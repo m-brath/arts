@@ -10428,6 +10428,88 @@ void define_md_data_raw() {
                GIN_DESC()));
 
   md_data_raw.push_back(create_mdrecord(
+      NAME("NewDoitCalc"),
+      DESCRIPTION("Interface to the DOIT solver.\n"
+                  "\n"
+                  "TODO: INCLUDE TEXT\n"),
+      AUTHORS("Manfred Brath"),
+      OUT("doit_i_field", "za_grid", "aa_grid", "scat_za_grid", "scat_aa_grid"),
+      GOUT(),
+      GOUT_TYPE(),
+      GOUT_DESC(),
+      IN("atmfields_checked",
+         "atmgeom_checked",
+         "scat_data_checked",
+         "cloudbox_checked",
+         "cloudbox_on",
+         "cloudbox_limits",
+         "propmat_clearsky_agenda",
+         "surface_rtprop_agenda",
+         "atmosphere_dim",
+         "pnd_field",
+         "t_field",
+         "z_field",
+         "vmr_field",
+         "p_grid",
+         "lat_grid",
+         "lon_grid",
+         "scat_data",
+         "f_grid",
+         "stokes_dim",
+         "iy_unit"),
+      GIN("epsilon",
+          "max_num_iterations",
+          "max_lvl_optimize",
+          "tau_scat_max",
+          "sgl_alb_max",
+          "N_za_grid",
+          "N_aa_grid",
+          "N_scat_za_grid",
+          "N_scat_aa_grid",
+          "za_grid_type",
+          "doit_i_field_apriori"),
+      GIN_TYPE("Vector",
+               "Index",
+               "Index",
+               "Numeric",
+               "Numeric",
+               "Index",
+               "Index",
+               "Index",
+               "Index",
+               "String",
+               "Tensor7"),
+      GIN_DEFAULT(NODEF,
+                  "100",
+                  "0",
+                  "0.1",
+                  "0.9",
+                  "17",
+                  "35",
+                  "19",
+                  "37",
+                  "linear_mu",
+                  NODEF),
+      GIN_DESC(
+          "Limits for convergence. A vector with length matching stokes_dim"
+          "with unit according to *iy_unit*",
+          "Maximum number of iterations allowed to reach convergencelimit.",
+          "Maximum levels of the cloudbox levels used for pressure grid optimization"
+          "additional layers matching the given maximum scattering optical"
+          "thickness scattering and maximum single scattering albedo"
+          "if set to 0 no optimization is done",
+          "Maximum scattering optical thickness",
+          "Maximum single scattering albedo",
+          "Number of zenith angle grid points",
+          "Number of azimuth angle grid points",
+          "Number of scattering zenith angle grid points for the "
+          "calculation of the scattering intergral",
+          "Number of scattering azimuth angle grid points for the "
+          "calculation of the scattering intergral",
+          "Zenith angle grid type",
+          "apriori doit_i_field if empty initial field is set to clearsky")));
+
+  md_data_raw.push_back(create_mdrecord(
       NAME("nlte_fieldRescalePopulationLevels"),
       DESCRIPTION(
           "Rescale NLTE field to expected total distribution amongst levels\n"),

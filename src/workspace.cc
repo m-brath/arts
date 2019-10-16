@@ -94,7 +94,6 @@ void Workspace::define_wsv_data() {
     sign "_" comes after all letters.
     Patrick Eriksson 2002-05-08
   ----------------------------------------------------------------------*/
-
   wsv_data.push_back(WsvRecord(
       NAME("aa_grid"),
       DESCRIPTION(
@@ -5759,6 +5758,7 @@ void Workspace::define_wsv_data() {
           "\n"
           "Dimensions: [ lat_grid, lon_grid ]\n"),
       GROUP("Matrix")));
+
 }
 
 //! Get index of WSV

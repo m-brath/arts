@@ -40,7 +40,6 @@
 #include "arts.h"
 #include "auto_md.h"
 #include "check_input.h"
-#include "doit.h"
 #include "geodetic.h"
 #include "lin_alg.h"
 #include "logic.h"
@@ -48,6 +47,7 @@
 #include "math_funcs.h"
 #include "matpackVII.h"
 #include "messages.h"
+#include "newdoit.h"
 #include "physics_funcs.h"
 #include "ppath.h"
 #include "rte.h"
@@ -64,72 +64,55 @@ extern const Numeric RAD2DEG;
   ===========================================================================*/
 
 /* Workspace method: Doxygen documentation will be auto-generated */
-void newDOAngularGridsSet(  // WS Output:
-    Index& doit_za_grid_size,
-    Vector& scat_aa_grid,
-    Vector& scat_za_grid,
-    // Keywords:
-    const Index& N_za_grid,
-    const Index& N_aa_grid,
-    const String& za_grid_opt_file,
-    const Verbosity& verbosity) {
-  // Azimuth angle grid (the same is used for the scattering integral and
-  // for the radiative transfer.
-  if (N_aa_grid > 1)
-    nlinspace(scat_aa_grid, 0, 360, N_aa_grid);
-  else if (N_aa_grid < 1) {
-    ostringstream os;
-    os << "N_aa_grid must be > 0 (even for 1D / DISORT cases).";
-    throw runtime_error(os.str());
-  } else {
-    scat_aa_grid.resize(1);
-    scat_aa_grid[0] = 0.;
-  }
+void NewDoitCalc(Workspace& ws,
+                 // WS Output:
+                 Tensor7& doit_i_field,
+                 Vector& za_grid,
+                 Vector& aa_grid,
+                 Vector& scat_za_grid,
+                 Vector& scat_aa_grid,
 
-  // Zenith angle grid:
-  // Number of zenith angle grid points (only for scattering integral):
-  if (N_za_grid < 0) {
-    ostringstream os;
-    os << "N_za_grid must be >= 0.";
-    throw runtime_error(os.str());
-  } else
-    doit_za_grid_size = N_za_grid;
+                 // WS Input
+                 const Index& atmfields_checked,
+                 const Index& atmgeom_checked,
+                 const Index& scat_data_checked,
+                 const Index& cloudbox_checked,
+                 const Index& cloudbox_on,
+                 const ArrayOfIndex& cloudbox_limits,
+                 const Agenda& propmat_clearsky_agenda,
+                 const Agenda& surface_rtprop_agenda,
+                 const Index& atmosphere_dim,
+                 const Tensor4& pnd_field,
+                 const Tensor3& t_field,
+                 const Tensor3& z_field,
+                 const Tensor4& vmr_field,
+                 const Vector& p_grid,
+                 const Vector& lat_grid,
+                 const Vector& lon_grid,
+                 const ArrayOfArrayOfSingleScatteringData& scat_data,
+                 const Vector& f_grid,
+                 const Index& stokes_dim,
+                 const String& iy_unit,
 
-  if (za_grid_opt_file == "")
-    if (N_za_grid == 0)
-      scat_za_grid.resize(0);
-    else if (N_za_grid == 1) {
-      ostringstream os;
-      os << "N_za_grid must be >1 or =0 (the latter only allowed for RT4).";
-      throw runtime_error(os.str());
-    } else
-      nlinspace(scat_za_grid, 0, 180, N_za_grid);
-  else
-    xml_read_from_file(za_grid_opt_file, scat_za_grid, verbosity);
-}
-
-/* Workspace method: Doxygen documentation will be auto-generated */
-void DoitCalc(Workspace& ws,
-              Tensor7& doit_i_field,
-              const Index& atmfields_checked,
-              const Index& atmgeom_checked,
-              const Index& cloudbox_checked,
-              const Index& scat_data_checked,
-              const Index& cloudbox_on,
-              const Vector& f_grid,
-              const Agenda& doit_mono_agenda,
-              const Index& doit_is_initialized,
-              const Verbosity& verbosity)
-
-{
+                 // Generic inputs
+                 const Vector& epsilon,
+                 const Index& max_num_iterations,
+                 const Index& max_lvl_optimize,
+                 const Numeric& tau_scat_max,
+                 const Numeric& sgl_alb_max,
+                 const Index& N_za_grid,
+                 const Index& N_aa_grid,
+                 const Index& N_scat_za_grid,
+                 const Index& N_scat_aa_grid,
+                 const String& za_grid_type,
+                 const Tensor7& doit_i_field_apriori,
+                 const Verbosity& verbosity) {
+  CREATE_OUT1;
   CREATE_OUT2;
 
   if (!cloudbox_on) {
-    CREATE_OUT0;
-    out0 << "  Cloudbox is off, DOIT calculation will be skipped.\n";
+    out1 << "  Cloudbox is off, NewDoit calculation is skipped.\n";
     return;
-    //throw runtime_error( "Cloudbox is off, no scattering calculations to be"
-    //                     "performed." );
   }
 
   //-------- Check input -------------------------------------------
@@ -146,46 +129,61 @@ void DoitCalc(Workspace& ws,
     throw runtime_error(
         "The cloudbox must be flagged to have "
         "passed a consistency check (cloudbox_checked=1).");
-
-  // Don't do anything if there's no cloudbox defined.
-  if (!cloudbox_on) return;
-
   if (scat_data_checked != 1)
     throw runtime_error(
         "The scattering data must be flagged to have "
         "passed a consistency check (scat_data_checked=1).");
 
-  chk_not_empty("doit_mono_agenda", doit_mono_agenda);
-
   // Frequency grid
-  //
   if (f_grid.empty()) throw runtime_error("The frequency grid is empty.");
   chk_if_increasing("f_grid", f_grid);
 
-  // Check whether DoitInit was executed
-  if (!doit_is_initialized) {
-    ostringstream os;
-    os << "Initialization method *DoitInit* has to be called before "
-       << "*DoitCalc*";
-    throw runtime_error(os.str());
-  }
-
   //-------- end of checks ----------------------------------------
 
-  // We have to make a local copy of the Workspace and the agendas because
-  // only non-reference types can be declared firstprivate in OpenMP
-  Workspace l_ws(ws);
-  Agenda l_doit_mono_agenda(doit_mono_agenda);
+  New_DOITAngularGridsSet(za_grid,
+                          aa_grid,
+                          scat_za_grid,
+                          scat_aa_grid,
+                          N_za_grid,
+                          N_aa_grid,
+                          N_scat_za_grid,
+                          N_scat_aa_grid,
+                          za_grid_type);
 
-  // OMP likes simple loop end conditions, so we make a local copy here:
+  //Check doit_i_field_apriori
+  if (!is_size(doit_i_field_apriori, 0, 0, 0, 0, 0, 0, 0)) {
+    chk_size("doit_i_field_apriori",
+             doit_i_field_apriori,
+             f_grid.nelem(),
+             (cloudbox_limits[1] - cloudbox_limits[0]) + 1,
+             (cloudbox_limits[3] - cloudbox_limits[2]) + 1,
+             (cloudbox_limits[5] - cloudbox_limits[4]) + 1,
+             N_za_grid,
+             N_aa_grid,
+             stokes_dim);
+
+    doit_i_field = doit_i_field_apriori;
+  } else {
+    New_doit_i_fieldSetClearsky(doit_i_field,
+                                f_grid,
+                                p_grid,
+                                lat_grid,
+                                lon_grid,
+                                za_grid,
+                                aa_grid,
+                                cloudbox_limits,
+                                atmosphere_dim,
+                                stokes_dim,
+                                verbosity);
+  }
+
+  //now do loop over frequency to run DOIT for each frequency
   const Index nf = f_grid.nelem();
 
   if (nf) {
     String fail_msg;
     bool failed = false;
 
-#pragma omp parallel for if (!arts_omp_in_parallel() && nf > 1) \
-    firstprivate(l_ws, l_doit_mono_agenda)
     for (Index f_index = 0; f_index < nf; f_index++) {
       if (failed) {
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
@@ -199,8 +197,11 @@ void DoitCalc(Workspace& ws,
 
         Tensor6 doit_i_field_mono_local =
             doit_i_field(f_index, joker, joker, joker, joker, joker, joker);
-        doit_mono_agendaExecute(
-            l_ws, doit_i_field_mono_local, f_grid, f_index, l_doit_mono_agenda);
+
+        //DUMMY
+        doit_i_field_mono_local = (Numeric)f_index;
+        //        NewDoitMonoCalc(
+        //            doit_i_field_mono_local, ...);
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) =
             doit_i_field_mono_local;
       } catch (const std::exception& e) {
@@ -209,7 +210,6 @@ void DoitCalc(Workspace& ws,
         os << "Error for f_index = " << f_index << " (" << f_grid[f_index]
            << " Hz)" << endl
            << e.what();
-#pragma omp critical(DoitCalc_fail)
         {
           failed = true;
           fail_msg = os.str();
@@ -221,5 +221,3 @@ void DoitCalc(Workspace& ws,
     if (failed) throw runtime_error(fail_msg);
   }
 }
-
-
