@@ -238,6 +238,7 @@ add_library (artscore STATIC
   m_linemixing.cc
   m_microphysics.cc
   m_montecarlo.cc
+  m_newdoit.cc
   m_nlte.cc
   m_oem.cc
   m_optproperties.cc
@@ -269,6 +270,7 @@ add_library (artscore STATIC
   microphysics.cc
   minimize.cc
   montecarlo.cc
+  newdoit.cc
   nlte.cc
   optproperties.cc
   parameters.cc
