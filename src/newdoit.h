@@ -31,7 +31,6 @@
   === External declarations
   ===========================================================================*/
 
-#include "doit.h"
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -41,6 +40,7 @@
 #include "auto_md.h"
 #include "check_input.h"
 #include "cloudbox.h"
+#include "doit.h"
 #include "geodetic.h"
 #include "lin_alg.h"
 #include "logic.h"
@@ -57,17 +57,44 @@
 
 extern const Numeric PI;
 extern const Numeric RAD2DEG;
+extern const Numeric DEG2RAD;
 
-void NewDoitMonoCalc(Workspace& ws,
-        // WS Input and Output:
-                              Tensor6& doit_i_field_mono,
+//TODO:Add doxygen doc
+void InitializeDoitFields(  //Output
+    Tensor7& doit_i_field,
+    //Input
+    const Index& stokes_dim,
+    const Index& atmosphere_dim,
+    const Vector& f_grid,
+    const Vector& rt_za_grid,
+    const Vector& rt_aa_grid,
+    const ArrayOfIndex& cloudbox_limits,
+    const Verbosity& verbosity);
 
-        // WS Input:
-                              ConstVectorView f_grid,
-                              const Index& f_index,
-                              const Index& maximum_number_iterations,
-                              const Agenda& doit_rte_agenda,
-                              const Agenda& doit_conv_test_agenda,
-                              const Index& accelerated,
-                              const Verbosity& verbosity)
+//TODO:Add doxygen doc
+void New_DOITAngularGridsSet(  //Output
+    Vector& za_grid,
+    Vector& aa_grid,
+    Vector& scat_za_grid,
+    Vector& scat_aa_grid,
+    //Input
+    const Index& N_za_grid,
+    const Index& N_aa_grid,
+    const Index& N_scat_za_grid,
+    const Index& N_scat_aa_grid,
+    const String& za_grid_type);
 
+//TODO:Add doxygen doc
+void New_doit_i_fieldSetClearsky(  //Output
+    Tensor7& doit_i_field,
+    //Input
+    const Vector& f_grid,
+    const Vector& p_grid,
+    const Vector& lat_grid,
+    const Vector& lon_grid,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const ArrayOfIndex& cloudbox_limits,
+    const Index& atmosphere_dim,
+    const Index& stokes_dim,
+    const Verbosity& verbosity);
