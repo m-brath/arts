@@ -81,9 +81,11 @@ void NewDoitCalc(Workspace& ws,
                  const ArrayOfIndex& cloudbox_limits,
                  const Agenda& propmat_clearsky_agenda,
                  const Agenda& surface_rtprop_agenda,
+                 const Agenda& iy_main_agenda,
                  const Index& atmosphere_dim,
                  const Tensor4& pnd_field,
                  const Tensor3& t_field,
+                 const Tensor4& nlte_field,
                  const Tensor3& z_field,
                  const Tensor4& vmr_field,
                  const Vector& p_grid,
@@ -134,21 +136,24 @@ void NewDoitCalc(Workspace& ws,
         "The scattering data must be flagged to have "
         "passed a consistency check (scat_data_checked=1).");
 
+  if (!(atmosphere_dim == 1 || atmosphere_dim == 3))
+    throw runtime_error("The atmospheric dimensionality must be 1 or 3.");
+
   // Frequency grid
   if (f_grid.empty()) throw runtime_error("The frequency grid is empty.");
   chk_if_increasing("f_grid", f_grid);
 
   //-------- end of checks ----------------------------------------
 
-  New_DOITAngularGridsSet(za_grid,
-                          aa_grid,
-                          scat_za_grid,
-                          scat_aa_grid,
-                          N_za_grid,
-                          N_aa_grid,
-                          N_scat_za_grid,
-                          N_scat_aa_grid,
-                          za_grid_type);
+  SetAngularGrids(za_grid,
+                  aa_grid,
+                  scat_za_grid,
+                  scat_aa_grid,
+                  N_za_grid,
+                  N_aa_grid,
+                  N_scat_za_grid,
+                  N_scat_aa_grid,
+                  za_grid_type);
 
   //Check doit_i_field_apriori
   if (!is_size(doit_i_field_apriori, 0, 0, 0, 0, 0, 0, 0)) {
@@ -164,17 +169,39 @@ void NewDoitCalc(Workspace& ws,
 
     doit_i_field = doit_i_field_apriori;
   } else {
-    New_doit_i_fieldSetClearsky(doit_i_field,
-                                f_grid,
-                                p_grid,
-                                lat_grid,
-                                lon_grid,
-                                za_grid,
-                                aa_grid,
-                                cloudbox_limits,
-                                atmosphere_dim,
-                                stokes_dim,
-                                verbosity);
+    Initialize_doit_i_field(doit_i_field,
+                            stokes_dim,
+                            atmosphere_dim,
+                            f_grid,
+                            za_grid,
+                            aa_grid,
+                            cloudbox_limits);
+
+
+    GetIncomingRadiation(ws,
+                         //output
+                         doit_i_field,
+                         //input
+                         iy_main_agenda,
+                         atmosphere_dim,
+                         lat_grid,
+                         lon_grid,
+                         z_field,
+                         nlte_field,
+                         cloudbox_limits,
+                         f_grid,
+                         za_grid,
+                         aa_grid,
+                         verbosity);
+
+    SetClearsky_doit_i_field(doit_i_field,
+                             f_grid,
+                             p_grid,
+                             lat_grid,
+                             lon_grid,
+                             cloudbox_limits,
+                             atmosphere_dim,
+                             verbosity);
   }
 
   //now do loop over frequency to run DOIT for each frequency
@@ -199,7 +226,7 @@ void NewDoitCalc(Workspace& ws,
             doit_i_field(f_index, joker, joker, joker, joker, joker, joker);
 
         //DUMMY
-        doit_i_field_mono_local = (Numeric)f_index;
+        //
         //        NewDoitMonoCalc(
         //            doit_i_field_mono_local, ...);
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) =

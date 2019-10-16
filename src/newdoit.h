@@ -60,7 +60,7 @@ extern const Numeric RAD2DEG;
 extern const Numeric DEG2RAD;
 
 //TODO:Add doxygen doc
-void InitializeDoitFields(  //Output
+void Initialize_doit_i_field(  //Output
     Tensor7& doit_i_field,
     //Input
     const Index& stokes_dim,
@@ -68,11 +68,10 @@ void InitializeDoitFields(  //Output
     const Vector& f_grid,
     const Vector& rt_za_grid,
     const Vector& rt_aa_grid,
-    const ArrayOfIndex& cloudbox_limits,
-    const Verbosity& verbosity);
+    const ArrayOfIndex& cloudbox_limits);
 
 //TODO:Add doxygen doc
-void New_DOITAngularGridsSet(  //Output
+void SetAngularGrids(  //Output
     Vector& za_grid,
     Vector& aa_grid,
     Vector& scat_za_grid,
@@ -85,16 +84,28 @@ void New_DOITAngularGridsSet(  //Output
     const String& za_grid_type);
 
 //TODO:Add doxygen doc
-void New_doit_i_fieldSetClearsky(  //Output
+void SetClearsky_doit_i_field(  //Output
     Tensor7& doit_i_field,
     //Input
     const Vector& f_grid,
     const Vector& p_grid,
     const Vector& lat_grid,
     const Vector& lon_grid,
-    const Vector& za_grid,
-    const Vector& aa_grid,
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
-    const Index& stokes_dim,
     const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void GetIncomingRadiation(Workspace& ws,
+                          Tensor7& doit_i_field,
+                          const Agenda& iy_main_agenda,
+                          const Index& atmosphere_dim,
+                          const Vector& lat_grid,
+                          const Vector& lon_grid,
+                          const Tensor3& z_field,
+                          const Tensor4& nlte_field,
+                          const ArrayOfIndex& cloudbox_limits,
+                          const Vector& f_grid,
+                          const Vector& za_grid,
+                          const Vector& aa_grid,
+                          const Verbosity& verbosity);
