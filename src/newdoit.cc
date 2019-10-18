@@ -212,6 +212,8 @@ void SetClearsky_doit_i_field(Tensor7& doit_i_field,
                 p_grid[Range(cloudbox_limits[0],
                              (cloudbox_limits[1] - cloudbox_limits[0]) + 1)]);
 
+
+
       Matrix itw((cloudbox_limits[1] - cloudbox_limits[0]) + 1, 2);
       interpweights(itw, p_gp);
 
@@ -653,4 +655,196 @@ void GetIncomingRadiation(Workspace& ws,
       }
     }
   }  // End atmosphere_dim = 3.
+}
+
+void LimitInputGridsAndFieldsToCloudbox(Vector& p_grid_cldbx,
+                                        Vector& lat_grid_cldbx,
+                                        Vector& lon_grid_cldbx,
+                                        Tensor3& t_field_cldbx,
+                                        Tensor3& z_field_cldbx,
+                                        Tensor4& vmr_field_cldbx,
+                                        ConstVectorView p_grid,
+                                        ConstVectorView lat_grid,
+                                        ConstVectorView lon_grid,
+                                        ConstTensor3View t_field,
+                                        ConstTensor3View z_field,
+                                        ConstTensor4View vmr_field,
+                                        const ArrayOfIndex& cloudbox_limits,
+                                        const Verbosity& verbosity) {
+  CREATE_OUT3;
+
+  //Limit input fields and spatial grids to cloudbox
+  const Index Np_cldbx = cloudbox_limits[1] - cloudbox_limits[0] + 1;
+
+  const Index Idx0_lat_cldbx =
+      cloudbox_limits.nelem() > 2 ? cloudbox_limits[2] : 0;
+  const Index Nlat_cldbx = cloudbox_limits.nelem() > 2
+                               ? (cloudbox_limits[3] - cloudbox_limits[2] + 1)
+                               : 1;
+  const Index Idx0_lon_cldbx =
+      cloudbox_limits.nelem() > 2 ? cloudbox_limits[4] : 0;
+  const Index Nlon_cldbx = cloudbox_limits.nelem() > 2
+                               ? (cloudbox_limits[5] - cloudbox_limits[4] + 1)
+                               : 1;
+
+  ostringstream os;
+  os << "limit fields to cloudbox: index are set \n"
+     << "Idx0_lat_cldbx = " << Idx0_lat_cldbx << " \n"
+     << "Nlat_cldbx = " << Nlat_cldbx << "\n"
+     << "Idx0_lon_cldbx = " << Idx0_lon_cldbx << " \n"
+     << "Nlon_cldbx = " << Nlon_cldbx << "\n";
+  out3 << os.str();
+
+  p_grid_cldbx = p_grid[Range(cloudbox_limits[0], Np_cldbx)];
+  if (cloudbox_limits.nelem() > 2) {
+    lat_grid_cldbx = lat_grid[Range(Idx0_lat_cldbx, Nlat_cldbx)];
+    lon_grid_cldbx = lon_grid[Range(Idx0_lon_cldbx, Nlon_cldbx)];
+  } else {
+    lat_grid_cldbx = lat_grid;
+    lon_grid_cldbx = lat_grid;
+  }
+
+
+  t_field_cldbx = t_field(Range(cloudbox_limits[0], Np_cldbx),
+                          Range(Idx0_lat_cldbx, Nlat_cldbx),
+                          Range(Idx0_lon_cldbx, Nlon_cldbx));
+
+
+  z_field_cldbx = z_field(Range(cloudbox_limits[0], Np_cldbx),
+                          Range(Idx0_lat_cldbx, Nlat_cldbx),
+                          Range(Idx0_lon_cldbx, Nlon_cldbx));
+
+
+  if (vmr_field.nbooks()) {
+    vmr_field_cldbx = vmr_field(joker,
+                                Range(cloudbox_limits[0], Np_cldbx),
+                                Range(Idx0_lat_cldbx, Nlat_cldbx),
+                                Range(Idx0_lon_cldbx, Nlon_cldbx));
+    ;
+  }
+}
+
+void NewDoitMonoCalc(Workspace& ws,
+    //Input and Output:
+                     Tensor6& doit_i_field_mono,
+                     Tensor3& gas_extinct,
+    //Input
+                     const ArrayOfIndex& cloudbox_limits,
+                     const Agenda& propmat_clearsky_agenda,
+                     const Agenda& surface_rtprop_agenda,
+                     const Index& atmosphere_dim,
+                     const Index& stokes_dim,
+                     const Tensor4& pnd_field,
+                     const Tensor3& t_field,
+                     const Tensor3& z_field,
+                     const Tensor4& vmr_field,
+                     const Vector& p_grid,
+                     const Vector& lat_grid,
+                     const Vector& lon_grid,
+                     const Vector& za_grid,
+                     const Vector& aa_grid,
+                     const Vector& scat_za_grid,
+                     const Vector& scat_aa_grid,
+                     const Numeric& f_mono,
+                     const ArrayOfArrayOfSingleScatteringData& scat_data,
+                     const String& iy_unit,
+                     const Vector& refellipsoid,
+                     const Vector& epsilon,
+                     const Index& max_num_iterations,
+                     const Index& max_lvl_optimize,
+                     const Numeric& tau_scat_max,
+                     const Numeric& sgl_alb_max,
+                     const Verbosity& verbosity)
+
+{
+
+  CREATE_OUT0;
+//  Tensor3 gas_extinct;
+
+  //calculate gas extinction
+  CalcGasExtinction(ws,
+                  gas_extinct,
+                  propmat_clearsky_agenda,
+                  t_field,
+                  vmr_field,
+                  p_grid,
+                  lat_grid,
+                  lon_grid,
+                  f_mono);
+
+  ostringstream os;
+  os << "gas absorption calculated... \n";
+  out0 << os.str();
+  //calculate par_optpropCalc_doit
+
+
+  //calculate sca_optpropCalc_doit
+
+
+  //calculate surf_optpropCalc_doit
+
+
+
+  //run new doit
+
+}
+
+void CalcGasExtinction(Workspace& ws,
+                     Tensor3& gas_extinct,
+                     const Agenda& propmat_clearsky_agenda,
+                     const ConstTensor3View& t_field,
+                     const ConstTensor4View& vmr_field,
+                     const ConstVectorView& p_grid,
+                     const ConstVectorView& lat_grid,
+                     const ConstVectorView& lon_grid,
+                     const ConstVectorView& f_mono) {
+  // Initialization
+  gas_extinct = 0.;
+
+  const Index Np = p_grid.nelem();
+  const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
+  const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
+
+  // Local variables to be used in agendas
+
+  ArrayOfPropagationMatrix propmat_clearsky_local;
+
+  const Vector rtp_temperature_nlte_local_dummy(0);
+
+  // Calculate layer averaged gaseous extinction
+  for (Index ip = 0; ip < Np; ip++) {
+    for (Index ilat = 0; ilat < Nlat; ilat++) {
+      for (Index ilon = 0; ilon < Nlon; ilon++) {
+        const Vector rtp_mag_dummy(3, 0);
+        const Vector ppath_los_dummy;
+
+        ArrayOfStokesVector nlte_dummy;
+        ArrayOfPropagationMatrix partial_dummy;
+        ArrayOfStokesVector partial_source_dummy, partial_nlte_dummy;
+        propmat_clearsky_agendaExecute(ws,
+                                       propmat_clearsky_local,
+                                       nlte_dummy,
+                                       partial_dummy,
+                                       partial_source_dummy,
+                                       partial_nlte_dummy,
+                                       ArrayOfRetrievalQuantity(0),
+                                       (Vector) f_mono,  // monochromatic calculation
+                                       rtp_mag_dummy,
+                                       ppath_los_dummy,
+                                       p_grid[ip],
+                                       t_field(ip, ilat, ilon),
+                                       rtp_temperature_nlte_local_dummy,
+                                       vmr_field(joker, ip, ilat, ilon),
+                                       propmat_clearsky_agenda);
+
+        //Assuming non-polarized light and only one frequency
+        //TODO: Check if polarization is needed for absorption
+        if (propmat_clearsky_local.nelem()) {
+          for (Index j = 0; j < propmat_clearsky_local.nelem(); j++) {
+            gas_extinct(ip, ilat, ilon) += propmat_clearsky_local[j].Kjj()[0];
+          }
+        }
+      }
+    }
+  }
 }

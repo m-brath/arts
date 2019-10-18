@@ -71,6 +71,7 @@ void NewDoitCalc(Workspace& ws,
                  Vector& aa_grid,
                  Vector& scat_za_grid,
                  Vector& scat_aa_grid,
+                 Tensor4& gas_extinct_doit,
 
                  // WS Input
                  const Index& atmfields_checked,
@@ -82,6 +83,8 @@ void NewDoitCalc(Workspace& ws,
                  const Agenda& propmat_clearsky_agenda,
                  const Agenda& surface_rtprop_agenda,
                  const Agenda& iy_main_agenda,
+                 const Agenda& ppath_step_agenda,
+                 const Index& stokes_dim,
                  const Index& atmosphere_dim,
                  const Tensor4& pnd_field,
                  const Tensor3& t_field,
@@ -91,10 +94,12 @@ void NewDoitCalc(Workspace& ws,
                  const Vector& p_grid,
                  const Vector& lat_grid,
                  const Vector& lon_grid,
-                 const ArrayOfArrayOfSingleScatteringData& scat_data,
                  const Vector& f_grid,
-                 const Index& stokes_dim,
+                 const Numeric& ppath_lmax,
+                 const Numeric& ppath_lraytrace,
+                 const ArrayOfArrayOfSingleScatteringData& scat_data,
                  const String& iy_unit,
+                 const Vector& refellipsoid,
 
                  // Generic inputs
                  const Vector& epsilon,
@@ -177,7 +182,6 @@ void NewDoitCalc(Workspace& ws,
                             aa_grid,
                             cloudbox_limits);
 
-
     GetIncomingRadiation(ws,
                          //output
                          doit_i_field,
@@ -204,8 +208,52 @@ void NewDoitCalc(Workspace& ws,
                              verbosity);
   }
 
-  //now do loop over frequency to run DOIT for each frequency
+  ostringstream os;
+  os << "limit fields to cloudbox \n";
+  out1 << os.str();
+
+  Vector p_grid_cldbx;
+  Vector lat_grid_cldbx;
+  Vector lon_grid_cldbx;
+  Tensor3 t_field_cldbx;
+  Tensor3 z_field_cldbx;
+  Tensor4 vmr_field_cldbx;
+
+  LimitInputGridsAndFieldsToCloudbox(p_grid_cldbx,
+                                     lat_grid_cldbx,
+                                     lon_grid_cldbx,
+                                     t_field_cldbx,
+                                     z_field_cldbx,
+                                     vmr_field_cldbx,
+                                     p_grid,
+                                     lat_grid,
+                                     lon_grid,
+                                     t_field,
+                                     z_field,
+                                     vmr_field,
+                                     cloudbox_limits,
+                                     verbosity);
+
+
+
+  os << "Now do loop... \n";
+  out1 << os.str();
+
+
   const Index nf = f_grid.nelem();
+  const Index Np_cloud = cloudbox_limits[1] - cloudbox_limits[0] + 1;
+
+  // Resize and initialize gas absorption field inside cloudbox
+  if (atmosphere_dim == 1) {
+    gas_extinct_doit.resize(nf, Np_cloud, 1, 1);
+  } else {
+    const Index Nlat_cloud = cloudbox_limits[3] - cloudbox_limits[2] + 1;
+    const Index Nlon_cloud = cloudbox_limits[5] - cloudbox_limits[4] + 1;
+    gas_extinct_doit.resize(nf, Np_cloud, Nlat_cloud, Nlon_cloud);
+  }
+  gas_extinct_doit = NAN;
+
+  //now do loop over frequency to run DOIT for each frequency
 
   if (nf) {
     String fail_msg;
@@ -214,25 +262,62 @@ void NewDoitCalc(Workspace& ws,
     for (Index f_index = 0; f_index < nf; f_index++) {
       if (failed) {
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
+        gas_extinct_doit(f_index, joker, joker, joker) = NAN;
         continue;
       }
 
       try {
         ostringstream os;
-        os << "Frequency: " << f_grid[f_index] / 1e9 << " GHz \n";
+        os << "Start with frequency: " << f_grid[f_index] / 1e9 << " GHz \n";
         out2 << os.str();
 
         Tensor6 doit_i_field_mono_local =
             doit_i_field(f_index, joker, joker, joker, joker, joker, joker);
 
-        //DUMMY
-        //
-        //        NewDoitMonoCalc(
-        //            doit_i_field_mono_local, ...);
+        Tensor3 gas_extinct_doit_local =
+            gas_extinct_doit(f_index, joker, joker, joker);
+
+        NewDoitMonoCalc(ws,
+                        doit_i_field_mono_local,
+                        gas_extinct_doit_local,
+                        cloudbox_limits,
+                        propmat_clearsky_agenda,
+                        surface_rtprop_agenda,
+                        atmosphere_dim,
+                        stokes_dim,
+                        pnd_field,
+                        t_field_cldbx,
+                        z_field_cldbx,
+                        vmr_field_cldbx,
+                        p_grid_cldbx,
+                        lat_grid_cldbx,
+                        lon_grid_cldbx,
+                        za_grid,
+                        aa_grid,
+                        scat_za_grid,
+                        scat_aa_grid,
+                        f_grid[f_index],
+                        scat_data,
+                        iy_unit,
+                        refellipsoid,
+                        epsilon,
+                        max_num_iterations,
+                        max_lvl_optimize,
+                        tau_scat_max,
+                        sgl_alb_max,
+                        verbosity);
+
+        os << "Done with frequency: " << f_grid[f_index] / 1e9 << " GHz \n";
+        out2 << os.str();
+
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) =
             doit_i_field_mono_local;
+
+        gas_extinct_doit(f_index, joker, joker, joker) = gas_extinct_doit_local;
+
       } catch (const std::exception& e) {
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
+        gas_extinct_doit(f_index, joker, joker, joker) = -9999.;
         ostringstream os;
         os << "Error for f_index = " << f_index << " (" << f_grid[f_index]
            << " Hz)" << endl

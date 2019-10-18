@@ -5759,6 +5759,18 @@ void Workspace::define_wsv_data() {
           "Dimensions: [ lat_grid, lon_grid ]\n"),
       GROUP("Matrix")));
 
+  //TODO: Remove later or add documentation
+  wsv_data.push_back(
+      WsvRecord(NAME("gas_extinct_doit"),
+                DESCRIPTION("gas extinction field within cloudbox.\n"
+                            "\n"
+                            "\n"
+                            "Usage:      Output of *NewDoitCalc*\n"
+                            "\n"
+                            "Unit:       1/m\n"
+                            "\n"
+                            "Dimensions: [ Nf, p_grid, lat_grid, lon_grid ]\n"),
+                GROUP("Tensor4")));
 }
 
 //! Get index of WSV
