@@ -71,7 +71,9 @@ void NewDoitCalc(Workspace& ws,
                  Vector& aa_grid,
                  Vector& scat_za_grid,
                  Vector& scat_aa_grid,
-                 Tensor4& gas_extinct_doit,
+                 Tensor4& gas_extinction_doit,
+                 Tensor7& extinction_matrix_doit,
+                 Tensor6& absorption_vector_doit,
 
                  // WS Input
                  const Index& atmfields_checked,
@@ -211,6 +213,7 @@ void NewDoitCalc(Workspace& ws,
   ostringstream os;
   os << "limit fields to cloudbox \n";
   out1 << os.str();
+  os.clear();
 
   Vector p_grid_cldbx;
   Vector lat_grid_cldbx;
@@ -238,20 +241,35 @@ void NewDoitCalc(Workspace& ws,
 
   os << "Now do loop... \n";
   out1 << os.str();
-
+  os.clear();
 
   const Index nf = f_grid.nelem();
   const Index Np_cloud = cloudbox_limits[1] - cloudbox_limits[0] + 1;
 
   // Resize and initialize gas absorption field inside cloudbox
   if (atmosphere_dim == 1) {
-    gas_extinct_doit.resize(nf, Np_cloud, 1, 1);
+    gas_extinction_doit.resize(nf, Np_cloud, 1, 1);
+    extinction_matrix_doit.resize(
+        nf, Np_cloud, 1, 1, za_grid.nelem(), stokes_dim, stokes_dim);
+    absorption_vector_doit.resize(
+        nf, Np_cloud, 1, 1, za_grid.nelem(), stokes_dim);
   } else {
     const Index Nlat_cloud = cloudbox_limits[3] - cloudbox_limits[2] + 1;
     const Index Nlon_cloud = cloudbox_limits[5] - cloudbox_limits[4] + 1;
-    gas_extinct_doit.resize(nf, Np_cloud, Nlat_cloud, Nlon_cloud);
+    gas_extinction_doit.resize(nf, Np_cloud, Nlat_cloud, Nlon_cloud);
+    extinction_matrix_doit.resize(nf,
+                                  Np_cloud,
+                                  Nlat_cloud,
+                                  Nlon_cloud,
+                                  za_grid.nelem(),
+                                  stokes_dim,
+                                  stokes_dim);
+    absorption_vector_doit.resize(
+        nf, Np_cloud, Nlat_cloud, Nlon_cloud, za_grid.nelem(), stokes_dim);
   }
-  gas_extinct_doit = NAN;
+  gas_extinction_doit = NAN;
+  extinction_matrix_doit = NAN;
+  absorption_vector_doit = NAN;
 
   //now do loop over frequency to run DOIT for each frequency
 
@@ -262,24 +280,38 @@ void NewDoitCalc(Workspace& ws,
     for (Index f_index = 0; f_index < nf; f_index++) {
       if (failed) {
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
-        gas_extinct_doit(f_index, joker, joker, joker) = NAN;
+        gas_extinction_doit(f_index, joker, joker, joker) = NAN;
+        extinction_matrix_doit(
+            f_index, joker, joker, joker, joker, joker, joker) = 0;
+        absorption_vector_doit(f_index, joker, joker, joker, joker, joker) =
+            0;
         continue;
       }
 
       try {
-        ostringstream os;
+//        ostringstream os;
         os << "Start with frequency: " << f_grid[f_index] / 1e9 << " GHz \n";
         out2 << os.str();
+        os.clear();
 
         Tensor6 doit_i_field_mono_local =
             doit_i_field(f_index, joker, joker, joker, joker, joker, joker);
 
-        Tensor3 gas_extinct_doit_local =
-            gas_extinct_doit(f_index, joker, joker, joker);
+        Tensor3 gas_extinction_doit_local =
+            gas_extinction_doit(f_index, joker, joker, joker);
+
+        Tensor6 extinction_matrix_doit_local = extinction_matrix_doit(
+            f_index, joker, joker, joker, joker, joker, joker);
+
+        Tensor5 absorption_vector_doit_local =
+            absorption_vector_doit(f_index, joker, joker, joker, joker, joker);
 
         NewDoitMonoCalc(ws,
                         doit_i_field_mono_local,
-                        gas_extinct_doit_local,
+                        gas_extinction_doit_local,
+                        extinction_matrix_doit_local,
+                        absorption_vector_doit_local,
+
                         cloudbox_limits,
                         propmat_clearsky_agenda,
                         surface_rtprop_agenda,
@@ -297,6 +329,7 @@ void NewDoitCalc(Workspace& ws,
                         scat_za_grid,
                         scat_aa_grid,
                         f_grid[f_index],
+                        f_index,
                         scat_data,
                         iy_unit,
                         refellipsoid,
@@ -309,16 +342,28 @@ void NewDoitCalc(Workspace& ws,
 
         os << "Done with frequency: " << f_grid[f_index] / 1e9 << " GHz \n";
         out2 << os.str();
+        os.clear();
 
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) =
             doit_i_field_mono_local;
 
-        gas_extinct_doit(f_index, joker, joker, joker) = gas_extinct_doit_local;
+        gas_extinction_doit(f_index, joker, joker, joker) = gas_extinction_doit_local;
+
+        extinction_matrix_doit(f_index, joker, joker, joker, joker, joker, joker) =
+            extinction_matrix_doit_local;
+
+        absorption_vector_doit(f_index, joker, joker, joker, joker, joker) =
+            absorption_vector_doit_local;
 
       } catch (const std::exception& e) {
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
-        gas_extinct_doit(f_index, joker, joker, joker) = -9999.;
-        ostringstream os;
+        gas_extinction_doit(f_index, joker, joker, joker) = -9999.;
+        extinction_matrix_doit(
+            f_index, joker, joker, joker, joker, joker, joker) = -9999.;
+        absorption_vector_doit(
+            f_index, joker, joker, joker, joker, joker) = -9999.;
+
+        //        ostringstream os;
         os << "Error for f_index = " << f_index << " (" << f_grid[f_index]
            << " Hz)" << endl
            << e.what();

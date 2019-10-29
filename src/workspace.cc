@@ -5759,9 +5759,9 @@ void Workspace::define_wsv_data() {
           "Dimensions: [ lat_grid, lon_grid ]\n"),
       GROUP("Matrix")));
 
-  //TODO: Remove later or add documentation
+  //TODO: Remove later or add documentation and move it to correct position
   wsv_data.push_back(
-      WsvRecord(NAME("gas_extinct_doit"),
+      WsvRecord(NAME("gas_extinction_doit"),
                 DESCRIPTION("gas extinction field within cloudbox.\n"
                             "\n"
                             "\n"
@@ -5771,6 +5771,34 @@ void Workspace::define_wsv_data() {
                             "\n"
                             "Dimensions: [ Nf, p_grid, lat_grid, lon_grid ]\n"),
                 GROUP("Tensor4")));
+
+  //TODO: Remove later or add documentation and move it to correct position
+  wsv_data.push_back(WsvRecord(
+      NAME("extinction_matrix_doit"),
+      DESCRIPTION("particle extinction matrix field within cloudbox.\n"
+                  "\n"
+                  "\n"
+                  "Usage:      Output of *NewDoitCalc*\n"
+                  "\n"
+                  "Unit:       1/m\n"
+                  "\n"
+                  "Dimensions: [ Nf, p_grid, lat_grid, lon_grid, za_grid,"
+                  " StokesDim, StokesDim]\n"),
+      GROUP("Tensor7")));
+
+  //TODO: Remove later or add documentation and move it to correct position
+  wsv_data.push_back(WsvRecord(
+      NAME("absorption_vector_doit"),
+      DESCRIPTION("particle absorption vector field within cloudbox.\n"
+                  "\n"
+                  "\n"
+                  "Usage:      Output of *NewDoitCalc*\n"
+                  "\n"
+                  "Unit:       1/m\n"
+                  "\n"
+                  "Dimensions: [ Nf, p_grid, lat_grid, lon_grid, za_grid,"
+                  " StokesDim]\n"),
+      GROUP("Tensor6")));
 }
 
 //! Get index of WSV

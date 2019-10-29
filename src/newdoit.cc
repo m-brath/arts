@@ -663,12 +663,12 @@ void LimitInputGridsAndFieldsToCloudbox(Vector& p_grid_cldbx,
                                         Tensor3& t_field_cldbx,
                                         Tensor3& z_field_cldbx,
                                         Tensor4& vmr_field_cldbx,
-                                        ConstVectorView p_grid,
-                                        ConstVectorView lat_grid,
-                                        ConstVectorView lon_grid,
-                                        ConstTensor3View t_field,
-                                        ConstTensor3View z_field,
-                                        ConstTensor4View vmr_field,
+                                        const ConstVectorView p_grid,
+                                        const ConstVectorView lat_grid,
+                                        const ConstVectorView lon_grid,
+                                        const ConstTensor3View t_field,
+                                        const ConstTensor3View z_field,
+                                        const ConstTensor4View vmr_field,
                                         const ArrayOfIndex& cloudbox_limits,
                                         const Verbosity& verbosity) {
   CREATE_OUT3;
@@ -727,7 +727,10 @@ void LimitInputGridsAndFieldsToCloudbox(Vector& p_grid_cldbx,
 void NewDoitMonoCalc(Workspace& ws,
     //Input and Output:
                      Tensor6& doit_i_field_mono,
-                     Tensor3& gas_extinct,
+                     Tensor3& gas_extinction,
+                     Tensor6& extinction_matrix,
+                     Tensor5& absorption_vector,
+
     //Input
                      const ArrayOfIndex& cloudbox_limits,
                      const Agenda& propmat_clearsky_agenda,
@@ -746,6 +749,7 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Vector& scat_za_grid,
                      const Vector& scat_aa_grid,
                      const Numeric& f_mono,
+                     const Index& f_index,
                      const ArrayOfArrayOfSingleScatteringData& scat_data,
                      const String& iy_unit,
                      const Vector& refellipsoid,
@@ -761,24 +765,40 @@ void NewDoitMonoCalc(Workspace& ws,
   CREATE_OUT0;
 //  Tensor3 gas_extinct;
 
+
+
   //calculate gas extinction
   CalcGasExtinction(ws,
-                  gas_extinct,
-                  propmat_clearsky_agenda,
-                  t_field,
-                  vmr_field,
-                  p_grid,
-                  lat_grid,
-                  lon_grid,
-                  f_mono);
+                    gas_extinction,
+                    propmat_clearsky_agenda,
+                    t_field,
+                    vmr_field,
+                    p_grid,
+                    lat_grid,
+                    lon_grid,
+                    f_mono);
 
   ostringstream os;
-  os << "gas absorption calculated... \n";
+  os << "gas absorption calculated \n";
   out0 << os.str();
-  //calculate par_optpropCalc_doit
+  os.clear();
 
+  //calculate par_optpropCalc_doit
+  CalcParticleOpticalProperties(extinction_matrix,
+                                absorption_vector,
+                                scat_data,
+                                za_grid,
+                                f_index,
+                                pnd_field,
+                                t_field,
+                                stokes_dim);
+
+  os << "particle optical properties calculated \n";
+  out0 << os.str();
+  os.clear();
 
   //calculate sca_optpropCalc_doit
+
 
 
   //calculate surf_optpropCalc_doit
@@ -848,3 +868,89 @@ void CalcGasExtinction(Workspace& ws,
     }
   }
 }
+
+void CalcParticleOpticalProperties(Tensor6& extinction_matrix,
+                    Tensor5& absorption_vector,
+                    const ArrayOfArrayOfSingleScatteringData& scat_data,
+                    const Vector& scat_za_grid,
+                    const Index& f_index,
+                    const ConstTensor4View& pnd_field,
+                    const ConstTensor3View& t_field,
+                    const Index& stokes_dim) {
+  // Initialization
+  extinction_matrix = 0.;
+  absorption_vector = 0.;
+
+  const Index Np = pnd_field.npages();
+  const Index Nlat = pnd_field.nrows();
+  const Index Nlon = pnd_field.ncols();
+
+
+  assert(absorption_vector.nshelves() == Np);
+  assert(extinction_matrix.nvitrines() == Np);
+
+  // preparing input data
+  Matrix dir_array(scat_za_grid.nelem(), 2, 0.);
+  dir_array(joker, 0) = scat_za_grid;
+
+  // making output containers
+  ArrayOfArrayOfTensor5 ext_mat_Nse;
+  ArrayOfArrayOfTensor4 abs_vec_Nse;
+  ArrayOfArrayOfIndex ptypes_Nse;
+  Matrix t_ok;
+  ArrayOfTensor5 ext_mat_ssbulk;
+  ArrayOfTensor4 abs_vec_ssbulk;
+  ArrayOfIndex ptype_ssbulk;
+  Tensor5 ext_mat_bulk_ii;
+  Tensor4 abs_vec_bulk_ii;
+  Index ptype_bulk_ii;
+
+
+  for (Index ilat = 0; ilat < Nlat; ilat++) {
+    for (Index ilon = 0; ilon < Nlon; ilon++) {
+
+      //Calculate the optical properties for each scattering element
+      opt_prop_NScatElems(ext_mat_Nse,
+                          abs_vec_Nse,
+                          ptypes_Nse,
+                          t_ok,
+                          scat_data,
+                          stokes_dim,
+                          t_field(joker,ilat,ilon),
+                          dir_array,
+                          f_index);
+
+      //Calculate the optical properties for each scattering species
+      opt_prop_ScatSpecBulk(ext_mat_ssbulk,
+                            abs_vec_ssbulk,
+                            ptype_ssbulk,
+                            ext_mat_Nse,
+                            abs_vec_Nse,
+                            ptypes_Nse,
+                            pnd_field(joker, joker, ilat, ilon),
+                            t_ok);
+
+      //Calculate the bulk optical properties
+      opt_prop_Bulk(ext_mat_bulk_ii,
+                    abs_vec_bulk_ii,
+                    ptype_bulk_ii,
+                    ext_mat_ssbulk,
+                    abs_vec_ssbulk,
+                    ptype_ssbulk);
+
+      extinction_matrix(joker, ilat, ilon, joker, joker, joker) =
+          ext_mat_bulk_ii(0, joker, joker, joker, joker);
+
+      absorption_vector(joker, ilat, ilon, joker, joker) =
+          abs_vec_bulk_ii(0, joker, joker, joker);
+    }
+  }
+
+
+
+
+
+}
+
+
+
