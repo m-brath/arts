@@ -151,6 +151,7 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Numeric& f_mono,
                      const Index& f_index,
                      const ArrayOfArrayOfSingleScatteringData& scat_data,
+                     const Index& t_interp_order,
                      const String& iy_unit,
                      const Vector& refellipsoid,
                      const Vector& epsilon,
@@ -181,3 +182,19 @@ void CalcParticleOpticalProperties(
     const ConstTensor4View& pnd_field,
     const ConstTensor3View& t_field,
     const Index& stokes_dim);
+
+//TODO:Add doxygen doc
+void sca_optpropCalc(  //Output
+    Tensor7& scattering_matrix,
+    const Tensor3& t_field,
+    const Index& f_index,
+    const ArrayOfArrayOfSingleScatteringData& scat_data,
+    const ConstTensor4View& pnd_field,
+    const Index& stokes_dim,
+    const Index& atmosphere_dim,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid,
+    const Index& t_interp_order,
+    const Verbosity& verbosity);

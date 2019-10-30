@@ -730,6 +730,7 @@ void NewDoitMonoCalc(Workspace& ws,
                      Tensor3& gas_extinction,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
+                     Tensor7& scattering_matrix,
 
     //Input
                      const ArrayOfIndex& cloudbox_limits,
@@ -751,6 +752,7 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Numeric& f_mono,
                      const Index& f_index,
                      const ArrayOfArrayOfSingleScatteringData& scat_data,
+                     const Index& t_interp_order,
                      const String& iy_unit,
                      const Vector& refellipsoid,
                      const Vector& epsilon,
@@ -798,8 +800,19 @@ void NewDoitMonoCalc(Workspace& ws,
   os.clear();
 
   //calculate sca_optpropCalc_doit
-
-
+  sca_optpropCalc(scattering_matrix,
+                  t_field,
+                  f_index,
+                  scat_data,
+                  pnd_field,
+                  stokes_dim,
+                  atmosphere_dim,
+                  za_grid,
+                  aa_grid,
+                  scat_za_grid,
+                  scat_aa_grid,
+                  t_interp_order,
+                  verbosity);
 
   //calculate surf_optpropCalc_doit
 
@@ -945,12 +958,178 @@ void CalcParticleOpticalProperties(Tensor6& extinction_matrix,
           abs_vec_bulk_ii(0, joker, joker, joker);
     }
   }
-
-
-
-
-
 }
 
+void sca_optpropCalc(  //Output
+    Tensor7& scattering_matrix,
+    const Tensor3& t_field,
+    const Index& f_index,
+    const ArrayOfArrayOfSingleScatteringData& scat_data,
+    const ConstTensor4View& pnd_field,
+    const Index& stokes_dim,
+    const Index& atmosphere_dim,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid,
+    const Index& t_interp_order,
+    const Verbosity& verbosity) {
+
+  CREATE_OUT2;
+
+  const Index Np = pnd_field.npages();
+  const Index Nlat = pnd_field.nrows();
+  const Index Nlon = pnd_field.ncols();
+
+  // preparing input data
+  Matrix idir_array;
+  idir_array.resize(scat_za_grid.nelem() * scat_aa_grid.nelem(), 2);
+
+  //Flatten incoming directions
+  Index Idir_idx = 0;
+  for (Index i_aa = 0; i_aa < scat_aa_grid.nelem(); i_aa++) {
+    for (Index i_za = 0; i_za < scat_za_grid.nelem(); i_za++) {
+      idir_array(Idir_idx, 0) = scat_za_grid[i_za];
+      idir_array(Idir_idx, 1) = scat_aa_grid[i_aa];
+
+      Idir_idx += 1;
+    }
+  }
+
+  Matrix pdir_array;
+  if (atmosphere_dim == 1) {
+    pdir_array.resize(za_grid.nelem(), 2);
+    pdir_array(joker, 0) = za_grid;
+  } else {
+    pdir_array.resize(scat_za_grid.nelem() * scat_aa_grid.nelem(), 2);
+
+    //Flatten outgoing/propagation directions
+    Index Pdir_idx = 0;
+    for (Index i_aa = 0; i_aa < aa_grid.nelem(); i_aa++) {
+      for (Index i_za = 0; i_za < za_grid.nelem(); i_za++) {
+        pdir_array(Idir_idx, 0) = za_grid[i_za];
+        pdir_array(Idir_idx, 1) = aa_grid[i_aa];
+
+        Pdir_idx += 1;
+      }
+    }
+  }
+
+  // making output containers
+  ArrayOfArrayOfTensor6 sca_mat_Nse;
+  ArrayOfArrayOfIndex ptypes_Nse;
+  Matrix t_ok;
+  ArrayOfTensor6 sca_mat_ssbulk;
+  ArrayOfIndex ptype_ssbulk;
+  Tensor6 scat_mat_bulk_ii;
+  Index ptype_bulk_ii;
+
+  if (atmosphere_dim == 1){
+    scattering_matrix.resize(Np,
+                             Nlat,
+                             Nlon,
+                             pdir_array.nrows(),
+                             idir_array.nrows(),
+                             stokes_dim,
+                             stokes_dim);
+  } else {
+    scattering_matrix.resize(Np,
+                             Nlat,
+                             Nlon,
+                             pdir_array.nrows(),
+                             scat_za_grid.nelem(),
+                             stokes_dim,
+                             stokes_dim);
+  }
+
+  ostringstream os;
+  os << "calculating ensemble scattering matrix \n";
+  out2 << os.str();
+  os.clear();
+
+  for (Index ilat = 0; ilat < Nlat; ilat++) {
+    for (Index ilon = 0; ilon < Nlon; ilon++) {
+      pha_mat_NScatElems(  //Output
+          sca_mat_Nse,     // [nss][nse](nf,nT,npdir,nidir,nst,nst)
+          ptypes_Nse,
+          t_ok,
+          //Input
+          scat_data,
+          stokes_dim,
+          t_field(joker, ilat, ilon),
+          pdir_array,
+          idir_array,
+          f_index,
+          t_interp_order);
+
+      pha_mat_ScatSpecBulk(  //Output
+          sca_mat_ssbulk,    // [nss](nf,nT,npdir,nidir,nst,nst)
+          ptype_ssbulk,
+          //Input
+          sca_mat_Nse,  // [nss][nse](nf,nT,npdir,nidir,nst,nst)
+          ptypes_Nse,
+          pnd_field(joker, joker, ilat, ilon),
+          t_ok);
+
+      pha_mat_Bulk(          //Output
+          scat_mat_bulk_ii,  // (nf,nT,npdir,nidir,nst,nst)
+          ptype_bulk_ii,
+          //Input
+          sca_mat_ssbulk,  // [nss](nf,nT,npdir,nidir,nst,nst)
+          ptype_ssbulk);
+
+      //For 1D atmosphere we can do already the azimuth integration here
+      //as for 1D atmosphere, there is no azimuth dependency of the incoming
+      //radiation
+      if (atmosphere_dim == 1) {
 
 
+        os << "As we have a 1D atmosphere, we can integrate over \n"
+           << "incoming azimuth. \n";
+        out2 << os.str();
+        os.clear();
+
+
+        Tensor6 scat_mat_bulk_ii_temp;
+        Index idx_i = 0;
+        Index idx_i1 = 0;
+        Numeric delta_phi = 360. / (scat_aa_grid.nelem() - 1);
+
+        scat_mat_bulk_ii_temp.resize(1,
+                                     Np,
+                                     za_grid.nelem(),
+                                     scat_za_grid.nelem(),
+                                     stokes_dim,
+                                     stokes_dim);
+
+        //integrate over incoming azimuth
+        for (Index i_za = 0; i_za < scat_za_grid.nelem(); i_za++) {
+          for (Index i_aa = 0; i_aa < scat_aa_grid.nelem() - 1; i_aa++) {
+            //flattened indices
+            idx_i = i_aa * scat_aa_grid.nelem() + i_za;
+            idx_i1 = (i_aa + 1) * scat_aa_grid.nelem() + i_za;
+
+            scat_mat_bulk_ii_temp(joker, joker, joker, i_za, joker, joker) +=
+                scat_mat_bulk_ii(joker, joker, joker, idx_i, joker, joker);
+
+            scat_mat_bulk_ii_temp(joker, joker, joker, i_za, joker, joker) +=
+                scat_mat_bulk_ii(joker, joker, joker, idx_i1, joker, joker);
+
+            scat_mat_bulk_ii_temp(joker, joker, joker, i_za, joker, joker) /=
+                2.;
+
+            scat_mat_bulk_ii_temp(joker, joker, joker, i_za, joker, joker) *=
+                delta_phi;
+          }
+        }
+
+        scattering_matrix(joker, ilat, ilon, joker, joker, joker, joker) =
+            scat_mat_bulk_ii_temp(0, joker, joker, joker, joker, joker);
+
+      } else {
+        scattering_matrix(joker, ilat, ilon, joker, joker, joker, joker) =
+            scat_mat_bulk_ii(0, joker, joker, joker, joker, joker);
+      }
+    }
+  }
+}
