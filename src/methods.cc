@@ -10427,6 +10427,7 @@ void define_md_data_raw() {
                GIN_DEFAULT(),
                GIN_DESC()));
 
+  //TODO: Add documentation
   md_data_raw.push_back(create_mdrecord(
       NAME("NewDoitCalc"),
       DESCRIPTION("Interface to the DOIT solver.\n"
@@ -10440,7 +10441,8 @@ void define_md_data_raw() {
           "scat_aa_grid",
           "gas_extinction_doit",
           "extinction_matrix_doit",
-          "absorption_vector_doit"),
+          "absorption_vector_doit",
+          "scattering_matrix_doit_array"),
       GOUT(),
       GOUT_TYPE(),
       GOUT_DESC(),
@@ -10475,6 +10477,7 @@ void define_md_data_raw() {
           "max_lvl_optimize",
           "tau_scat_max",
           "sgl_alb_max",
+          "t_interp_order",
           "N_za_grid",
           "N_aa_grid",
           "N_scat_za_grid",
@@ -10490,6 +10493,7 @@ void define_md_data_raw() {
                "Index",
                "Index",
                "Index",
+               "Index",
                "String",
                "Tensor7"),
       GIN_DEFAULT(NODEF,
@@ -10497,6 +10501,7 @@ void define_md_data_raw() {
                   "0",
                   "0.1",
                   "0.9",
+                  "0",
                   "17",
                   "35",
                   "19",
@@ -10513,6 +10518,7 @@ void define_md_data_raw() {
           "if set to 0 no optimization is done",
           "Maximum scattering optical thickness",
           "Maximum single scattering albedo",
+          "Temperature interpolation of scattering data",
           "Number of zenith angle grid points",
           "Number of azimuth angle grid points",
           "Number of scattering zenith angle grid points for the "

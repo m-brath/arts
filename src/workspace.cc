@@ -5799,6 +5799,19 @@ void Workspace::define_wsv_data() {
                   "Dimensions: [ Nf, p_grid, lat_grid, lon_grid, za_grid,"
                   " StokesDim]\n"),
       GROUP("Tensor6")));
+
+  //TODO: Remove later or add documentation and move it to correct position
+  wsv_data.push_back(WsvRecord(
+      NAME("scattering_matrix_doit_array"),
+      DESCRIPTION("Array of scattering matrix field within cloudbox.\n"
+                  "\n"
+                  "\n"
+                  "Usage:      Output of *NewDoitCalc*\n"
+                  "\n"
+                  "Unit:       1/m\n"
+                  "\n"
+                  "Dimensions: Number of array elements equals number of frequencies\n"),
+      GROUP("ArrayOfTensor7")));
 }
 
 //! Get index of WSV
