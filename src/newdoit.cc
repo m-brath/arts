@@ -731,8 +731,6 @@ void NewDoitMonoCalc(Workspace& ws,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
                      Tensor7& scattering_matrix,
-
-    //Input
                      const ArrayOfIndex& cloudbox_limits,
                      const Agenda& propmat_clearsky_agenda,
                      const Agenda& surface_rtprop_agenda,
@@ -780,7 +778,7 @@ void NewDoitMonoCalc(Workspace& ws,
                     lon_grid,
                     f_mono);
 
-  ostringstream os;
+  ostringstream os, os1, os2;
   os << "gas absorption calculated \n";
   out0 << os.str();
   os.clear();
@@ -795,9 +793,9 @@ void NewDoitMonoCalc(Workspace& ws,
                                 t_field,
                                 stokes_dim);
 
-  os << "particle optical properties calculated \n";
-  out0 << os.str();
-  os.clear();
+  os1 << "particle optical properties calculated \n";
+  out0 << os1.str();
+  os1.clear();
 
   //calculate sca_optpropCalc_doit
   sca_optpropCalc(scattering_matrix,
@@ -813,6 +811,12 @@ void NewDoitMonoCalc(Workspace& ws,
                   scat_aa_grid,
                   t_interp_order,
                   verbosity);
+
+
+  os2 << "particle optical properties calculated \n";
+  out0 << os2.str();
+  os2.clear();
+
 
   //calculate surf_optpropCalc_doit
 
@@ -1000,6 +1004,8 @@ void sca_optpropCalc(  //Output
   if (atmosphere_dim == 1) {
     pdir_array.resize(za_grid.nelem(), 2);
     pdir_array(joker, 0) = za_grid;
+    pdir_array(joker, 1) = 0.;
+
   } else {
     pdir_array.resize(scat_za_grid.nelem() * scat_aa_grid.nelem(), 2);
 
@@ -1029,7 +1035,7 @@ void sca_optpropCalc(  //Output
                              Nlat,
                              Nlon,
                              pdir_array.nrows(),
-                             idir_array.nrows(),
+                             scat_za_grid.nelem(),
                              stokes_dim,
                              stokes_dim);
   } else {
@@ -1037,10 +1043,12 @@ void sca_optpropCalc(  //Output
                              Nlat,
                              Nlon,
                              pdir_array.nrows(),
-                             scat_za_grid.nelem(),
+                             idir_array.nrows(),
                              stokes_dim,
                              stokes_dim);
   }
+  scattering_matrix=0.;
+
 
   ostringstream os;
   os << "calculating ensemble scattering matrix \n";
@@ -1093,7 +1101,7 @@ void sca_optpropCalc(  //Output
         Tensor6 scat_mat_bulk_ii_temp;
         Index idx_i = 0;
         Index idx_i1 = 0;
-        Numeric delta_phi = 360. / (scat_aa_grid.nelem() - 1);
+        Numeric delta_phi = 360. *DEG2RAD / (scat_aa_grid.nelem() - 1);
 
         scat_mat_bulk_ii_temp.resize(1,
                                      Np,
@@ -1101,13 +1109,14 @@ void sca_optpropCalc(  //Output
                                      scat_za_grid.nelem(),
                                      stokes_dim,
                                      stokes_dim);
+        scat_mat_bulk_ii_temp=0.;
 
         //integrate over incoming azimuth
         for (Index i_za = 0; i_za < scat_za_grid.nelem(); i_za++) {
-          for (Index i_aa = 0; i_aa < scat_aa_grid.nelem() - 1; i_aa++) {
+          for (Index i_aa = 0; i_aa < (scat_aa_grid.nelem() - 1); i_aa++) {
             //flattened indices
-            idx_i = i_aa * scat_aa_grid.nelem() + i_za;
-            idx_i1 = (i_aa + 1) * scat_aa_grid.nelem() + i_za;
+            idx_i = i_aa * scat_za_grid.nelem() + i_za;
+            idx_i1 = (i_aa + 1) * scat_za_grid.nelem() + i_za;
 
             scat_mat_bulk_ii_temp(joker, joker, joker, i_za, joker, joker) +=
                 scat_mat_bulk_ii(joker, joker, joker, idx_i, joker, joker);
