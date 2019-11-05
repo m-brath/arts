@@ -740,6 +740,7 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Tensor3& t_field,
                      const Tensor3& z_field,
                      const Tensor4& vmr_field,
+                     const Matrix& z_surface,
                      const Vector& p_grid,
                      const Vector& lat_grid,
                      const Vector& lon_grid,
@@ -798,29 +799,49 @@ void NewDoitMonoCalc(Workspace& ws,
   os1.clear();
 
   //calculate sca_optpropCalc_doit
-  sca_optpropCalc(scattering_matrix,
-                  t_field,
-                  f_index,
-                  scat_data,
-                  pnd_field,
-                  stokes_dim,
-                  atmosphere_dim,
-                  za_grid,
-                  aa_grid,
-                  scat_za_grid,
-                  scat_aa_grid,
-                  t_interp_order,
-                  verbosity);
-
+  CalcScatteringProperties(scattering_matrix,
+                           t_field,
+                           f_index,
+                           scat_data,
+                           pnd_field,
+                           stokes_dim,
+                           atmosphere_dim,
+                           za_grid,
+                           aa_grid,
+                           scat_za_grid,
+                           scat_aa_grid,
+                           t_interp_order,
+                           verbosity);
 
   os2 << "particle optical properties calculated \n";
   out0 << os2.str();
   os2.clear();
 
 
+  Matrix surface_skin_t;
+  Tensor4 surface_los;
+  Tensor6 surface_reflection_matrix;
+  Tensor5 surface_emission;
+
   //calculate surf_optpropCalc_doit
-
-
+  if (atmosphere_dim == 1) {
+    if (z_surface(0, 0) >= z_field(0, 0, 0)) {
+      CalcSurfaceProperties(ws,
+                            surface_skin_t,
+                            surface_los,
+                            surface_reflection_matrix,
+                            surface_emission,
+                            surface_rtprop_agenda,
+                            f_mono,
+                            za_grid,
+                            aa_grid,
+                            lat_grid,
+                            lon_grid,
+                            atmosphere_dim,
+                            stokes_dim,
+                            z_surface);
+    }
+  }
 
   //run new doit
 
@@ -964,7 +985,7 @@ void CalcParticleOpticalProperties(Tensor6& extinction_matrix,
   }
 }
 
-void sca_optpropCalc(  //Output
+void CalcScatteringProperties(  //Output
     Tensor7& scattering_matrix,
     const Tensor3& t_field,
     const Index& f_index,
@@ -1138,6 +1159,118 @@ void sca_optpropCalc(  //Output
       } else {
         scattering_matrix(joker, ilat, ilon, joker, joker, joker, joker) =
             scat_mat_bulk_ii(0, joker, joker, joker, joker, joker);
+      }
+    }
+  }
+}
+
+void CalcSurfaceProperties(Workspace& ws,
+                      //Output
+                      Matrix& surface_skin_t,
+                      Tensor4& surface_los,
+                      Tensor6& surface_reflection_matrix,
+                      Tensor5& surface_emission,
+
+                      //Input
+                      const Agenda& surface_rtprop_agenda,
+                      const ConstVectorView f_grid,
+                      const ConstVectorView za_grid,
+                      const ConstVectorView aa_grid,
+                      const Vector& lat_grid,
+                      const Vector& lon_grid,
+                      const Index& atmosphere_dim,
+                      const Index& stokes_dim,
+                      const Matrix& z_surface) {
+
+  chk_not_empty("surface_rtprop_agenda", surface_rtprop_agenda);
+  const Index Nza = za_grid.nelem();
+  const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
+  const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
+
+  Index Naa = 1;
+  Vector rte_pos(1, 0);
+  Vector rte_los(1, 0);
+
+  // rte_pos and rte_los are of different size than for 1d atm.
+  if (atmosphere_dim == 3) {
+    rte_pos.resize(3);
+    rte_pos = 0.;
+    rte_pos.resize(2);
+    rte_pos = 0.;
+
+    Naa = aa_grid.nelem();
+  }
+
+  //Allocate
+  Numeric surface_skin_t_ii;
+  Matrix surface_los_ii;
+  Tensor4 surface_rmatrix_ii;
+  Matrix surface_emission_ii;
+  Index los_idx;
+
+  //prepare output container
+  surface_skin_t.resize(Nlat, Nlon);
+  surface_los.resize(Nlat, Nlon, Naa * Nza, 2);
+  surface_reflection_matrix.resize(Nlat, Nlon, Naa * Nza, 1, stokes_dim, stokes_dim);
+  surface_emission.resize(Nlat, Nlon,Naa * Nza, 1, stokes_dim);
+  surface_skin_t = 0.;
+  surface_los = NAN;
+  surface_reflection_matrix = NAN;
+  surface_emission = 0;
+
+  // loop over geographic coordinates
+  for (Index ilat = 0; ilat < Nlat; ilat++) {
+    for (Index ilon = 0; ilon < Nlon; ilon++) {
+
+      rte_pos[0] = z_surface(ilat, ilon);
+      // for a 3d atmosphere rte_pos has 3 components
+      if (atmosphere_dim == 3) {
+        rte_pos[1] = lat_grid[ilat];
+        rte_pos[2] = lon_grid[ilon];
+      }
+
+      los_idx = 0;
+      for (Index iaa = 0; iaa < Naa; iaa++) {
+        for (Index iza = 0; iza < Nza; iza++) {
+          if (za_grid[iza] > 90) {
+            rte_los[0] = za_grid[iza];
+
+
+            if (atmosphere_dim == 3) {
+              rte_los[1] = aa_grid[iaa];
+            }
+
+            // calculate the local surface properties
+            surface_rtprop_agendaExecute(ws,
+                                         surface_skin_t_ii,
+                                         surface_emission_ii,
+                                         surface_los_ii,
+                                         surface_rmatrix_ii,
+                                         f_grid,
+                                         rte_pos,
+                                         rte_los,
+                                         surface_rtprop_agenda);
+
+            // surface_skin_t is independent of rte_los, so we need it only for
+            // first rte_los
+            if (iaa == 0 && iza == 0) {
+              surface_skin_t(ilat, ilon) = surface_skin_t_ii;
+            }
+
+            //Store it
+            surface_reflection_matrix(ilat, ilon, los_idx, 0, joker, joker) =
+                surface_rmatrix_ii(0, 0, joker, joker);
+            surface_emission(ilat, ilon, los_idx, 0, joker) =
+                surface_emission_ii(0, joker);
+
+            surface_los(ilat, ilon, los_idx, 0) = surface_los_ii(0, 0);
+            //for 3d atmosphere sensor_los has to angles.
+            if (atmosphere_dim == 3) {
+              surface_los(ilat, ilon, los_idx, 1) = surface_los_ii(0, 1);
+            }
+          }
+          los_idx++;
+        }
       }
     }
   }

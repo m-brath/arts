@@ -10463,6 +10463,7 @@ void define_md_data_raw() {
          "nlte_field",
          "z_field",
          "vmr_field",
+         "z_surface",
          "p_grid",
          "lat_grid",
          "lon_grid",
