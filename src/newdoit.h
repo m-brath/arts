@@ -60,7 +60,8 @@ extern const Numeric RAD2DEG;
 extern const Numeric DEG2RAD;
 
 //TODO:Add doxygen doc
-void Initialize_doit_i_field(  //Output
+void Initialize_doit_i_field(
+    //Output
     Tensor7& doit_i_field,
     //Input
     const Index& stokes_dim,
@@ -71,7 +72,8 @@ void Initialize_doit_i_field(  //Output
     const ArrayOfIndex& cloudbox_limits);
 
 //TODO:Add doxygen doc
-void SetAngularGrids(  //Output
+void SetAngularGrids(
+    //Output
     Vector& za_grid,
     Vector& aa_grid,
     Vector& scat_za_grid,
@@ -84,7 +86,8 @@ void SetAngularGrids(  //Output
     const String& za_grid_type);
 
 //TODO:Add doxygen doc
-void SetClearsky_doit_i_field(  //Output
+void SetClearsky_doit_i_field(
+    //Output
     Tensor7& doit_i_field,
     //Input
     const Vector& f_grid,
@@ -97,7 +100,9 @@ void SetClearsky_doit_i_field(  //Output
 
 //TODO:Add doxygen doc
 void GetIncomingRadiation(Workspace& ws,
+                          //Output
                           Tensor7& doit_i_field,
+                          //Input
                           const Agenda& iy_main_agenda,
                           const Index& atmosphere_dim,
                           const Vector& lat_grid,
@@ -111,12 +116,15 @@ void GetIncomingRadiation(Workspace& ws,
                           const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
-void LimitInputGridsAndFieldsToCloudbox(Vector& p_grid_cldbx,
+void LimitInputGridsAndFieldsToCloudbox(
+                                        //Output
+                                        Vector& p_grid_cldbx,
                                         Vector& lat_grid_cldbx,
                                         Vector& lon_grid_cldbx,
                                         Tensor3& t_field_cldbx,
                                         Tensor3& z_field_cldbx,
                                         Tensor4& vmr_field_cldbx,
+                                        //Input
                                         ConstVectorView p_grid,
                                         ConstVectorView lat_grid,
                                         ConstVectorView lon_grid,
@@ -128,11 +136,13 @@ void LimitInputGridsAndFieldsToCloudbox(Vector& p_grid_cldbx,
 
 //TODO:Add doxygen doc
 void NewDoitMonoCalc(Workspace& ws,
+                     //Output
                      Tensor6& doit_i_field_mono,
                      Tensor3& gas_extinction,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
                      Tensor7& scattering_matrix,
+                     //Input
                      const ArrayOfIndex& cloudbox_limits,
                      const Agenda& propmat_clearsky_agenda,
                      const Agenda& surface_rtprop_agenda,
@@ -142,6 +152,7 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Tensor3& t_field,
                      const Tensor3& z_field,
                      const Tensor4& vmr_field,
+                     const Matrix& z_surface,
                      const Vector& p_grid,
                      const Vector& lat_grid,
                      const Vector& lon_grid,
@@ -164,7 +175,9 @@ void NewDoitMonoCalc(Workspace& ws,
 
 //TODO:Add doxygen doc
 void CalcGasExtinction(Workspace& ws,
+                       //Output
                        Tensor3& gas_extinct,
+                       //Input
                        const Agenda& propmat_clearsky_agenda,
                        const ConstTensor3View& t_field,
                        const ConstTensor4View& vmr_field,
@@ -175,8 +188,10 @@ void CalcGasExtinction(Workspace& ws,
 
 //TODO:Add doxygen doc
 void CalcParticleOpticalProperties(
+    //Output
     Tensor6& extinction_matrix,
     Tensor5& absorption_vector,
+    //input
     const ArrayOfArrayOfSingleScatteringData& scat_data,
     const Vector& scat_za_grid,
     const Index& f_index,
@@ -185,8 +200,10 @@ void CalcParticleOpticalProperties(
     const Index& stokes_dim);
 
 //TODO:Add doxygen doc
-void sca_optpropCalc(  //Output
+void CalcScatteringProperties(
+    //Output
     Tensor7& scattering_matrix,
+    //Input
     const Tensor3& t_field,
     const Index& f_index,
     const ArrayOfArrayOfSingleScatteringData& scat_data,
@@ -199,3 +216,22 @@ void sca_optpropCalc(  //Output
     const Vector& scat_aa_grid,
     const Index& t_interp_order,
     const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void CalcSurfaceProperties(Workspace& ws,
+                           //Output
+                           Matrix& surface_skin_t,
+                           Tensor4& surface_los,
+                           Tensor6& surface_reflection_matrix,
+                           Tensor5& surface_emission,
+
+                           //Input
+                           const Agenda& surface_rtprop_agenda,
+                           const ConstVectorView f_grid,
+                           const ConstVectorView za_grid,
+                           const ConstVectorView aa_grid,
+                           const Vector& lat_grid,
+                           const Vector& lon_grid,
+                           const Index& atmosphere_dim,
+                           const Index& stokes_dim,
+                           const Matrix& surface_field);
