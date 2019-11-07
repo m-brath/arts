@@ -235,3 +235,13 @@ void CalcSurfaceProperties(Workspace& ws,
                            const Index& atmosphere_dim,
                            const Index& stokes_dim,
                            const Matrix& surface_field);
+
+//TODO:Add doxygen doc
+void CalcPropagationPathMaxLength(
+    Tensor3& p_path_maxlength,
+    Tensor6& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+    const ConstVectorView& p_grid,
+    const ConstVectorView& lat_grid,
+    const ConstVectorView& lon_grid,
+    const Vector& scat_za_grid,
+    Numeric& tau_max);
