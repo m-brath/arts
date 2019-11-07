@@ -843,6 +843,11 @@ void NewDoitMonoCalc(Workspace& ws,
     }
   }
 
+  //calculate local ppath_lmax
+  Tensor3 lmax;
+
+
+
   //run new doit
 
 }
@@ -907,8 +912,8 @@ void CalcGasExtinction(Workspace& ws,
   }
 }
 
-void CalcParticleOpticalProperties(Tensor6& extinction_matrix,
-                    Tensor5& absorption_vector,
+void CalcParticleOpticalProperties(Tensor6& extinction_matrix,//(Np,Nlat,Nlon,ndir,nst,nst)
+                    Tensor5& absorption_vector,//(Np,Nlat,Nlon,ndir,nst)
                     const ArrayOfArrayOfSingleScatteringData& scat_data,
                     const Vector& scat_za_grid,
                     const Index& f_index,
@@ -969,8 +974,8 @@ void CalcParticleOpticalProperties(Tensor6& extinction_matrix,
                             t_ok);
 
       //Calculate the bulk optical properties
-      opt_prop_Bulk(ext_mat_bulk_ii,
-                    abs_vec_bulk_ii,
+      opt_prop_Bulk(ext_mat_bulk_ii, //(nf,nT,ndir,nst,nst)
+                    abs_vec_bulk_ii, //(nf,nT,ndir,nst)
                     ptype_bulk_ii,
                     ext_mat_ssbulk,
                     abs_vec_ssbulk,
@@ -1271,6 +1276,48 @@ void CalcSurfaceProperties(Workspace& ws,
           }
           los_idx++;
         }
+      }
+    }
+  }
+}
+
+void CalcPropagationPathMaxLength(
+    Tensor3& p_path_maxlength,
+    Tensor6& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+    const ConstVectorView& p_grid,
+    const ConstVectorView& lat_grid,
+    const ConstVectorView& lon_grid,
+    const Vector& scat_za_grid,
+    Numeric& tau_max) {
+
+
+  const Index Np = p_grid.nelem();
+  const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
+  const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
+  const Index Ndir = extinction_matrix.npages();
+  Numeric ext_mat_elem;
+
+  //prepare output container
+  p_path_maxlength.resize(Np, Nlat, Nlon);
+  p_path_maxlength = 0.;
+
+  for (Index ip = 0; ip < Np; ip++) {
+    for (Index ilat = 0; ilat < Nlat; ilat++) {
+      for (Index ilon = 0; ilon < Nlon; ilon++) {
+        ext_mat_elem = 0.;
+
+        // calculate average over zenith direction,
+        // for azimuthal random orientation, this is not fully correct,
+        // but since this is more an rough estimation we assume, that the
+        // optical thickness is only a function of the position.
+        for (Index idir = 0; idir < Ndir; idir++) {
+          ext_mat_elem += (extinction_matrix(ip, ilat, ilon, idir, 0, 0) *
+                           sin(scat_za_grid[idir] * DEG2RAD));
+        }
+        ext_mat_elem /= Numeric(Ndir);
+
+        // maximum propagation path length for each grid point.
+        p_path_maxlength(ip, ilat, ilon) = tau_max / ext_mat_elem;
       }
     }
   }
