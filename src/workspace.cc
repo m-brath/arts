@@ -5812,6 +5812,33 @@ void Workspace::define_wsv_data() {
                   "\n"
                   "Dimensions: Number of array elements equals number of frequencies\n"),
       GROUP("ArrayOfTensor7")));
+
+  //TODO: Remove later or add documentation and move it to correct position
+  wsv_data.push_back(WsvRecord(
+      NAME("convergence_flag_doit"),
+      DESCRIPTION("Array of convergence flags.\n"
+                  "\n"
+                  "\n"
+                  "Usage:      Output of *NewDoitCalc*\n"
+                  "\n"
+                  "Unit:       no unit\n"
+                  "\n"
+                  "Dimensions: Number of array elements equals number of frequencies\n"),
+      GROUP("ArrayOfIndex")));
+
+  //TODO: Remove later or add documentation and move it to correct position
+  wsv_data.push_back(WsvRecord(
+      NAME("iteration_counter_doit"),
+      DESCRIPTION("Array of iteration counter.\n"
+                  "\n"
+                  "\n"
+                  "Usage:      Output of *NewDoitCalc*\n"
+                  "\n"
+                  "Unit:       no unit\n"
+                  "\n"
+                  "Dimensions: Number of array elements equals number of frequencies\n"),
+      GROUP("ArrayOfIndex")));
+
 }
 
 //! Get index of WSV

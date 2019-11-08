@@ -731,9 +731,12 @@ void NewDoitMonoCalc(Workspace& ws,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
                      Tensor7& scattering_matrix,
+                     Index& convergence_flag,
+                     Index& iteration_counter,
                      const ArrayOfIndex& cloudbox_limits,
                      const Agenda& propmat_clearsky_agenda,
                      const Agenda& surface_rtprop_agenda,
+                     const Agenda& ppath_step_agenda,
                      const Index& atmosphere_dim,
                      const Index& stokes_dim,
                      const Tensor4& pnd_field,
@@ -756,17 +759,15 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Vector& refellipsoid,
                      const Vector& epsilon,
                      const Index& max_num_iterations,
-                     const Index& max_lvl_optimize,
-                     const Numeric& tau_scat_max,
-                     const Numeric& sgl_alb_max,
+                     const Numeric& tau_max,
+                     const Index& accelerated,
+                     const Numeric& ppath_lmax,
+                     const Numeric& ppath_lraytrace,
                      const Verbosity& verbosity)
 
 {
 
   CREATE_OUT0;
-//  Tensor3 gas_extinct;
-
-
 
   //calculate gas extinction
   CalcGasExtinction(ws,
@@ -843,12 +844,55 @@ void NewDoitMonoCalc(Workspace& ws,
     }
   }
 
-  //calculate local ppath_lmax
-  Tensor3 lmax;
-
-
+  Tensor3 p_path_maxlength;
+  if (tau_max > 0) {
+    //calculate local ppath_lmax
+    CalcPropagationPathMaxLength(
+        p_path_maxlength,
+        extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+        p_grid,
+        lat_grid,
+        lon_grid,
+        za_grid,
+        tau_max);
+  }
 
   //run new doit
+  RunNewDoit(ws,
+      doit_i_field_mono,
+      convergence_flag,
+      iteration_counter,
+      gas_extinction,
+      extinction_matrix,
+      absorption_vector,
+      scattering_matrix,
+      cloudbox_limits,
+      propmat_clearsky_agenda,
+      surface_rtprop_agenda,
+      ppath_step_agenda,
+      atmosphere_dim,
+      stokes_dim,
+      t_field,
+      z_field,
+      z_surface,
+      p_grid,
+      lat_grid,
+      lon_grid,
+      za_grid,
+      aa_grid,
+      scat_za_grid,
+      scat_aa_grid,
+      f_mono,
+      f_index,
+      iy_unit,
+      ppath_lmax,
+      ppath_lraytrace,
+      p_path_maxlength,
+      refellipsoid,
+      epsilon,
+      max_num_iterations,
+      accelerated,
+      verbosity);
 
 }
 
@@ -1288,7 +1332,7 @@ void CalcPropagationPathMaxLength(
     const ConstVectorView& lat_grid,
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
-    Numeric& tau_max) {
+    const Numeric& tau_max) {
 
 
   const Index Np = p_grid.nelem();
@@ -1321,4 +1365,301 @@ void CalcPropagationPathMaxLength(
       }
     }
   }
+}
+
+void RunNewDoit(Workspace& ws,
+                //Input and Output:
+                Tensor6& doit_i_field_mono,
+                Index& convergence_flag,
+                Index& iteration_counter,
+                const ConstTensor3View& gas_extinction,
+                const ConstTensor6View& extinction_matrix,
+                const ConstTensor5View& absorption_vector,
+                const ConstTensor7View& scattering_matrix,
+                const ArrayOfIndex& cloudbox_limits,
+                const Agenda& propmat_clearsky_agenda,
+                const Agenda& surface_rtprop_agenda,
+                const Agenda& ppath_step_agenda,
+                const Index& atmosphere_dim,
+                const Index& stokes_dim,
+                const Tensor3& t_field,
+                const Tensor3& z_field,
+                const Matrix& z_surface,
+                const Vector& p_grid,
+                const Vector& lat_grid,
+                const Vector& lon_grid,
+                const Vector& za_grid,
+                const Vector& aa_grid,
+                const Vector& scat_za_grid,
+                const Vector& scat_aa_grid,
+                const Numeric& f_mono,
+                const Index& f_index,
+                const String& iy_unit,
+                const Numeric& ppath_lmax,
+                const Numeric& ppath_lraytrace,
+                const Tensor3& p_path_maxlength,
+                const Vector& refellipsoid,
+                const Vector& epsilon,
+                const Index& max_num_iterations,
+                const Index& accelerated,
+                const Verbosity& verbosity) {
+  CREATE_OUT2;
+
+  for (Index v = 0; v < doit_i_field_mono.nvitrines(); v++)
+    for (Index s = 0; s < doit_i_field_mono.nshelves(); s++)
+      for (Index b = 0; b < doit_i_field_mono.nbooks(); b++)
+        for (Index p = 0; p < doit_i_field_mono.npages(); p++)
+          for (Index r = 0; r < doit_i_field_mono.nrows(); r++)
+            for (Index c = 0; c < doit_i_field_mono.ncols(); c++)
+              if (std::isnan(doit_i_field_mono(v, s, b, p, r, c)))
+                throw std::runtime_error(
+                    "*doit_i_field_mono* contains at least one NaN value.\n"
+                    "This indicates an improper initialization of *doit_i_field*.");
+
+  //doit_i_field_mono can not be further checked here, because there is no way
+  //to find out the size without including a lot more interface
+  //variables
+  //-----------End of checks--------------------------------------
+
+  Tensor6 doit_i_field_mono_old;
+
+  // Resize and initialize doit_scat_field,
+  // which  has the same dimensions as doit_i_field
+  Tensor6 doit_scat_field(doit_i_field_mono.nvitrines(),
+                          doit_i_field_mono.nshelves(),
+                          doit_i_field_mono.nbooks(),
+                          doit_i_field_mono.npages(),
+                          doit_i_field_mono.nrows(),
+                          doit_i_field_mono.ncols(),
+                          0.);
+
+  convergence_flag = 0;
+  iteration_counter = 0;
+  // Array to save the last iteration steps
+  ArrayOfTensor6 acceleration_input;
+  if (accelerated) {
+    acceleration_input.resize(4);
+  }
+  while (convergence_flag == 0) {
+    // 1. Copy doit_i_field to doit_i_field_old.
+    doit_i_field_mono_old = doit_i_field_mono;
+
+    // 2.Calculate scattered field vector for all points in the cloudbox.
+
+    // Calculate the scattered field.
+    out2 << "  Calculate scattering field. \n";
+    CalcScatteredField(ws,
+                       doit_scat_field,
+                       doit_i_field_mono,
+                       scattering_matrix,
+                       atmosphere_dim,
+                       cloudbox_limits,
+                       za_grid,
+                       aa_grid,
+                       scat_za_grid,
+                       scat_aa_grid,
+                       verbosity);
+
+    // Update doit_i_field.
+    out2 << "  Execute doit_rte_agenda. \n";
+    Vector f_grid(1, f_mono);
+    UpdateSpectralRadianceField(ws,
+                                doit_i_field_mono,
+                                doit_scat_field,
+                                gas_extinction,
+                                extinction_matrix,
+                                absorption_vector,
+                                cloudbox_limits,
+                                za_grid,
+                                aa_grid,
+                                atmosphere_dim,
+                                ppath_step_agenda,
+                                ppath_lmax,
+                                ppath_lraytrace,
+                                p_path_maxlength,
+                                p_grid,
+                                z_field,
+                                refellipsoid,
+                                t_field,
+                                f_grid,
+                                f_index,
+                                verbosity);
+
+    //Convergence test.
+    ChackConvergence(convergence_flag,
+                     iteration_counter,
+                     doit_i_field_mono,
+                     doit_i_field_mono_old,
+                     epsilon,
+                     max_num_iterations,
+                     iy_unit,
+                     verbosity);
+
+    // Convergence Acceleration, if wished.
+    if (accelerated > 0 && convergence_flag == 0) {
+      acceleration_input[(iteration_counter - 1) % 4] = doit_i_field_mono;
+      // NG - Acceleration
+      if (iteration_counter % 4 == 0) {
+        doit_i_field_ngAcceleration(
+            doit_i_field_mono, acceleration_input, accelerated, verbosity);
+      }
+    }
+  }  //end of while loop, convergence is reached.
+}
+
+void CalcScatteredField(Workspace& ws,
+                        // WS Output and Input
+                        Tensor6& doit_scat_field,
+                        //WS Input:
+                        const Tensor6& doit_i_field_mono,
+                        const Tensor7& scattering_matrix,
+                        const Index& atmosphere_dim,
+                        const ArrayOfIndex& cloudbox_limits,
+                        const Vector& za_grid,
+                        const Vector& aa_grid,
+                        const Vector& scat_za_grid,
+                        const Vector& scat_aa_grid,
+                        const Verbosity& verbosity) {
+
+
+
+
+}
+
+void UpdateSpectralRadianceField(Workspace& ws,
+                                 // WS Input and Output:
+                                 Tensor6& doit_i_field_mono,
+                                 Tensor6& doit_scat_field,
+                                 // WS Input:
+                                 const ConstTensor3View& gas_extinction,
+                                 const ConstTensor6View& extinction_matrix,
+                                 const ConstTensor5View& absorption_vector,
+                                 const ArrayOfIndex& cloudbox_limits,
+                                 const Vector& za_grid,
+                                 const Vector& aa_grid,
+                                 const Index& atmosphere_dim,
+                                 // Propagation path calculation:
+                                 const Agenda& ppath_step_agenda,
+                                 const Numeric& ppath_lmax,
+                                 const Numeric& ppath_lraytrace,
+                                 const Tensor3& p_path_maxlength,
+                                 const Vector& p_grid,
+                                 const Tensor3& z_field,
+                                 const Vector& refellipsoid,
+                                 // Calculate thermal emission:
+                                 const Tensor3& t_field,
+                                 const Vector& f_grid,
+                                 const Index& f_index,
+                                 const Verbosity& verbosity) {
+  if (atmosphere_dim == 1) {
+    UpdateSpectralRadianceField1D(ws,
+                                  doit_i_field_mono,
+                                  doit_scat_field,
+                                  gas_extinction,
+                                  extinction_matrix,
+                                  absorption_vector,
+                                  cloudbox_limits,
+                                  za_grid,
+                                  aa_grid,
+                                  ppath_step_agenda,
+                                  ppath_lmax,
+                                  ppath_lraytrace,
+                                  p_path_maxlength,
+                                  p_grid,
+                                  z_field,
+                                  refellipsoid,
+                                  t_field,
+                                  f_grid,
+                                  f_index,
+                                  verbosity);
+  } else if (atmosphere_dim == 3) {
+    UpdateSpectralRadianceField3D(ws,
+                                  doit_i_field_mono,
+                                  doit_scat_field,
+                                  gas_extinction,
+                                  extinction_matrix,
+                                  absorption_vector,
+                                  cloudbox_limits,
+                                  za_grid,
+                                  aa_grid,
+                                  ppath_step_agenda,
+                                  ppath_lmax,
+                                  ppath_lraytrace,
+                                  p_path_maxlength,
+                                  p_grid,
+                                  z_field,
+                                  refellipsoid,
+                                  t_field,
+                                  f_grid,
+                                  f_index,
+                                  verbosity);
+  }
+}
+
+void UpdateSpectralRadianceField1D(Workspace& ws,
+                                   // WS Input and Output:
+                                   Tensor6& doit_i_field_mono,
+                                   Tensor6& doit_scat_field,
+                                   // WS Input:
+                                   const ConstTensor3View& gas_extinction,
+                                   const ConstTensor6View& extinction_matrix,
+                                   const ConstTensor5View& absorption_vector,
+                                   const ArrayOfIndex& cloudbox_limits,
+                                   const Vector& za_grid,
+                                   const Vector& aa_grid,
+                                   // Propagation path calculation:
+                                   const Agenda& ppath_step_agenda,
+                                   const Numeric& ppath_lmax,
+                                   const Numeric& ppath_lraytrace,
+                                   const Tensor3& p_path_maxlength,
+                                   const Vector& p_grid,
+                                   const Tensor3& z_field,
+                                   const Vector& refellipsoid,
+                                   // Calculate thermal emission:
+                                   const Tensor3& t_field,
+                                   const Vector& f_grid,
+                                   const Index& f_index,
+                                   const Verbosity& verbosity) {
+
+}
+
+void UpdateSpectralRadianceField3D(Workspace& ws,
+                                   // WS Input and Output:
+                                   Tensor6& doit_i_field_mono,
+                                   Tensor6& doit_scat_field,
+                                   const ConstTensor3View& gas_extinction,
+                                   const ConstTensor6View& extinction_matrix,
+                                   const ConstTensor5View& absorption_vector,
+                                   // WS Input:
+                                   const ArrayOfIndex& cloudbox_limits,
+                                   const Vector& za_grid,
+                                   const Vector& aa_grid,
+                                   // Propagation path calculation:
+                                   const Agenda& ppath_step_agenda,
+                                   const Numeric& ppath_lmax,
+                                   const Numeric& ppath_lraytrace,
+                                   const Tensor3& p_path_maxlength,
+                                   const Vector& p_grid,
+                                   const Tensor3& z_field,
+                                   const Vector& refellipsoid,
+                                   // Calculate thermal emission:
+                                   const Tensor3& t_field,
+                                   const Vector& f_grid,
+                                   const Index& f_index,
+                                   const Verbosity& verbosity) {
+
+}
+
+void ChackConvergence(  //WS Input and Output:
+    Index& convergence_flag,
+    Index& iteration_counter,
+    Tensor6& doit_i_field_mono,
+    // WS Input:
+    const Tensor6& doit_i_field_mono_old,
+    // Keyword:
+    const Vector& epsilon,
+    const Index& max_iterations,
+    const String& iy_unit,
+    const Verbosity& verbosity) {
+
 }

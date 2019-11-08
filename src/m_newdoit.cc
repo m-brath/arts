@@ -75,6 +75,9 @@ void NewDoitCalc(Workspace& ws,
                  Tensor7& extinction_matrix_doit,
                  Tensor6& absorption_vector_doit,
                  ArrayOfTensor7& scattering_matrix_doit_array,
+                 ArrayOfIndex& convergence_flag_doit,
+                 ArrayOfIndex& iteration_counter_doit,
+
 
                  // WS Input
                  const Index& atmfields_checked,
@@ -108,9 +111,8 @@ void NewDoitCalc(Workspace& ws,
                  // Generic inputs
                  const Vector& epsilon,
                  const Index& max_num_iterations,
-                 const Index& max_lvl_optimize,
-                 const Numeric& tau_scat_max,
-                 const Numeric& sgl_alb_max,
+                 const Numeric& tau_max,
+                 const Index& accelerated,
                  const Index& t_interp_order,
                  const Index& N_za_grid,
                  const Index& N_aa_grid,
@@ -250,7 +252,7 @@ void NewDoitCalc(Workspace& ws,
   const Index nf = f_grid.nelem();
   const Index Np_cloud = cloudbox_limits[1] - cloudbox_limits[0] + 1;
 
-  // Resize and initialize gas absorption field inside cloudbox
+  // Resize and initialize fields
   if (atmosphere_dim == 1) {
     gas_extinction_doit.resize(nf, Np_cloud, 1, 1);
     extinction_matrix_doit.resize(
@@ -273,6 +275,8 @@ void NewDoitCalc(Workspace& ws,
         nf, Np_cloud, Nlat_cloud, Nlon_cloud, za_grid.nelem(), stokes_dim);
   }
   scattering_matrix_doit_array.resize(f_grid.nelem());
+  convergence_flag_doit.resize(f_grid.nelem());
+  iteration_counter_doit.resize(f_grid.nelem());
 
   gas_extinction_doit = NAN;
   extinction_matrix_doit = NAN;
@@ -316,7 +320,8 @@ void NewDoitCalc(Workspace& ws,
             absorption_vector_doit(f_index, joker, joker, joker, joker, joker);
 
         Tensor7 scattering_matrix_doit_local;
-
+        Index convergence_flag_local;
+        Index iteration_counter_local;
 
         NewDoitMonoCalc(ws,
                         doit_i_field_mono_local,
@@ -324,9 +329,12 @@ void NewDoitCalc(Workspace& ws,
                         extinction_matrix_doit_local,
                         absorption_vector_doit_local,
                         scattering_matrix_doit_local,
+                        convergence_flag_local,
+                        iteration_counter_local,
                         cloudbox_limits,
                         propmat_clearsky_agenda,
                         surface_rtprop_agenda,
+                        ppath_step_agenda,
                         atmosphere_dim,
                         stokes_dim,
                         pnd_field,
@@ -349,9 +357,10 @@ void NewDoitCalc(Workspace& ws,
                         refellipsoid,
                         epsilon,
                         max_num_iterations,
-                        max_lvl_optimize,
-                        tau_scat_max,
-                        sgl_alb_max,
+                        tau_max,
+                        accelerated,
+                        ppath_lmax,
+                        ppath_lraytrace,
                         verbosity);
 
 
@@ -372,14 +381,18 @@ void NewDoitCalc(Workspace& ws,
 
         scattering_matrix_doit_array[f_index]=scattering_matrix_doit_local;
 
+        convergence_flag_doit[f_index]=convergence_flag_local;
+
+        iteration_counter_doit[f_index]=iteration_counter_local;
+
 
       } catch (const std::exception& e) {
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
-        gas_extinction_doit(f_index, joker, joker, joker) = -9999.;
+        gas_extinction_doit(f_index, joker, joker, joker) = NAN;
         extinction_matrix_doit(
-            f_index, joker, joker, joker, joker, joker, joker) = -9999.;
+            f_index, joker, joker, joker, joker, joker, joker) = NAN;
         absorption_vector_doit(
-            f_index, joker, joker, joker, joker, joker) = -9999.;
+            f_index, joker, joker, joker, joker, joker) = NAN;
 
 
         os << "Error for f_index = " << f_index << " (" << f_grid[f_index]
