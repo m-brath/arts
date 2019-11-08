@@ -142,10 +142,13 @@ void NewDoitMonoCalc(Workspace& ws,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
                      Tensor7& scattering_matrix,
+                     Index& convergence_flag,
+                     Index& iteration_counter,
                      //Input
                      const ArrayOfIndex& cloudbox_limits,
                      const Agenda& propmat_clearsky_agenda,
                      const Agenda& surface_rtprop_agenda,
+                     const Agenda& ppath_step_agenda,
                      const Index& atmosphere_dim,
                      const Index& stokes_dim,
                      const Tensor4& pnd_field,
@@ -168,9 +171,10 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Vector& refellipsoid,
                      const Vector& epsilon,
                      const Index& max_num_iterations,
-                     const Index& max_lvl_optimize,
-                     const Numeric& tau_scat_max,
-                     const Numeric& sgl_alb_max,
+                     const Numeric& tau_max,
+                     const Index& accelerated,
+                     const Numeric& ppath_lmax,
+                     const Numeric& ppath_lraytrace,
                      const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
@@ -244,4 +248,154 @@ void CalcPropagationPathMaxLength(
     const ConstVectorView& lat_grid,
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
-    Numeric& tau_max);
+    const Numeric& tau_max);
+
+//TODO:Add doxygen doc
+void RunNewDoit(Workspace& ws,
+    //Input and Output:
+                Tensor6& doit_i_field_mono,
+                Index& convergence_flag,
+                Index& iteration_counter,
+                const ConstTensor3View& gas_extinction,
+                const ConstTensor6View& extinction_matrix,
+                const ConstTensor5View& absorption_vector,
+                const ConstTensor7View& scattering_matrix,
+                const ArrayOfIndex& cloudbox_limits,
+                const Agenda& propmat_clearsky_agenda,
+                const Agenda& surface_rtprop_agenda,
+                const Agenda& ppath_step_agenda,
+                const Index& atmosphere_dim,
+                const Index& stokes_dim,
+                const Tensor3& t_field,
+                const Tensor3& z_field,
+                const Matrix& z_surface,
+                const Vector& p_grid,
+                const Vector& lat_grid,
+                const Vector& lon_grid,
+                const Vector& za_grid,
+                const Vector& aa_grid,
+                const Vector& scat_za_grid,
+                const Vector& scat_aa_grid,
+                const Numeric& f_mono,
+                const Index& f_index,
+                const String& iy_unit,
+                const Numeric& ppath_lmax,
+                const Numeric& ppath_lraytrace,
+                const Tensor3& p_path_maxlength,
+                const Vector& refellipsoid,
+                const Vector& epsilon,
+                const Index& max_num_iterations,
+                const Index& accelerated,
+                const Verbosity& verbosity);
+
+
+//TODO:Add doxygen doc
+void CalcScatteredField(Workspace& ws,
+                        // WS Output and Input
+                        Tensor6& doit_scat_field,
+                        //WS Input:
+                        const Tensor6& doit_i_field_mono,
+                        const Tensor7& scattering_matrix,
+                        const Index& atmosphere_dim,
+                        const ArrayOfIndex& cloudbox_limits,
+                        const Vector& za_grid,
+                        const Vector& aa_grid,
+                        const Vector& scat_za_grid,
+                        const Vector& scat_aa_grid,
+                        const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void UpdateSpectralRadianceField(
+    Workspace& ws,
+    // WS Input and Output:
+    Tensor6& doit_i_field_mono,
+    Tensor6& doit_scat_field,
+    // WS Input:
+    const ConstTensor3View& gas_extinction,
+    const ConstTensor6View& extinction_matrix,
+    const ConstTensor5View& absorption_vector,
+    const ArrayOfIndex& cloudbox_limits,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const Index& atmosphere_dim,
+    // Propagation path calculation:
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Tensor3& p_path_maxlength,
+    const Vector& p_grid,
+    const Tensor3& z_field,
+    const Vector& refellipsoid,
+    // Calculate thermal emission:
+    const Tensor3& t_field,
+    const Vector& f_grid,
+    const Index& f_index,
+    const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void UpdateSpectralRadianceField1D(
+    Workspace& ws,
+    // WS Input and Output:
+    Tensor6& doit_i_field_mono,
+    Tensor6& doit_scat_field,
+    // WS Input:
+    const ConstTensor3View& gas_extinction,
+    const ConstTensor6View& extinction_matrix,
+    const ConstTensor5View& absorption_vector,
+    const ArrayOfIndex& cloudbox_limits,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    // Propagation path calculation:
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Tensor3& p_path_maxlength,
+    const Vector& p_grid,
+    const Tensor3& z_field,
+    const Vector& refellipsoid,
+    // Calculate thermal emission:
+    const Tensor3& t_field,
+    const Vector& f_grid,
+    const Index& f_index,
+    const Verbosity& verbosity);
+
+
+//TODO:Add doxygen doc
+void UpdateSpectralRadianceField3D(
+    Workspace& ws,
+    // WS Input and Output:
+    Tensor6& doit_i_field_mono,
+    Tensor6& doit_scat_field,
+    // WS Input:
+    const ConstTensor3View& gas_extinction,
+    const ConstTensor6View& extinction_matrix,
+    const ConstTensor5View& absorption_vector,
+    const ArrayOfIndex& cloudbox_limits,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    // Propagation path calculation:
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Tensor3& p_path_maxlength,
+    const Vector& p_grid,
+    const Tensor3& z_field,
+    const Vector& refellipsoid,
+    // Calculate thermal emission:
+    const Tensor3& t_field,
+    const Vector& f_grid,
+    const Index& f_index,
+    const Verbosity& verbosity);
+
+
+void ChackConvergence(  //WS Input and Output:
+    Index& convergence_flag,
+    Index& iteration_counter,
+    Tensor6&  doit_i_field_mono,
+    // WS Input:
+    const Tensor6& doit_i_field_mono_old,
+    // Keyword:
+    const Vector& epsilon,
+    const Index& max_iterations,
+    const String& iy_unit,
+    const Verbosity& verbosity);
