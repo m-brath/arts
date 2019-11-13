@@ -799,8 +799,24 @@ void NewDoitMonoCalc(Workspace& ws,
   out0 << os1.str();
   os1.clear();
 
+
+  ArrayOfIndex idir_idx0;
+  ArrayOfIndex idir_idx1;
+  ArrayOfIndex pdir_idx0;
+  ArrayOfIndex pdir_idx1;
+  ArrayOfGridPos gp_za_i;
+  ArrayOfGridPos gp_aa_i;
+  Tensor3 itw;
+
   //calculate sca_optpropCalc_doit
   CalcScatteringProperties(scattering_matrix,
+                           idir_idx0,
+                           idir_idx1,
+                           pdir_idx0,
+                           pdir_idx1,
+                           gp_za_i,
+                           gp_aa_i,
+                           itw,
                            t_field,
                            f_index,
                            scat_data,
@@ -859,41 +875,47 @@ void NewDoitMonoCalc(Workspace& ws,
 
   //run new doit
   RunNewDoit(ws,
-      doit_i_field_mono,
-      convergence_flag,
-      iteration_counter,
-      gas_extinction,
-      extinction_matrix,
-      absorption_vector,
-      scattering_matrix,
-      cloudbox_limits,
-      propmat_clearsky_agenda,
-      surface_rtprop_agenda,
-      ppath_step_agenda,
-      atmosphere_dim,
-      stokes_dim,
-      t_field,
-      z_field,
-      z_surface,
-      p_grid,
-      lat_grid,
-      lon_grid,
-      za_grid,
-      aa_grid,
-      scat_za_grid,
-      scat_aa_grid,
-      f_mono,
-      f_index,
-      iy_unit,
-      ppath_lmax,
-      ppath_lraytrace,
-      p_path_maxlength,
-      refellipsoid,
-      epsilon,
-      max_num_iterations,
-      accelerated,
-      verbosity);
-
+             doit_i_field_mono,
+             convergence_flag,
+             iteration_counter,
+             gas_extinction,
+             extinction_matrix,
+             absorption_vector,
+             scattering_matrix,
+             cloudbox_limits,
+             propmat_clearsky_agenda,
+             surface_rtprop_agenda,
+             ppath_step_agenda,
+             atmosphere_dim,
+             stokes_dim,
+             t_field,
+             z_field,
+             z_surface,
+             p_grid,
+             lat_grid,
+             lon_grid,
+             za_grid,
+             aa_grid,
+             scat_za_grid,
+             scat_aa_grid,
+             idir_idx0,
+             idir_idx1,
+             pdir_idx0,
+             pdir_idx1,
+             gp_za_i,
+             gp_aa_i,
+             itw,
+             f_mono,
+             f_index,
+             iy_unit,
+             ppath_lmax,
+             ppath_lraytrace,
+             p_path_maxlength,
+             refellipsoid,
+             epsilon,
+             max_num_iterations,
+             accelerated,
+             verbosity);
 }
 
 void CalcGasExtinction(Workspace& ws,
@@ -1036,6 +1058,13 @@ void CalcParticleOpticalProperties(Tensor6& extinction_matrix,//(Np,Nlat,Nlon,nd
 
 void CalcScatteringProperties(  //Output
     Tensor7& scattering_matrix,
+    ArrayOfIndex& idir_idx0,
+    ArrayOfIndex& idir_idx1,
+    ArrayOfIndex& pdir_idx0,
+    ArrayOfIndex& pdir_idx1,
+    ArrayOfGridPos& gp_za_i,
+    ArrayOfGridPos& gp_aa_i,
+    Tensor3& itw,
     const Tensor3& t_field,
     const Index& f_index,
     const ArrayOfArrayOfSingleScatteringData& scat_data,
@@ -1048,7 +1077,6 @@ void CalcScatteringProperties(  //Output
     const Vector& scat_aa_grid,
     const Index& t_interp_order,
     const Verbosity& verbosity) {
-
   CREATE_OUT2;
 
   const Index Np = pnd_field.npages();
@@ -1057,19 +1085,11 @@ void CalcScatteringProperties(  //Output
 
   // preparing input data
   Matrix idir_array;
-  idir_array.resize(scat_za_grid.nelem() * scat_aa_grid.nelem(), 2);
 
   //Flatten incoming directions
-  Index Idir_idx = 0;
-  for (Index i_aa = 0; i_aa < scat_aa_grid.nelem(); i_aa++) {
-    for (Index i_za = 0; i_za < scat_za_grid.nelem(); i_za++) {
-      idir_array(Idir_idx, 0) = scat_za_grid[i_za];
-      idir_array(Idir_idx, 1) = scat_aa_grid[i_aa];
+  FlattenMeshGrid(idir_array, scat_za_grid, scat_aa_grid);
 
-      Idir_idx += 1;
-    }
-  }
-
+  //Flatten outgoing directions
   Matrix pdir_array;
   if (atmosphere_dim == 1) {
     pdir_array.resize(za_grid.nelem(), 2);
@@ -1077,18 +1097,7 @@ void CalcScatteringProperties(  //Output
     pdir_array(joker, 1) = 0.;
 
   } else {
-    pdir_array.resize(scat_za_grid.nelem() * scat_aa_grid.nelem(), 2);
-
-    //Flatten outgoing/propagation directions
-    Index Pdir_idx = 0;
-    for (Index i_aa = 0; i_aa < aa_grid.nelem(); i_aa++) {
-      for (Index i_za = 0; i_za < za_grid.nelem(); i_za++) {
-        pdir_array(Idir_idx, 0) = za_grid[i_za];
-        pdir_array(Idir_idx, 1) = aa_grid[i_aa];
-
-        Pdir_idx += 1;
-      }
-    }
+    FlattenMeshGrid(pdir_array, za_grid, aa_grid);
   }
 
   // making output containers
@@ -1100,7 +1109,15 @@ void CalcScatteringProperties(  //Output
   Tensor6 scat_mat_bulk_ii;
   Index ptype_bulk_ii;
 
-  if (atmosphere_dim == 1){
+  //We also prepare the gridpos-array, the interpolation weights and the index-
+  //arrays for the flattened meshgrid of the angular grids. They all are
+  //constant, so we calculate them only once. They are all needed
+  //for the calculation of the scattering field within the actual solver.
+
+  //grid pos array for zenith angle interpolation.
+  gridpos(gp_za_i, za_grid, scat_za_grid);
+
+  if (atmosphere_dim == 1) {
     scattering_matrix.resize(Np,
                              Nlat,
                              Nlon,
@@ -1108,6 +1125,21 @@ void CalcScatteringProperties(  //Output
                              scat_za_grid.nelem(),
                              stokes_dim,
                              stokes_dim);
+
+    //index arrays for flattened meshgrid of the angular grids, also needed
+    //for the calculation of the scattering field later on.
+    FlattenMeshGridIndex(idir_idx0, idir_idx1, scat_za_grid, Vector(1, 0.));
+    FlattenMeshGridIndex(pdir_idx0, pdir_idx1, za_grid, Vector(1, 0.));
+
+    //Interpolation weights, for 1D we need only interpolation weight for the
+    //zenith angle interpolation.
+    Matrix itw_za_i(scat_za_grid.nelem(), 2);
+    itw.resize(scat_za_grid.nelem(), 1, 2);
+    itw = 0;
+
+    interpweights(itw_za_i, gp_za_i);
+    itw(joker, 0, joker) = itw_za_i;
+
   } else {
     scattering_matrix.resize(Np,
                              Nlat,
@@ -1116,9 +1148,18 @@ void CalcScatteringProperties(  //Output
                              idir_array.nrows(),
                              stokes_dim,
                              stokes_dim);
-  }
-  scattering_matrix=0.;
 
+    FlattenMeshGridIndex(idir_idx0, idir_idx1, scat_za_grid, scat_aa_grid);
+    FlattenMeshGridIndex(pdir_idx0, pdir_idx1, za_grid, aa_grid);
+
+    //grid pos array for azimuth angle interpolation
+    gridpos(gp_aa_i, aa_grid, scat_aa_grid);
+
+    //Interpolation weights
+    itw.resize(scat_za_grid.nelem(), scat_aa_grid.nelem(), 4);
+    interpweights(itw, gp_za_i, gp_aa_i);
+  }
+  scattering_matrix = 0.;
 
   ostringstream os;
   os << "calculating ensemble scattering matrix \n";
@@ -1160,18 +1201,15 @@ void CalcScatteringProperties(  //Output
       //as for 1D atmosphere, there is no azimuth dependency of the incoming
       //radiation
       if (atmosphere_dim == 1) {
-
-
-        os << "As we have a 1D atmosphere, we can integrate over \n"
+        os << "As we have a 1D atmosphere, we can alrady integrate over \n"
            << "incoming azimuth. \n";
         out2 << os.str();
         os.clear();
 
-
         Tensor6 scat_mat_bulk_ii_temp;
         Index idx_i = 0;
         Index idx_i1 = 0;
-        Numeric delta_phi = 360. *DEG2RAD / (scat_aa_grid.nelem() - 1);
+        Numeric delta_phi = 360. * DEG2RAD / (scat_aa_grid.nelem() - 1);
 
         scat_mat_bulk_ii_temp.resize(1,
                                      Np,
@@ -1179,7 +1217,7 @@ void CalcScatteringProperties(  //Output
                                      scat_za_grid.nelem(),
                                      stokes_dim,
                                      stokes_dim);
-        scat_mat_bulk_ii_temp=0.;
+        scat_mat_bulk_ii_temp = 0.;
 
         //integrate over incoming azimuth
         for (Index i_za = 0; i_za < scat_za_grid.nelem(); i_za++) {
@@ -1392,6 +1430,13 @@ void RunNewDoit(Workspace& ws,
                 const Vector& aa_grid,
                 const Vector& scat_za_grid,
                 const Vector& scat_aa_grid,
+                ArrayOfIndex& idir_idx0,
+                ArrayOfIndex& idir_idx1,
+                ArrayOfIndex& pdir_idx0,
+                ArrayOfIndex& pdir_idx1,
+                ArrayOfGridPos& gp_za_i,
+                ArrayOfGridPos& gp_aa_i,
+                Tensor3& itw,
                 const Numeric& f_mono,
                 const Index& f_index,
                 const String& iy_unit,
@@ -1448,16 +1493,19 @@ void RunNewDoit(Workspace& ws,
 
     // Calculate the scattered field.
     out2 << "  Calculate scattering field. \n";
-    CalcScatteredField(ws,
-                       doit_scat_field,
+    CalcScatteredField(doit_scat_field,
                        doit_i_field_mono,
                        scattering_matrix,
                        atmosphere_dim,
-                       cloudbox_limits,
-                       za_grid,
-                       aa_grid,
                        scat_za_grid,
                        scat_aa_grid,
+                       idir_idx0,
+                       idir_idx1,
+                       pdir_idx0,
+                       pdir_idx1,
+                       gp_za_i,
+                       gp_aa_i,
+                       itw,
                        verbosity);
 
     // Update doit_i_field.
@@ -1486,7 +1534,7 @@ void RunNewDoit(Workspace& ws,
                                 verbosity);
 
     //Convergence test.
-    ChackConvergence(convergence_flag,
+    CheckConvergence(convergence_flag,
                      iteration_counter,
                      doit_i_field_mono,
                      doit_i_field_mono_old,
@@ -1507,23 +1555,214 @@ void RunNewDoit(Workspace& ws,
   }  //end of while loop, convergence is reached.
 }
 
-void CalcScatteredField(Workspace& ws,
-                        // WS Output and Input
+void CalcScatteredField(// WS Output and Input
                         Tensor6& doit_scat_field,
                         //WS Input:
                         const Tensor6& doit_i_field_mono,
                         const Tensor7& scattering_matrix,
                         const Index& atmosphere_dim,
-                        const ArrayOfIndex& cloudbox_limits,
-                        const Vector& za_grid,
-                        const Vector& aa_grid,
                         const Vector& scat_za_grid,
                         const Vector& scat_aa_grid,
+                        ArrayOfIndex& idir_idx0, //index array of flattened inc. direction
+                        ArrayOfIndex& idir_idx1, //index array of flattened inc. direction
+                        ArrayOfIndex& pdir_idx0, //index array of flattened propagation direction
+                        ArrayOfIndex& pdir_idx1, //index array of flattened propagation direction
+                        ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
+                        ArrayOfGridPos& gp_aa_i, // grid pos for azimuth angle interpolation
+                        Tensor3& itw, //interpolation weights
                         const Verbosity& verbosity) {
 
+  if (atmosphere_dim == 1) {
+    CalcScatteredField1D(doit_scat_field,
+                         doit_i_field_mono,
+                         scattering_matrix,
+                         scat_za_grid,
+                         pdir_idx0,
+                         gp_za_i,
+                         itw,
+                         verbosity);
+
+  } else {
+    CalcScatteredField3D(doit_scat_field,
+                         doit_i_field_mono,
+                         scattering_matrix,
+                         scat_za_grid,
+                         scat_aa_grid,
+                         idir_idx0,
+                         idir_idx1,
+                         pdir_idx0,
+                         pdir_idx1,
+                         gp_za_i,
+                         gp_aa_i,
+                         itw,
+                         verbosity);
+  }
+}
+
+void CalcScatteredField1D(
+    // Output
+    Tensor6& doit_scat_field,
+    // Input:
+    const Tensor6& doit_i_field_mono,
+    const Tensor7& scattering_matrix,
+    const Vector& iza_grid,  // incoming direction
+    ArrayOfIndex& pdir_idx0,//index array of propagation direction
+    ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
+    Tensor3& itw, //interpolation weights
+    const Verbosity& verbosity) {
+
+  CREATE_OUT3;
+
+  // Number of zenith angles.
+  const Index Npza = pdir_idx0.nelem();
+  const Index Niza = iza_grid.nelem();
+
+  // Get stokes dimension from *doit_scat_field*:
+  const Index stokes_dim = doit_i_field_mono.ncols();
+
+  // and pressure dimension
+  const Index Np = doit_i_field_mono.nvitrines();
+
+  //Prepare intensity field interpolated on equidistant grid.
+  Matrix doit_i_field_int(Niza, stokes_dim, 0);
+
+  //Prepare product field
+  Matrix product_field(Niza, stokes_dim, 0);
+
+  for (Index i_p = 0; i_p < Np; i_p++) {
+    // Interpolate intensity field:
+    // Only one interpolation is required. We have to interpolate the
+    // intensity field on the equidistant grid. There is no further interpolation
+    // needed, because we evaluate the scattering matrix directly for the propagation/
+    // outgoing direction, which is the direction of the actual radiation field.
+    for (Index i = 0; i < stokes_dim; i++) {
+      interp(doit_i_field_int(joker, i),
+             itw(joker,0,joker),
+             doit_i_field_mono(i_p, 0, 0, joker, 0, i),
+             gp_za_i);
+    }
+
+    //There is only loop over zenith angle grid; no azimuth angle grid.
+    for (Index i_pza = 0; i_pza < Npza; i_pza++) {
+      product_field = 0;
+
+      //as we did the azimuth integration already during scattering data preparation
+      //we just need to do the zenith integration
+      for (Index i_iza = 0; i_iza < Niza; i_iza++) {
+        // Multiplication of scattering matrix with incoming
+        // intensity field.
+
+        for (Index i = 0; i < stokes_dim; i++) {
+          for (Index j = 0; j < stokes_dim; j++) {
+            product_field(i_iza, i) +=
+                scattering_matrix(i_p, 0, 0, i_pza, i_iza, i, j) *
+                doit_i_field_int(i_iza, j);
+          }
+        }
+      }
+
+      out3 << "Compute integral. \n";
+      for (Index i = 0; i < stokes_dim; i++) {
+        doit_scat_field(i_p, 0, 0, i_pza, 0, i) =
+            AngIntegrate_trapezoid(product_field(joker, i), iza_grid) / 2 / PI;
+      }
+    }
+  }
+}
+
+void CalcScatteredField3D(
+    // Output
+    Tensor6& doit_scat_field,
+    // Input:
+    const Tensor6& doit_i_field_mono,
+    const Tensor7& scattering_matrix,
+    const Vector& iza_grid,  // incoming direction
+    const Vector& iaa_grid,  // incoming direction
+    const ArrayOfIndex& idir_idx0, //index array of flattened inc. direction
+    const ArrayOfIndex& idir_idx1, //index array of flattened inc. direction
+    const ArrayOfIndex& pdir_idx0, //index array of flattened propagation direction
+    const ArrayOfIndex& pdir_idx1, //index array of flattened propagation direction
+    const ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
+    const ArrayOfGridPos& gp_aa_i, // grid pos for azimuth angle interpolation
+    const Tensor3& itw, //interpolation weights
+    const Verbosity& verbosity) {
+
+  CREATE_OUT2;
+  CREATE_OUT3;
+
+  // Number of incoming zenith angles.
+  const Index Niza = iza_grid.nelem();
+
+  // Number of incoming azimuth angles.
+  const Index Niaa = iaa_grid.nelem();
+
+  // Get stokes dimension from *doit_scat_field*:
+  const Index stokes_dim = doit_i_field_mono.ncols();
+
+  const Index Np = doit_i_field_mono.nvitrines();
+  const Index Nlat = doit_i_field_mono.nshelves();
+  const Index Nlon = doit_i_field_mono.nbooks();
 
 
+  //Prepare intensity field interpolated on equidistant grid.
+  Tensor3 doit_i_field_int(Niza, Niaa, stokes_dim, 0);
 
+  //Grid stepsize of zenith and azimuth angle grid, these are needed for the
+  //integration function.
+  Vector grid_stepsize(2);
+  grid_stepsize[0] = 180. / (Numeric)(Niza - 1);
+  grid_stepsize[1] = 360. / (Numeric)(Niaa - 1);
+
+  //
+  Tensor3 product_field(Niza, Niaa, stokes_dim, 0);
+
+  for (Index i_p = 0; i_p < Np; i_p++) {
+    for (Index i_lat = 0; i_lat < Nlat; i_lat++) {
+      for (Index i_lon = 0; i_lon < Nlon; i_lon++) {
+        // Interpolate intensity field:
+        // Only one interpolation is required. We have to interpolate the
+        // intensity field on the equidistant grid. There is no further interpolation
+        // needed, because we evaluate the scattering matrix directly for the propagation/
+        // outgoing direction, which is the direction of the actual radiation field.
+        for (Index i = 0; i < stokes_dim; i++) {
+          interp(doit_i_field_int(joker, joker, i),
+                 itw,
+                 doit_i_field_mono(i_p, i_lat, i_lon, joker, joker, i),
+                 gp_za_i,
+                 gp_aa_i);
+        }
+
+        //loop over outgoing directions
+        for (Index i_prop = 0; i_prop < pdir_idx0.nelem(); i_prop++) {
+
+          //loop over incoming directions
+          for (Index i_inc = 0; i_inc < idir_idx0.nelem(); i_inc++) {
+
+            //Calculate the product of scattering matrix and incoming radiation field
+            for (Index i = 0; i < stokes_dim; i++) {
+              for (Index j = 0; j < stokes_dim; j++) {
+                product_field(idir_idx0[i_inc], idir_idx1[i_inc], i) +=
+                    scattering_matrix(
+                        i_p, i_lon, i_lat, idir_idx0[i_inc], idir_idx1[i_inc], i, j) *
+                    doit_i_field_int(idir_idx0[i_inc], idir_idx1[i_inc], j);
+              }
+            }
+          }
+
+          //Integrate over incoming zenith and azimuth direction
+          out3 << "Compute integral. \n";
+          for (Index i = 0; i < stokes_dim; i++) {
+            doit_scat_field(
+                i_p, i_lat, i_lon, pdir_idx0[i_prop], pdir_idx1[i_prop], i) =
+                AngIntegrate_trapezoid_opti(product_field(joker, joker, i),
+                                            iza_grid,
+                                            iaa_grid,
+                                            grid_stepsize);
+          }
+        }
+      }
+    }
+  }
 }
 
 void UpdateSpectralRadianceField(Workspace& ws,
@@ -1650,7 +1889,7 @@ void UpdateSpectralRadianceField3D(Workspace& ws,
 
 }
 
-void ChackConvergence(  //WS Input and Output:
+void CheckConvergence(  //WS Input and Output:
     Index& convergence_flag,
     Index& iteration_counter,
     Tensor6& doit_i_field_mono,
@@ -1662,4 +1901,51 @@ void ChackConvergence(  //WS Input and Output:
     const String& iy_unit,
     const Verbosity& verbosity) {
 
+}
+
+void FlattenMeshGrid(Matrix& flattened_meshgrid,
+                     const Vector& grid1,
+                     const Vector& grid2) {
+
+  const Index N_grid1 = grid1.nelem();
+  const Index N_grid2 = grid2.nelem();
+
+  // preparing output
+  flattened_meshgrid.resize(N_grid1 * N_grid2, 2);
+
+  //Flatten grids
+  Index Idir_idx = 0;
+  for (Index i_aa = 0; i_aa < N_grid2; i_aa++) {
+    for (Index i_za = 0; i_za < N_grid1; i_za++) {
+      flattened_meshgrid(Idir_idx, 0) = grid1[i_za];
+      flattened_meshgrid(Idir_idx, 1) = grid2[i_aa];
+
+      Idir_idx += 1;
+    }
+  }
+}
+
+
+void FlattenMeshGridIndex(ArrayOfIndex& index_grid1,
+                          ArrayOfIndex& index_grid2,
+                     const Vector& grid1,
+                     const Vector& grid2) {
+
+  const Index N_grid1 = grid1.nelem();
+  const Index N_grid2 = grid2.nelem();
+
+  // preparing output
+  index_grid1.resize(N_grid1*N_grid2);
+  index_grid2.resize(N_grid1*N_grid2);
+
+  //Flatten grids
+  Index Idir_idx = 0;
+  for (Index i_aa = 0; i_aa < N_grid2; i_aa++) {
+    for (Index i_za = 0; i_za < N_grid1; i_za++) {
+      index_grid1[Idir_idx] = i_za;
+      index_grid2[Idir_idx] = i_aa;
+
+      Idir_idx += 1;
+    }
+  }
 }

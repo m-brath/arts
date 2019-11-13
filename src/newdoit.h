@@ -204,10 +204,15 @@ void CalcParticleOpticalProperties(
     const Index& stokes_dim);
 
 //TODO:Add doxygen doc
-void CalcScatteringProperties(
-    //Output
+void CalcScatteringProperties(  //Output
     Tensor7& scattering_matrix,
-    //Input
+    ArrayOfIndex& idir_idx0,
+    ArrayOfIndex& idir_idx1,
+    ArrayOfIndex& pdir_idx0,
+    ArrayOfIndex& pdir_idx1,
+    ArrayOfGridPos& gp_za_i,
+    ArrayOfGridPos& gp_aa_i,
+    Tensor3& itw,
     const Tensor3& t_field,
     const Index& f_index,
     const ArrayOfArrayOfSingleScatteringData& scat_data,
@@ -252,7 +257,6 @@ void CalcPropagationPathMaxLength(
 
 //TODO:Add doxygen doc
 void RunNewDoit(Workspace& ws,
-    //Input and Output:
                 Tensor6& doit_i_field_mono,
                 Index& convergence_flag,
                 Index& iteration_counter,
@@ -276,6 +280,13 @@ void RunNewDoit(Workspace& ws,
                 const Vector& aa_grid,
                 const Vector& scat_za_grid,
                 const Vector& scat_aa_grid,
+                ArrayOfIndex& idir_idx0,
+                ArrayOfIndex& idir_idx1,
+                ArrayOfIndex& pdir_idx0,
+                ArrayOfIndex& pdir_idx1,
+                ArrayOfGridPos& gp_za_i,
+                ArrayOfGridPos& gp_aa_i,
+                Tensor3& itw,
                 const Numeric& f_mono,
                 const Index& f_index,
                 const String& iy_unit,
@@ -290,19 +301,54 @@ void RunNewDoit(Workspace& ws,
 
 
 //TODO:Add doxygen doc
-void CalcScatteredField(Workspace& ws,
-                        // WS Output and Input
-                        Tensor6& doit_scat_field,
-                        //WS Input:
-                        const Tensor6& doit_i_field_mono,
-                        const Tensor7& scattering_matrix,
-                        const Index& atmosphere_dim,
-                        const ArrayOfIndex& cloudbox_limits,
-                        const Vector& za_grid,
-                        const Vector& aa_grid,
-                        const Vector& scat_za_grid,
-                        const Vector& scat_aa_grid,
-                        const Verbosity& verbosity);
+void CalcScatteredField(  // WS Output and Input
+    Tensor6& doit_scat_field,
+    //WS Input:
+    const Tensor6& doit_i_field_mono,
+    const Tensor7& scattering_matrix,
+    const Index& atmosphere_dim,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid,
+    ArrayOfIndex& idir_idx0,
+    ArrayOfIndex& idir_idx1,
+    ArrayOfIndex& pdir_idx0,
+    ArrayOfIndex& pdir_idx1,
+    ArrayOfGridPos& gp_za_i,
+    ArrayOfGridPos& gp_aa_i,
+    Tensor3& itw,
+    const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void CalcScatteredField1D(
+    // Output
+    Tensor6& doit_scat_field,
+    // Input:
+    const Tensor6& doit_i_field_mono,
+    const Tensor7& scattering_matrix,
+    const Vector& iza_grid,  // incoming direction
+    ArrayOfIndex& pdir_idx0,//index array of propagation direction
+    ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
+    Tensor3& itw, //interpolation weights
+    const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void CalcScatteredField3D(
+    // WS Output and Input
+    Tensor6& doit_scat_field,
+    //WS Input:
+    const Tensor6& doit_i_field_mono,
+    const Tensor7& scattering_matrix,
+    const Vector& iza_grid,  // incoming direction
+    const Vector& iaa_grid,  // incoming direction
+    const ArrayOfIndex& idir_idx0, //index array of flattened inc. direction
+    const ArrayOfIndex& idir_idx1, //index array of flattened inc. direction
+    const ArrayOfIndex& pdir_idx0, //index array of flattened propagation direction
+    const ArrayOfIndex& pdir_idx1, //index array of flattened propagation direction
+    const ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
+    const ArrayOfGridPos& gp_aa_i, // grid pos for azimuth angle interpolation
+    const Tensor3& itw, //interpolation weights
+    const Verbosity& verbosity);
+
 
 //TODO:Add doxygen doc
 void UpdateSpectralRadianceField(
@@ -387,8 +433,8 @@ void UpdateSpectralRadianceField3D(
     const Index& f_index,
     const Verbosity& verbosity);
 
-
-void ChackConvergence(  //WS Input and Output:
+//TODO:Add doxygen doc
+void CheckConvergence(  //WS Input and Output:
     Index& convergence_flag,
     Index& iteration_counter,
     Tensor6&  doit_i_field_mono,
@@ -399,3 +445,14 @@ void ChackConvergence(  //WS Input and Output:
     const Index& max_iterations,
     const String& iy_unit,
     const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void FlattenMeshGrid(Matrix& flattened_meshgrid,
+                     const Vector& grid1,
+                     const Vector& grid2);
+
+//TODO:Add doxygen doc
+void FlattenMeshGridIndex(ArrayOfIndex& index_grid1,
+                          ArrayOfIndex& index_grid2,
+                          const Vector& grid1,
+                          const Vector& grid2);
