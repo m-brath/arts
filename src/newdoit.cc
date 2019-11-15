@@ -720,7 +720,7 @@ void LimitInputGridsAndFieldsToCloudbox(Vector& p_grid_cldbx,
                                 Range(cloudbox_limits[0], Np_cldbx),
                                 Range(Idx0_lat_cldbx, Nlat_cldbx),
                                 Range(Idx0_lon_cldbx, Nlon_cldbx));
-    ;
+
   }
 }
 
@@ -882,9 +882,9 @@ void NewDoitMonoCalc(Workspace& ws,
              extinction_matrix,
              absorption_vector,
              scattering_matrix,
+             surface_reflection_matrix,
+             surface_emission,
              cloudbox_limits,
-             propmat_clearsky_agenda,
-             surface_rtprop_agenda,
              ppath_step_agenda,
              atmosphere_dim,
              stokes_dim,
@@ -1351,7 +1351,7 @@ void CalcSurfaceProperties(Workspace& ws,
                 surface_emission_ii(0, joker);
 
             surface_los(ilat, ilon, los_idx, 0) = surface_los_ii(0, 0);
-            //for 3d atmosphere sensor_los has to angles.
+            //for 3d atmosphere sensor_los has two angles.
             if (atmosphere_dim == 3) {
               surface_los(ilat, ilon, los_idx, 1) = surface_los_ii(0, 1);
             }
@@ -1414,9 +1414,9 @@ void RunNewDoit(Workspace& ws,
                 const ConstTensor6View& extinction_matrix,
                 const ConstTensor5View& absorption_vector,
                 const ConstTensor7View& scattering_matrix,
+                const ConstTensor6View& surface_reflection_matrix,
+                const ConstTensor5View& surface_emission,
                 const ArrayOfIndex& cloudbox_limits,
-                const Agenda& propmat_clearsky_agenda,
-                const Agenda& surface_rtprop_agenda,
                 const Agenda& ppath_step_agenda,
                 const Index& atmosphere_dim,
                 const Index& stokes_dim,
@@ -1517,6 +1517,8 @@ void RunNewDoit(Workspace& ws,
                                 gas_extinction,
                                 extinction_matrix,
                                 absorption_vector,
+                                surface_reflection_matrix,
+                                surface_emission,
                                 cloudbox_limits,
                                 za_grid,
                                 aa_grid,
@@ -1773,6 +1775,8 @@ void UpdateSpectralRadianceField(Workspace& ws,
                                  const ConstTensor3View& gas_extinction,
                                  const ConstTensor6View& extinction_matrix,
                                  const ConstTensor5View& absorption_vector,
+                                 const ConstTensor6View& surface_reflection_matrix,
+                                 const ConstTensor5View& surface_emission,
                                  const ArrayOfIndex& cloudbox_limits,
                                  const Vector& za_grid,
                                  const Vector& aa_grid,
@@ -1797,6 +1801,8 @@ void UpdateSpectralRadianceField(Workspace& ws,
                                   gas_extinction,
                                   extinction_matrix,
                                   absorption_vector,
+                                  surface_reflection_matrix,
+                                  surface_emission,
                                   cloudbox_limits,
                                   za_grid,
                                   aa_grid,
@@ -1812,54 +1818,254 @@ void UpdateSpectralRadianceField(Workspace& ws,
                                   f_index,
                                   verbosity);
   } else if (atmosphere_dim == 3) {
-    UpdateSpectralRadianceField3D(ws,
-                                  doit_i_field_mono,
-                                  doit_scat_field,
-                                  gas_extinction,
-                                  extinction_matrix,
-                                  absorption_vector,
-                                  cloudbox_limits,
-                                  za_grid,
-                                  aa_grid,
-                                  ppath_step_agenda,
-                                  ppath_lmax,
-                                  ppath_lraytrace,
-                                  p_path_maxlength,
-                                  p_grid,
-                                  z_field,
-                                  refellipsoid,
-                                  t_field,
-                                  f_grid,
-                                  f_index,
-                                  verbosity);
+//    UpdateSpectralRadianceField3D(ws,
+//                                  doit_i_field_mono,
+//                                  doit_scat_field,
+//                                  gas_extinction,
+//                                  extinction_matrix,
+//                                  absorption_vector,
+//                                  cloudbox_limits,
+//                                  za_grid,
+//                                  aa_grid,
+//                                  ppath_step_agenda,
+//                                  ppath_lmax,
+//                                  ppath_lraytrace,
+//                                  p_path_maxlength,
+//                                  p_grid,
+//                                  z_field,
+//                                  refellipsoid,
+//                                  t_field,
+//                                  f_grid,
+//                                  f_index,
+//                                  verbosity);
   }
 }
 
-void UpdateSpectralRadianceField1D(Workspace& ws,
-                                   // WS Input and Output:
-                                   Tensor6& doit_i_field_mono,
-                                   Tensor6& doit_scat_field,
-                                   // WS Input:
-                                   const ConstTensor3View& gas_extinction,
-                                   const ConstTensor6View& extinction_matrix,
-                                   const ConstTensor5View& absorption_vector,
-                                   const ArrayOfIndex& cloudbox_limits,
-                                   const Vector& za_grid,
-                                   const Vector& aa_grid,
-                                   // Propagation path calculation:
-                                   const Agenda& ppath_step_agenda,
-                                   const Numeric& ppath_lmax,
-                                   const Numeric& ppath_lraytrace,
-                                   const Tensor3& p_path_maxlength,
-                                   const Vector& p_grid,
-                                   const Tensor3& z_field,
-                                   const Vector& refellipsoid,
-                                   // Calculate thermal emission:
-                                   const Tensor3& t_field,
-                                   const Vector& f_grid,
-                                   const Index& f_index,
-                                   const Verbosity& verbosity) {
+void UpdateSpectralRadianceField1D(
+    Workspace& ws,
+    // WS Input and Output:
+    Tensor6& doit_i_field_mono,
+    Tensor6& doit_scat_field,
+    // WS Input:
+    const ConstTensor3View& gas_extinction,
+    const ConstTensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+    const ConstTensor5View& absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const ArrayOfIndex& cloudbox_limits,
+    const Vector& za_grid,
+    // Propagation path calculation:
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Tensor3& p_path_maxlength,
+    const Vector& p_grid,
+    const Tensor3& z_field,
+    const Vector& refellipsoid,
+    // Calculate thermal emission:
+    const Tensor3& t_field,
+    const Vector& f_grid,
+    const Index& f_index,
+    const Verbosity& verbosity) {
 
+  CREATE_OUT2;
+  CREATE_OUT3;
+
+  out2 << "  UpdateSpectralRadianceField1D: Radiative transfer calculation in cloudbox\n";
+  out2 << "  ------------------------------------------------------------- \n";
+
+  // Number of zenith angles.
+  const Index N_za = za_grid.nelem();
+
+  const Index stokes_dim = doit_scat_field.ncols();
+
+  const Index c_idx1 = cloudbox_limits[1];
+  const Index c_idx0 = cloudbox_limits[0];
+
+
+  // If theta is between 90° and the limiting value, the intersection point
+  // is exactly at the same level as the starting point (cp. AUG)
+  Numeric theta_lim =
+      180. - asin((refellipsoid[0] + z_field(cloudbox_limits[0], 0, 0)) /
+                  (refellipsoid[0] + z_field(cloudbox_limits[1], 0, 0))) *
+                 RAD2DEG;
+
+  // Epsilon for additional limb iterations
+  Vector epsilon(4);
+  epsilon[0] = 0.1;
+  epsilon[1] = 0.01;
+  epsilon[2] = 0.01;
+  epsilon[3] = 0.01;
+
+  Matrix doit_i_field_limb;
+  Tensor5 ext_mat_field;
+  Tensor4 abs_vec_field;
+
+  //Only dummy variables:
+  Index scat_aa_index_local = 0;
+
+  //  if (normalize) {
+  //    Tensor4 si, sei, si_corr;
+  //    doit_scat_fieldNormalize(ws,
+  //                             doit_scat_field,
+  //                             doit_i_field_mono,
+  //                             cloudbox_limits,
+  //                             spt_calc_agenda,
+  //                             1,
+  //                             za_grid,
+  //                             aa_grid,
+  //                             pnd_field,
+  //                             t_field,
+  //                             norm_error_threshold,
+  //                             norm_debug,
+  //                             verbosity);
+  //  }
+
+
+
+  //Loop over all directions, defined by za_grid
+  for (Index i_za = 0; i_za < N_za; i_za++) {
+    ext_mat_field = extinction_matrix(joker, joker, joker, i_za, joker, joker);
+    abs_vec_field = absorption_vector(joker, joker, joker, i_za, joker);
+
+    //======================================================================
+    // Radiative transfer inside the cloudbox
+    //=====================================================================
+
+    // Sequential update for uplooking angles
+    if (za_grid[i_za] <= 90.) {
+      // Loop over all positions inside the cloud box defined by the
+      // cloudbox_limits excluding the upper boundary. For uplooking
+      // directions, we start from cloudbox_limits[1]-1 and go down
+      // to cloudbox_limits[0] to do a sequential update of the
+      // radiation field
+      for (Index i_p = c_idx1 - 1; i_p >= c_idx0; i_p--) {
+        UpdateCloudPropagationPath1D(ws,
+                             doit_i_field_mono,
+                             i_p,
+                             i_za,
+                             za_grid,
+                             cloudbox_limits,
+                             doit_scat_field,
+                             ppath_step_agenda,
+                             ppath_lmax,
+                             ppath_lraytrace,
+                             p_grid,
+                             z_field,
+                             refellipsoid,
+                             t_field,
+                             f_grid,
+                             f_index,
+                             ext_mat_field,
+                             abs_vec_field,
+                             gas_extinction,
+                             surface_reflection_matrix,
+                             surface_emission,
+                             verbosity);
+      }
+    } else if (za_grid[i_za] >= theta_lim) {
+      //
+      // Sequential updating for downlooking angles
+      //
+      for (Index i_p = c_idx0 + 1; i_p <= c_idx1; i_p++) {
+        UpdateCloudPropagationPath1D(ws,
+                                     doit_i_field_mono,
+                                     i_p,
+                                     i_za,
+                                     za_grid,
+                                     cloudbox_limits,
+                                     doit_scat_field,
+                                     ppath_step_agenda,
+                                     ppath_lmax,
+                                     ppath_lraytrace,
+                                     p_grid,
+                                     z_field,
+                                     refellipsoid,
+                                     t_field,
+                                     f_grid,
+                                     f_index,
+                                     ext_mat_field,
+                                     abs_vec_field,
+                                     gas_extinction,
+                                     surface_reflection_matrix,
+                                     surface_emission,
+                                     verbosity);
+      }  // Close loop over p_grid (inside cloudbox).
+    }    // end if downlooking.
+
+    //
+    // Limb looking:
+    // We have to include a special case here, as we may miss the endpoints
+    // when the intersection point is at the same level as the aactual point.
+    // To be save we loop over the full cloudbox. Inside the function
+    // cloud_ppath_update1D it is checked whether the intersection point is
+    // inside the cloudbox or not.
+
+    else {
+      bool conv_flag = false;
+      Index limb_it = 0;
+      while (!conv_flag && limb_it < 10) {
+        limb_it++;
+        doit_i_field_limb = doit_i_field_mono(joker, 0, 0, i_za, 0, joker);
+        for (Index i_p = c_idx0; i_p <= c_idx1; i_p++) {
+
+          // For this case the cloudbox goes down to the surface and we
+          // look downwards. These cases are outside the cloudbox and
+          // not needed. Switch is included here, as ppath_step_agenda
+          // gives an error for such cases.
+
+          if (i_p != 0) {
+            UpdateCloudPropagationPath1D(ws,
+                                         doit_i_field_mono,
+                                         i_p,
+                                         i_za,
+                                         za_grid,
+                                         cloudbox_limits,
+                                         doit_scat_field,
+                                         ppath_step_agenda,
+                                         ppath_lmax,
+                                         ppath_lraytrace,
+                                         p_grid,
+                                         z_field,
+                                         refellipsoid,
+                                         t_field,
+                                         f_grid,
+                                         f_index,
+                                         ext_mat_field,
+                                         abs_vec_field,
+                                         gas_extinction,
+                                         surface_reflection_matrix,
+                                         surface_emission,
+                                         verbosity);
+          }
+        }
+
+        conv_flag = true;
+        for (Index i_p = 0; conv_flag && i_p < doit_i_field_mono.nvitrines();
+             i_p++) {
+          for (Index stokes_index = 0; conv_flag && stokes_index < stokes_dim;
+               stokes_index++) {
+
+            Numeric diff = doit_i_field_mono(i_p, 0, 0, i_za, 0, stokes_index) -
+                           doit_i_field_limb(i_p, stokes_index);
+
+            // If the absolute difference of the components
+            // is larger than the pre-defined values, continue with
+            // another iteration
+            Numeric diff_bt = invrayjean(diff, f_grid[f_index]);
+            if (abs(diff_bt) > epsilon[stokes_index]) {
+
+              out2 << "Limb BT difference: " << diff_bt << " in stokes dim "
+                   << stokes_index << "\n";
+
+              conv_flag = false;
+            }
+          }
+        }
+      }
+      out2 << "Limb iterations: " << limb_it << "\n";
+    }
+  }  // Closes loop over za_grid.
 }
 
 void UpdateSpectralRadianceField3D(Workspace& ws,
@@ -1888,6 +2094,200 @@ void UpdateSpectralRadianceField3D(Workspace& ws,
                                    const Verbosity& verbosity) {
 
 }
+
+void UpdateCloudPropagationPath1D(
+    Workspace& ws,
+    Tensor6View doit_i_field_mono,
+    const Index& p_index,
+    const Index& za_index,
+    const ConstVectorView& za_grid,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstTensor6View& doit_scat_field,
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const ConstVectorView& p_grid,
+    const ConstTensor3View& z_field,
+    const ConstVectorView& refellipsoid,
+    const ConstTensor3View& t_field,
+    const ConstVectorView& f_grid,
+    const Index& f_index,
+    const ConstTensor5View& ext_mat_field,
+    const ConstTensor4View& abs_vec_field,
+    const ConstTensor3View& gas_extinction,
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const Verbosity& verbosity) {
+
+  Ppath ppath_step;
+  // Input variables are checked in the WSMs i_fieldUpdateSeqXXX, from
+  // where this function is called.
+
+  //Initialize ppath for 1D.
+  ppath_init_structure(ppath_step, 1, 1);
+  // See documentation of ppath_init_structure for understanding
+  // the parameters.
+
+  // Assign value to ppath.pos:
+  ppath_step.pos(0, 0) = z_field(p_index, 0, 0);
+  ppath_step.r[0] = refellipsoid[0] + z_field(p_index, 0, 0);
+
+  // Define the direction:
+  ppath_step.los(0, 0) = za_grid[za_index];
+
+  // Define the grid positions:
+  ppath_step.gp_p[0].idx = p_index;
+  ppath_step.gp_p[0].fd[0] = 0;
+  ppath_step.gp_p[0].fd[1] = 1;
+
+  // Call ppath_step_agenda:
+  ppath_step_agendaExecute(ws,
+                           ppath_step,
+                           ppath_lmax,
+                           ppath_lraytrace,
+                           Vector(1, f_grid[f_index]),
+                           ppath_step_agenda);
+
+  // Check whether the next point is inside or outside the
+  // cloudbox. Only if the next point lies inside the
+  // cloudbox a radiative transfer step caclulation has to
+  // be performed.
+
+  if ((cloudbox_limits[0] <= ppath_step.gp_p[1].idx &&
+       cloudbox_limits[1] > ppath_step.gp_p[1].idx) ||
+      (cloudbox_limits[1] == ppath_step.gp_p[1].idx &&
+       abs(ppath_step.gp_p[1].fd[0]) < 1e-6)) {
+    // Stokes dimension
+    const Index stokes_dim = doit_i_field_mono.ncols();
+    // Number of species
+        // Ppath_step normally has 2 points, the starting
+    // point and the intersection point.
+    // But there can be points in between, when a maximum
+    // lstep is given. We have to interpolate on all the
+    // points in the ppath_step.
+
+    // Initialize variables for interpolated values
+    Vector gas_abs_int(ppath_step.np, 0.);
+    Tensor3 ext_mat_int(stokes_dim, stokes_dim, ppath_step.np, 0.);
+    Matrix abs_vec_int(stokes_dim, ppath_step.np, 0.);
+    Matrix sca_vec_int(stokes_dim, ppath_step.np, 0.);
+    Matrix doit_i_field_mono_int(stokes_dim, ppath_step.np, 0.);
+    Vector t_int(ppath_step.np, 0.);
+    Vector p_int(ppath_step.np, 0.);
+
+    InterpolateOnPropagation1D(
+                         gas_abs_int,
+                         ext_mat_int,
+                         abs_vec_int,
+                         sca_vec_int,
+                         doit_i_field_mono_int,
+                         t_int,
+                         p_int,
+                         gas_extinction,
+                         ext_mat_field,
+                         abs_vec_field,
+                         doit_scat_field,
+                         doit_i_field_mono,
+                         t_field,
+                         p_grid,
+                         ppath_step,
+                         cloudbox_limits,
+                         za_grid,
+                         verbosity);
+
+    // ppath_what_background(ppath_step) tells the
+    // radiative background.  More information in the
+    // function get_iy_of_background.
+    // if there is no background we proceed the RT
+    Index bkgr = ppath_what_background(ppath_step);
+
+    // Radiative transfer from one layer to the next, starting
+    // at the intersection with the next layer and propagating
+    // to the considered point.
+    RTInCloudNoBackground(
+                           doit_i_field_mono,
+                           ppath_step,
+                           t_int,
+                           gas_abs_int,
+                           ext_mat_int,
+                           abs_vec_int,
+                           sca_vec_int,
+                           doit_i_field_mono_int,
+                           p_int,
+                           cloudbox_limits,
+                           f_grid,
+                           f_index,
+                           p_index,
+                           0,
+                           0,
+                           za_index,
+                           0,
+                           verbosity);
+
+    // bkgr=2 indicates that the background is the surface
+//    if (bkgr == 2) {
+//       cout << "hit surface "<< ppath_step.gp_p << endl;
+//      cloud_RT_surface(ws,
+//                       doit_i_field_mono,
+//                       surface_rtprop_agenda,
+//                       f_grid,
+//                       f_index,
+//                       stokes_dim,
+//                       ppath_step,
+//                       cloudbox_limits,
+//                       za_grid,
+//                       za_index);
+//    }
+
+  }  //end if inside cloudbox
+}
+
+void InterpolateOnPropagation1D(  //Output
+    VectorView  gas_abs_int,
+    Tensor3View ext_mat_int,
+    MatrixView abs_vec_int,
+    MatrixView sca_vec_int,
+    MatrixView doit_i_field_mono_int,
+    VectorView t_int,
+    VectorView p_int,
+    const ConstTensor3View& gas_extinction,
+    const ConstTensor5View& ext_mat_field,
+    const ConstTensor4View& abs_vec_field,
+    const ConstTensor6View& doit_scat_field,
+    const ConstTensor6View& doit_i_field_mono,
+    const ConstTensor3View& t_field,
+    const ConstVectorView& p_grid,
+    const Ppath& ppath_step,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& za_grid,
+    const Verbosity& verbosity) {
+
+}
+
+void RTInCloudNoBackground(
+                            Tensor6View doit_i_field_mono,
+                            const Ppath& ppath_step,
+                            const ConstVectorView& t_int,
+                            const VectorView&  gas_abs_int,
+                            const ConstTensor3View& ext_mat_int,
+                            const ConstMatrixView& abs_vec_int,
+                            const ConstMatrixView& sca_vec_int,
+                            const ConstMatrixView& doit_i_field_mono_int,
+                            const ConstVectorView& p_int,
+                            const ArrayOfIndex& cloudbox_limits,
+                            ConstVectorView f_grid,
+                            const Index& f_index,
+                            const Index& p_index,
+                            const Index& lat_index,
+                            const Index& lon_index,
+                            const Index& za_index,
+                            const Index& aa_index,
+                            const Verbosity& verbosity) {
+
+
+}
+
+
 
 void CheckConvergence(  //WS Input and Output:
     Index& convergence_flag,

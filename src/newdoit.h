@@ -264,9 +264,9 @@ void RunNewDoit(Workspace& ws,
                 const ConstTensor6View& extinction_matrix,
                 const ConstTensor5View& absorption_vector,
                 const ConstTensor7View& scattering_matrix,
+                const ConstTensor6View& surface_reflection_matrix,
+                const ConstTensor5View& surface_emission,
                 const ArrayOfIndex& cloudbox_limits,
-                const Agenda& propmat_clearsky_agenda,
-                const Agenda& surface_rtprop_agenda,
                 const Agenda& ppath_step_agenda,
                 const Index& atmosphere_dim,
                 const Index& stokes_dim,
@@ -360,6 +360,8 @@ void UpdateSpectralRadianceField(
     const ConstTensor3View& gas_extinction,
     const ConstTensor6View& extinction_matrix,
     const ConstTensor5View& absorption_vector,
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
     const Vector& aa_grid,
@@ -386,11 +388,12 @@ void UpdateSpectralRadianceField1D(
     Tensor6& doit_scat_field,
     // WS Input:
     const ConstTensor3View& gas_extinction,
-    const ConstTensor6View& extinction_matrix,
-    const ConstTensor5View& absorption_vector,
+    const ConstTensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+    const ConstTensor5View& absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
-    const Vector& aa_grid,
     // Propagation path calculation:
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
@@ -404,7 +407,6 @@ void UpdateSpectralRadianceField1D(
     const Vector& f_grid,
     const Index& f_index,
     const Verbosity& verbosity);
-
 
 //TODO:Add doxygen doc
 void UpdateSpectralRadianceField3D(
@@ -432,6 +434,74 @@ void UpdateSpectralRadianceField3D(
     const Vector& f_grid,
     const Index& f_index,
     const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void UpdateCloudPropagationPath1D(
+    Workspace& ws,
+    Tensor6View doit_i_field_mono,
+    const Index& p_index,
+    const Index& za_index,
+    const ConstVectorView& za_grid,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstTensor6View& doit_scat_field,
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const ConstVectorView& p_grid,
+    const ConstTensor3View& z_field,
+    const ConstVectorView& refellipsoid,
+    const ConstTensor3View& t_field,
+    const ConstVectorView& f_grid,
+    const Index& f_index,
+    const ConstTensor5View& ext_mat_field,
+    const ConstTensor4View& abs_vec_field,
+    const ConstTensor3View& gas_extinction,
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void InterpolateOnPropagation1D(  //Output
+    VectorView  gas_abs_int,
+    Tensor3View ext_mat_int,
+    MatrixView abs_vec_int,
+    MatrixView sca_vec_int,
+    MatrixView doit_i_field_mono_int,
+    VectorView t_int,
+    VectorView p_int,
+    const ConstTensor3View& gas_extinction,
+    const ConstTensor5View& ext_mat_field,
+    const ConstTensor4View& abs_vec_field,
+    const ConstTensor6View& doit_scat_field,
+    const ConstTensor6View& doit_i_field_mono,
+    const ConstTensor3View& t_field,
+    const ConstVectorView& p_grid,
+    const Ppath& ppath_step,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& za_grid,
+    const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void RTInCloudNoBackground(
+    Tensor6View doit_i_field_mono,
+    const Ppath& ppath_step,
+    const ConstVectorView& t_int,
+    const VectorView&  gas_abs_int,
+    const ConstTensor3View& ext_mat_int,
+    const ConstMatrixView& abs_vec_int,
+    const ConstMatrixView& sca_vec_int,
+    const ConstMatrixView& doit_i_field_mono_int,
+    const ConstVectorView& p_int,
+    const ArrayOfIndex& cloudbox_limits,
+    ConstVectorView f_grid,
+    const Index& f_index,
+    const Index& p_index,
+    const Index& lat_index,
+    const Index& lon_index,
+    const Index& za_index,
+    const Index& aa_index,
+    const Verbosity& verbosity)
+
 
 //TODO:Add doxygen doc
 void CheckConvergence(  //WS Input and Output:
