@@ -2391,7 +2391,8 @@ void opt_prop_sum_propmat_clearsky(  //Output:
     PropagationMatrix& ext_mat,
     StokesVector& abs_vec,
     //Input:
-    const PropagationMatrix& propmat_clearsky) {
+
+   const PropagationMatrix& propmat_clearsky) {
    const Index stokes_dim = propmat_clearsky.StokesDimensions();
    const Index freq_dim = propmat_clearsky.NumberOfFrequencies();
 
