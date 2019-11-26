@@ -2418,7 +2418,7 @@ void opt_prop_sum_propmat_clearsky(  //Output:
     const ArrayOfPropagationMatrix& propmat_clearsky) {
   Index stokes_dim, freq_dim;
 
-  if (propmat_clearsky.nelem() > 1) {
+  if (propmat_clearsky.nelem() > 0) {
     stokes_dim = propmat_clearsky[0].StokesDimensions();
     freq_dim = propmat_clearsky[0].NumberOfFrequencies();
   } else {
