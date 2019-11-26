@@ -236,9 +236,9 @@ void CalcSurfaceProperties(Workspace& ws,
 
                            //Input
                            const Agenda& surface_rtprop_agenda,
-                           const ConstVectorView f_grid,
-                           const ConstVectorView za_grid,
-                           const ConstVectorView aa_grid,
+                           const ConstVectorView& f_grid,
+                           const ConstVectorView& za_grid,
+                           const ConstVectorView& aa_grid,
                            const Vector& lat_grid,
                            const Vector& lon_grid,
                            const Index& atmosphere_dim,
@@ -269,13 +269,9 @@ void RunNewDoit(Workspace& ws,
                 const ArrayOfIndex& cloudbox_limits,
                 const Agenda& ppath_step_agenda,
                 const Index& atmosphere_dim,
-                const Index& stokes_dim,
                 const Tensor3& t_field,
                 const Tensor3& z_field,
-                const Matrix& z_surface,
                 const Vector& p_grid,
-                const Vector& lat_grid,
-                const Vector& lon_grid,
                 const Vector& za_grid,
                 const Vector& aa_grid,
                 const Vector& scat_za_grid,
@@ -377,7 +373,6 @@ void UpdateSpectralRadianceField(
     // Calculate thermal emission:
     const Tensor3& t_field,
     const Vector& f_grid,
-    const Index& f_index,
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
@@ -405,7 +400,6 @@ void UpdateSpectralRadianceField1D(
     // Calculate thermal emission:
     const Tensor3& t_field,
     const Vector& f_grid,
-    const Index& f_index,
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
@@ -432,13 +426,12 @@ void UpdateSpectralRadianceField3D(
     // Calculate thermal emission:
     const Tensor3& t_field,
     const Vector& f_grid,
-    const Index& f_index,
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
 void UpdateCloudPropagationPath1D(
     Workspace& ws,
-    Tensor6View doit_i_field_mono,
+    Tensor6View& doit_i_field_mono,
     const Index& p_index,
     const Index& za_index,
     const ConstVectorView& za_grid,
@@ -452,7 +445,6 @@ void UpdateCloudPropagationPath1D(
     const ConstVectorView& refellipsoid,
     const ConstTensor3View& t_field,
     const ConstVectorView& f_grid,
-    const Index& f_index,
     const ConstTensor5View& ext_mat_field,
     const ConstTensor4View& abs_vec_field,
     const ConstTensor3View& gas_extinction,
@@ -462,55 +454,60 @@ void UpdateCloudPropagationPath1D(
 
 //TODO:Add doxygen doc
 void InterpolateOnPropagation1D(  //Output
-    VectorView  gas_abs_int,
-    Tensor3View ext_mat_int,
-    MatrixView abs_vec_int,
-    MatrixView sca_vec_int,
-    MatrixView doit_i_field_mono_int,
-    VectorView t_int,
-    VectorView p_int,
+    VectorView&  gas_abs_int,
+    Tensor3View& ext_mat_int,
+    MatrixView& abs_vec_int,
+    MatrixView& sca_vec_int,
+    MatrixView& doit_i_field_mono_int,
+    VectorView& t_int,
     const ConstTensor3View& gas_extinction,
     const ConstTensor5View& ext_mat_field,
     const ConstTensor4View& abs_vec_field,
     const ConstTensor6View& doit_scat_field,
     const ConstTensor6View& doit_i_field_mono,
     const ConstTensor3View& t_field,
-    const ConstVectorView& p_grid,
     const Ppath& ppath_step,
     const ArrayOfIndex& cloudbox_limits,
     const ConstVectorView& za_grid,
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
-void RTInCloudNoBackground(
-    Tensor6View doit_i_field_mono,
-    const Ppath& ppath_step,
-    const ConstVectorView& t_int,
-    const VectorView&  gas_abs_int,
-    const ConstTensor3View& ext_mat_int,
-    const ConstMatrixView& abs_vec_int,
-    const ConstMatrixView& sca_vec_int,
-    const ConstMatrixView& doit_i_field_mono_int,
-    const ConstVectorView& p_int,
-    const ArrayOfIndex& cloudbox_limits,
-    ConstVectorView f_grid,
-    const Index& f_index,
-    const Index& p_index,
-    const Index& lat_index,
-    const Index& lon_index,
-    const Index& za_index,
-    const Index& aa_index,
-    const Verbosity& verbosity)
+void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
+                               const Ppath& ppath_step,
+                               const ConstVectorView& t_int,
+                               const VectorView& gas_abs_int,
+                               const ConstTensor3View& ext_mat_int,
+                               const ConstMatrixView& abs_vec_int,
+                               const ConstMatrixView& sca_vec_int,
+                               const ConstMatrixView& doit_i_field_mono_int,
+                               const ArrayOfIndex& cloudbox_limits,
+                               const ConstVectorView& f_grid,
+                               const Index& p_index,
+                               const Index& lat_index,
+                               const Index& lon_index,
+                               const Index& za_index,
+                               const Index& aa_index,
+                               const Verbosity& verbosity);
 
+//TODO:Add doxygen doc
+void RadiativeTransferStep(  //Output and Input:
+    VectorView stokes_vec,
+    MatrixView trans_mat,
+    //Input
+    const PropagationMatrix& ext_mat_av,
+    const StokesVector& abs_vec_av,
+    const ConstVectorView& sca_vec_av,
+    const Numeric& lstep,
+    const Numeric& rtp_planck_value,
+    const bool& trans_is_precalc = false);
 
 //TODO:Add doxygen doc
 void CheckConvergence(  //WS Input and Output:
     Index& convergence_flag,
     Index& iteration_counter,
     Tensor6&  doit_i_field_mono,
-    // WS Input:
     const Tensor6& doit_i_field_mono_old,
-    // Keyword:
+    const Numeric& f_mono,
     const Vector& epsilon,
     const Index& max_iterations,
     const String& iy_unit,

@@ -10435,6 +10435,7 @@ void define_md_data_raw() {
                   "TODO: INCLUDE TEXT\n"),
       AUTHORS("Manfred Brath"),
       OUT("doit_i_field",
+          "doit_i_field_clearsky",
           "za_grid",
           "aa_grid",
           "scat_za_grid",

@@ -5839,6 +5839,30 @@ void Workspace::define_wsv_data() {
                   "Dimensions: Number of array elements equals number of frequencies\n"),
       GROUP("ArrayOfIndex")));
 
+  //TODO: Remove later or add documentation and move it to correct position
+  wsv_data.push_back(WsvRecord(
+      NAME("doit_i_field_clearsky"),
+      DESCRIPTION(
+            "Radiation field.\n"
+            "\n"
+            "This variable is used to store the radiation field \n"
+            "inside the cloudbox which is found by an iterative solution (DOIT).\n"
+            "Refer to AUG for further information.\n"
+            "\n"
+            "Usage: Method output. \n"
+            "\n"
+            "Unit: W / (m^2 Hz sr) for each Stokes component.\n"
+            "\n"
+            "Size: [Nf,"
+            "       (cloudbox_limits[1] - cloudbox_limits[0]) +1, \n"
+            "       (cloudbox_limits[3] - cloudbox_limits[2]) +1, \n"
+            "       (cloudbox_limits[5] - cloudbox_limits[4]) +1, \n"
+            "        N_za, N_aa, N_i ]\n"
+            "\n"
+            "Note: For 1D, the size of the azimuth angle dimension (N_aa) is\n"
+            "always 1.\n"),
+      GROUP("Tensor7")));
+
 }
 
 //! Get index of WSV

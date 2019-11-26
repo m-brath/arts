@@ -67,6 +67,7 @@ extern const Numeric RAD2DEG;
 void NewDoitCalc(Workspace& ws,
                  // WS Output:
                  Tensor7& doit_i_field,
+                 Tensor7& doit_i_field_clearsky,
                  Vector& za_grid,
                  Vector& aa_grid,
                  Vector& scat_za_grid,
@@ -226,6 +227,8 @@ void NewDoitCalc(Workspace& ws,
   Tensor3 t_field_cldbx;
   Tensor3 z_field_cldbx;
   Tensor4 vmr_field_cldbx;
+
+  doit_i_field_clearsky=doit_i_field;
 
   LimitInputGridsAndFieldsToCloudbox(p_grid_cldbx,
                                      lat_grid_cldbx,
