@@ -752,7 +752,6 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Vector& scat_za_grid,
                      const Vector& scat_aa_grid,
                      const Numeric& f_mono,
-                     const Index& f_index,
                      const ArrayOfArrayOfSingleScatteringData& scat_data,
                      const Index& t_interp_order,
                      const String& iy_unit,
@@ -790,7 +789,6 @@ void NewDoitMonoCalc(Workspace& ws,
                                 absorption_vector,
                                 scat_data,
                                 za_grid,
-                                f_index,
                                 pnd_field,
                                 t_field,
                                 stokes_dim);
@@ -818,7 +816,6 @@ void NewDoitMonoCalc(Workspace& ws,
                            gp_aa_i,
                            itw,
                            t_field,
-                           f_index,
                            scat_data,
                            pnd_field,
                            stokes_dim,
@@ -902,7 +899,6 @@ void NewDoitMonoCalc(Workspace& ws,
              gp_aa_i,
              itw,
              f_mono,
-             f_index,
              iy_unit,
              ppath_lmax,
              ppath_lraytrace,
@@ -977,8 +973,7 @@ void CalcGasExtinction(Workspace& ws,
 void CalcParticleOpticalProperties(Tensor6& extinction_matrix,//(Np,Nlat,Nlon,ndir,nst,nst)
                     Tensor5& absorption_vector,//(Np,Nlat,Nlon,ndir,nst)
                     const ArrayOfArrayOfSingleScatteringData& scat_data,
-                    const Vector& scat_za_grid,
-                    const Index& f_index,
+                    const Vector& za_grid,
                     const ConstTensor4View& pnd_field,
                     const ConstTensor3View& t_field,
                     const Index& stokes_dim) {
@@ -995,8 +990,8 @@ void CalcParticleOpticalProperties(Tensor6& extinction_matrix,//(Np,Nlat,Nlon,nd
   assert(extinction_matrix.nvitrines() == Np);
 
   // preparing input data
-  Matrix dir_array(scat_za_grid.nelem(), 2, 0.);
-  dir_array(joker, 0) = scat_za_grid;
+  Matrix dir_array(za_grid.nelem(), 2, 0.);
+  dir_array(joker, 0) = za_grid;
 
   // making output containers
   ArrayOfArrayOfTensor5 ext_mat_Nse;
@@ -1062,7 +1057,6 @@ void CalcScatteringProperties(  //Output
     ArrayOfGridPos& gp_aa_i,
     Tensor3& itw,
     const Tensor3& t_field,
-    const Index& f_index,
     const ArrayOfArrayOfSingleScatteringData& scat_data,
     const ConstTensor4View& pnd_field,
     const Index& stokes_dim,
@@ -1199,23 +1193,26 @@ void CalcScatteringProperties(  //Output
       //as for 1D atmosphere, there is no azimuth dependency of the incoming
       //radiation
       if (atmosphere_dim == 1) {
-        os << "As we have a 1D atmosphere, we can alrady integrate over \n"
+        os << "As we have a 1D atmosphere, we can already integrate over \n"
            << "incoming azimuth. \n";
         out2 << os.str();
         os.clear();
 
-        Tensor6 scat_mat_bulk_ii_temp;
-        Index idx_i = 0;
-        Index idx_i1 = 0;
-        Numeric delta_phi = 360. * DEG2RAD / (scat_aa_grid.nelem() - 1);
-
-        scat_mat_bulk_ii_temp.resize(1,
+        Tensor5 scat_mat_bulk_ii_temp(1,
+                                      Np,
+                                      za_grid.nelem(),
+                                      stokes_dim,
+                                      stokes_dim);
+        Tensor6 scat_mat_bulk_ii_int(1,
                                      Np,
                                      za_grid.nelem(),
                                      scat_za_grid.nelem(),
                                      stokes_dim,
-                                     stokes_dim);
-        scat_mat_bulk_ii_temp = 0.;
+                                     stokes_dim,0.);
+
+        Index idx_i = 0;
+        Index idx_i1 = 0;
+        Numeric delta_phi = 360. * DEG2RAD / (scat_aa_grid.nelem() - 1);
 
         //integrate over incoming azimuth
         for (Index i_za = 0; i_za < scat_za_grid.nelem(); i_za++) {
@@ -1224,22 +1221,20 @@ void CalcScatteringProperties(  //Output
             idx_i = i_aa * scat_za_grid.nelem() + i_za;
             idx_i1 = (i_aa + 1) * scat_za_grid.nelem() + i_za;
 
-            scat_mat_bulk_ii_temp(joker, joker, joker, i_za, joker, joker) +=
+            scat_mat_bulk_ii_temp =
                 scat_mat_bulk_ii(joker, joker, joker, idx_i, joker, joker);
 
-            scat_mat_bulk_ii_temp(joker, joker, joker, i_za, joker, joker) +=
+            scat_mat_bulk_ii_temp +=
                 scat_mat_bulk_ii(joker, joker, joker, idx_i1, joker, joker);
 
-            scat_mat_bulk_ii_temp(joker, joker, joker, i_za, joker, joker) /=
-                2.;
-
-            scat_mat_bulk_ii_temp(joker, joker, joker, i_za, joker, joker) *=
-                delta_phi;
+            scat_mat_bulk_ii_int(joker, joker, joker, i_za, joker, joker) +=
+                scat_mat_bulk_ii_temp;
           }
         }
+        scat_mat_bulk_ii_int *= delta_phi / 2.;
 
         scattering_matrix(joker, ilat, ilon, joker, joker, joker, joker) =
-            scat_mat_bulk_ii_temp(0, joker, joker, joker, joker, joker);
+            scat_mat_bulk_ii_int(0, joker, joker, joker, joker, joker);
 
       } else {
         scattering_matrix(joker, ilat, ilon, joker, joker, joker, joker) =
@@ -1432,7 +1427,6 @@ void RunNewDoit(Workspace& ws,
                 ArrayOfGridPos& gp_aa_i,
                 Tensor3& itw,
                 const Numeric& f_mono,
-                const Index& f_index,
                 const String& iy_unit,
                 const Numeric& ppath_lmax,
                 const Numeric& ppath_lraytrace,
@@ -1609,6 +1603,7 @@ void CalcScatteredField1D(
 
   CREATE_OUT3;
 
+
   // Number of zenith angles.
   const Index Npza = pdir_idx0.nelem();
   const Index Niza = iza_grid.nelem();
@@ -1664,6 +1659,8 @@ void CalcScatteredField1D(
       }
     }
   }
+
+  out3 << "DONE calculating scattering field 1d. \n";
 }
 
 void CalcScatteredField3D(
@@ -2184,6 +2181,7 @@ void UpdateCloudPropagationPath1D(
                          abs_vec_field,
                          doit_scat_field,
                          doit_i_field_mono,
+                         p_grid,
                          t_field,
                          ppath_step,
                          cloudbox_limits,
@@ -2245,6 +2243,7 @@ void InterpolateOnPropagation1D(  //Output
     const ConstTensor4View& abs_vec_field,
     const ConstTensor6View& doit_scat_field,
     const ConstTensor6View& doit_i_field_mono,
+    const ConstVectorView& p_grid,
     const ConstTensor3View& t_field,
     const Ppath& ppath_step,
     const ArrayOfIndex& cloudbox_limits,
@@ -2272,6 +2271,21 @@ void InterpolateOnPropagation1D(  //Output
 
   Matrix itw(cloud_gp_p.nelem(), 2);
   interpweights(itw, cloud_gp_p);
+
+  //pressure interpolation
+  Vector p_int(ppath_step.np);
+  itw2p(p_int, p_grid, cloud_gp_p, itw);
+
+  // prepare poly interpolation
+  Index order=3;
+  if (order > ppath_step.np-1){
+    order = ppath_step.np-1;
+  }
+  ArrayOfGridPosPoly gp_poly(ppath_step.np);
+  gridpos_poly(gp_poly,p_grid,p_int,order);
+  Matrix itw_poly(gp_poly.nelem(),order+1);
+  interpweights(itw_poly,gp_poly);
+
 
   // The zenith angles of the propagation path are needed as we have to
   // interpolate the intensity field and the scattered field on the
@@ -2328,7 +2342,9 @@ void InterpolateOnPropagation1D(  //Output
 
   // Interpolate gas extinction
   out3 << "Interpolate vmr field\n";
-  interp(gas_abs_int, itw, gas_extinction(joker, 0, 0), cloud_gp_p);
+//  interp(gas_abs_int, itw, gas_extinction(joker, 0, 0), cloud_gp_p);
+  interp(gas_abs_int, itw_poly, gas_extinction(joker, 0, 0), gp_poly );
+
 
 }
 
