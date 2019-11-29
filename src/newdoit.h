@@ -180,6 +180,7 @@ void NewDoitMonoCalc(Workspace& ws,
 void CalcGasExtinction(Workspace& ws,
                        //Output
                        Tensor3& gas_extinct,
+                       Vector& p_grid_abs,
                        //Input
                        const Agenda& propmat_clearsky_agenda,
                        const ConstTensor3View& t_field,
@@ -245,8 +246,10 @@ void CalcSurfaceProperties(Workspace& ws,
 //TODO:Add doxygen doc
 void CalcPropagationPathMaxLength(
     Tensor3& p_path_maxlength,
-    Tensor6& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+    const Tensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
     const ConstVectorView& p_grid,
+    const ConstTensor3View& gas_extinct,
+    const ConstVectorView& p_grid_abs,
     const ConstVectorView& lat_grid,
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
@@ -269,6 +272,7 @@ void RunNewDoit(Workspace& ws,
                 const Tensor3& t_field,
                 const Tensor3& z_field,
                 const Vector& p_grid,
+                const Vector& p_grid_abs,
                 const Vector& za_grid,
                 const Vector& aa_grid,
                 const Vector& scat_za_grid,
@@ -364,6 +368,7 @@ void UpdateSpectralRadianceField(
     const Numeric& ppath_lraytrace,
     const Tensor3& p_path_maxlength,
     const Vector& p_grid,
+    const Vector& p_grid_abs,
     const Tensor3& z_field,
     const Vector& refellipsoid,
     // Calculate thermal emission:
@@ -391,6 +396,7 @@ void UpdateSpectralRadianceField1D(
     const Numeric& ppath_lraytrace,
     const Tensor3& p_path_maxlength,
     const Vector& p_grid,
+    const Vector& p_grid_abs,
     const Tensor3& z_field,
     const Vector& refellipsoid,
     // Calculate thermal emission:
@@ -437,6 +443,7 @@ void UpdateCloudPropagationPath1D(
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
     const ConstVectorView& p_grid,
+    const ConstVectorView& p_grid_abs,
     const ConstTensor3View& z_field,
     const ConstVectorView& refellipsoid,
     const ConstTensor3View& t_field,
@@ -462,6 +469,7 @@ void InterpolateOnPropagation1D(  //Output
     const ConstTensor6View& doit_scat_field,
     const ConstTensor6View& doit_i_field_mono,
     const ConstVectorView& p_grid,
+    const ConstVectorView& p_grid_abs,
     const ConstTensor3View& t_field,
     const Ppath& ppath_step,
     const ArrayOfIndex& cloudbox_limits,

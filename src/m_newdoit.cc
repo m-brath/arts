@@ -113,6 +113,7 @@ void NewDoitCalc(Workspace& ws,
                  const Vector& epsilon,
                  const Index& max_num_iterations,
                  const Numeric& tau_max,
+                 const Numeric& refine_absorption_p_grid,
                  const Index& accelerated,
                  const Index& t_interp_order,
                  const Index& N_za_grid,
@@ -254,10 +255,12 @@ void NewDoitCalc(Workspace& ws,
 
   const Index nf = f_grid.nelem();
   const Index Np_cloud = cloudbox_limits[1] - cloudbox_limits[0] + 1;
+  const Index Np_cloud_abs =
+      Index(Numeric(Np_cloud) * refine_absorption_p_grid);
 
   // Resize and initialize fields
   if (atmosphere_dim == 1) {
-    gas_extinction_doit.resize(nf, Np_cloud, 1, 1);
+    gas_extinction_doit.resize(nf, Np_cloud_abs, 1, 1);
     extinction_matrix_doit.resize(
         nf, Np_cloud, 1, 1, za_grid.nelem(), stokes_dim, stokes_dim);
     absorption_vector_doit.resize(
@@ -266,7 +269,8 @@ void NewDoitCalc(Workspace& ws,
   } else {
     const Index Nlat_cloud = cloudbox_limits[3] - cloudbox_limits[2] + 1;
     const Index Nlon_cloud = cloudbox_limits[5] - cloudbox_limits[4] + 1;
-    gas_extinction_doit.resize(nf, Np_cloud, Nlat_cloud, Nlon_cloud);
+
+    gas_extinction_doit.resize(nf, Np_cloud_abs, Nlat_cloud, Nlon_cloud);
     extinction_matrix_doit.resize(nf,
                                   Np_cloud,
                                   Nlat_cloud,
