@@ -1926,7 +1926,7 @@ void UpdateSpectralRadianceField1D(
 
   // Number of zenith angles.
   const Index N_za = za_grid.nelem();
-
+  const Index N_p = p_grid.nelem();
   const Index stokes_dim = doit_scat_field.ncols();
 
   const Index c_idx1 = cloudbox_limits[1];
@@ -1935,8 +1935,8 @@ void UpdateSpectralRadianceField1D(
   // If theta is between 90° and the limiting value, the intersection point
   // is exactly at the same level as the starting point (cp. AUG)
   Numeric theta_lim =
-      180. - asin((refellipsoid[0] + z_field(cloudbox_limits[0], 0, 0)) /
-                  (refellipsoid[0] + z_field(cloudbox_limits[1], 0, 0))) *
+      180. - asin((refellipsoid[0] + z_field(0, 0, 0)) /
+                  (refellipsoid[0] + z_field(N_p-1, 0, 0))) *
                  RAD2DEG;
 
   // Epsilon for additional limb iterations
@@ -1990,7 +1990,7 @@ void UpdateSpectralRadianceField1D(
       // directions, we start from cloudbox_limits[1]-1 and go down
       // to cloudbox_limits[0] to do a sequential update of the
       // radiation field
-      for (Index i_p = c_idx1 - 1; i_p >= c_idx0; i_p--) {
+      for (Index i_p = N_p - 2; i_p >= 0; i_p--) {
         if (adaptive) {
           ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
           ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
@@ -2023,7 +2023,7 @@ void UpdateSpectralRadianceField1D(
       //
       // Sequential updating for downlooking angles
       //
-      for (Index i_p = c_idx0 + 1; i_p <= c_idx1; i_p++) {
+      for (Index i_p = 0 + 1; i_p <= N_p-1; i_p++) {
         if (adaptive) {
           ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
           ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
@@ -2068,7 +2068,7 @@ void UpdateSpectralRadianceField1D(
       while (!conv_flag && limb_it < 10) {
         limb_it++;
         doit_i_field_limb = doit_i_field_mono(joker, 0, 0, i_za, 0, joker);
-        for (Index i_p = c_idx0; i_p <= c_idx1; i_p++) {
+        for (Index i_p = 0; i_p <= N_p-1; i_p++) {
           // For this case the cloudbox goes down to the surface and we
           // look downwards. These cases are outside the cloudbox and
           // not needed. Switch is included here, as ppath_step_agenda
@@ -2198,7 +2198,7 @@ void UpdateCloudPropagationPath1D(
   ppath_step.los(0, 0) = za_grid[za_index];
 
   // Define the grid positions:
-  ppath_step.gp_p[0].idx = p_index;
+  ppath_step.gp_p[0].idx = p_index+cloudbox_limits[0];
   ppath_step.gp_p[0].fd[0] = 0;
   ppath_step.gp_p[0].fd[1] = 1;
 
@@ -2535,10 +2535,10 @@ void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
   }  // End of loop over ppath_step.
   // Assign calculated Stokes Vector to doit_i_field_mono.
   if (atmosphere_dim == 1)
-    doit_i_field_mono(p_index - cloudbox_limits[0], 0, 0, za_index, 0, joker) =
+    doit_i_field_mono(p_index , 0, 0, za_index, 0, joker) =
         stokes_vec;
   else if (atmosphere_dim == 3)
-    doit_i_field_mono(p_index - cloudbox_limits[0],
+    doit_i_field_mono(p_index,
                       lat_index - cloudbox_limits[2],
                       lon_index - cloudbox_limits[4],
                       za_index,
