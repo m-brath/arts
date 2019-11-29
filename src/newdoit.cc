@@ -768,9 +768,12 @@ void NewDoitMonoCalc(Workspace& ws,
 
   CREATE_OUT0;
 
+  Vector p_grid_abs;
+
   //calculate gas extinction
   CalcGasExtinction(ws,
                     gas_extinction,
+                    p_grid_abs,
                     propmat_clearsky_agenda,
                     t_field,
                     vmr_field,
@@ -864,6 +867,8 @@ void NewDoitMonoCalc(Workspace& ws,
         p_path_maxlength,
         extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
         p_grid,
+        gas_extinction,
+        p_grid_abs,
         lat_grid,
         lon_grid,
         za_grid,
@@ -887,6 +892,7 @@ void NewDoitMonoCalc(Workspace& ws,
              t_field,
              z_field,
              p_grid,
+             p_grid_abs,
              za_grid,
              aa_grid,
              scat_za_grid,
@@ -912,6 +918,7 @@ void NewDoitMonoCalc(Workspace& ws,
 
 void CalcGasExtinction(Workspace& ws,
                      Tensor3& gas_extinct,
+                     Vector& p_grid_abs,
                      const Agenda& propmat_clearsky_agenda,
                      const ConstTensor3View& t_field,
                      const ConstTensor4View& vmr_field,
@@ -922,9 +929,13 @@ void CalcGasExtinction(Workspace& ws,
   // Initialization
   gas_extinct = 0.;
 
-  const Index Np = p_grid.nelem();
+  const Index Np = gas_extinct.npages();
   const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
   const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
+
+
+  //create pressure grid for absorption
+  nlogspace(p_grid_abs,p_grid[0],p_grid[p_grid.nelem()-1],Np);
 
   // Local variables to be used in agendas
 
@@ -932,7 +943,33 @@ void CalcGasExtinction(Workspace& ws,
 
   const Vector rtp_temperature_nlte_local_dummy(0);
 
-  // Calculate layer averaged gaseous extinction
+  //interpolate t and vmr field on absorption pressure grid
+  Tensor3 t_field_int(Np,Nlat,Nlon);
+  Tensor4 vmr_field_int(vmr_field.nbooks(),Np,Nlat,Nlon);
+  ArrayOfGridPos gp_p;
+  Matrix itw_p(Np, 2);
+
+  gp_p.resize(p_grid_abs.nelem());
+  gridpos(gp_p, p_grid, p_grid_abs);
+  interpweights(itw_p, gp_p);
+
+  for (Index ilat = 0; ilat < Nlat; ilat++) {
+    for (Index ilon = 0; ilon < Nlon; ilon++) {
+      interp(t_field_int(joker, ilat, ilon),
+             itw_p,
+             t_field(joker, ilon, ilat),
+             gp_p);
+
+      for (Index ispc = 0; ispc < vmr_field.nbooks(); ispc++) {
+        interp(vmr_field_int(ispc, joker, ilat, ilon),
+               itw_p,
+               vmr_field(ispc, joker, ilon, ilat),
+               gp_p);
+      }
+    }
+  }
+
+    // Calculate layer averaged gaseous extinction
   for (Index ip = 0; ip < Np; ip++) {
     for (Index ilat = 0; ilat < Nlat; ilat++) {
       for (Index ilon = 0; ilon < Nlon; ilon++) {
@@ -952,10 +989,10 @@ void CalcGasExtinction(Workspace& ws,
                                        (Vector) f_mono,  // monochromatic calculation
                                        rtp_mag_dummy,
                                        ppath_los_dummy,
-                                       p_grid[ip],
-                                       t_field(ip, ilat, ilon),
+                                       p_grid_abs[ip],
+                                       t_field_int(ip, ilat, ilon),
                                        rtp_temperature_nlte_local_dummy,
-                                       vmr_field(joker, ip, ilat, ilon),
+                                       vmr_field_int(joker, ip, ilat, ilon),
                                        propmat_clearsky_agenda);
 
         //Assuming non-polarized light and only one frequency
@@ -1358,8 +1395,10 @@ void CalcSurfaceProperties(Workspace& ws,
 
 void CalcPropagationPathMaxLength(
     Tensor3& p_path_maxlength,
-    Tensor6& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+    const Tensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
     const ConstVectorView& p_grid,
+    const ConstTensor3View& gas_extinct,
+    const ConstVectorView& p_grid_abs,
     const ConstVectorView& lat_grid,
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
@@ -1371,6 +1410,25 @@ void CalcPropagationPathMaxLength(
   const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
   const Index Ndir = extinction_matrix.npages();
   Numeric ext_mat_elem;
+
+  //gas extinction has a different grid than extinction matrix, so we have to
+  // interpolate
+  Tensor3 gas_ext_int(Np, Nlat, Nlon);
+  ArrayOfGridPos gp_p;
+  Matrix itw_p(Np, 2);
+
+  gp_p.resize(p_grid.nelem());
+  gridpos(gp_p, p_grid_abs, p_grid);
+  interpweights(itw_p, gp_p);
+
+  for (Index ilat = 0; ilat < Nlat; ilat++) {
+    for (Index ilon = 0; ilon < Nlon; ilon++) {
+      interp(gas_ext_int(joker, ilat, ilon),
+             itw_p,
+             gas_extinct(joker, ilon, ilat),
+             gp_p);
+    }
+  }
 
   //prepare output container
   p_path_maxlength.resize(Np, Nlat, Nlon);
@@ -1392,7 +1450,8 @@ void CalcPropagationPathMaxLength(
         ext_mat_elem /= Numeric(Ndir);
 
         // maximum propagation path length for each grid point.
-        p_path_maxlength(ip, ilat, ilon) = tau_max / ext_mat_elem;
+        p_path_maxlength(ip, ilat, ilon) =
+            tau_max / (ext_mat_elem + gas_extinct(ip, ilat, ilon));
       }
     }
   }
@@ -1415,6 +1474,7 @@ void RunNewDoit(Workspace& ws,
                 const Tensor3& t_field,
                 const Tensor3& z_field,
                 const Vector& p_grid,
+                const Vector& p_grid_abs,
                 const Vector& za_grid,
                 const Vector& aa_grid,
                 const Vector& scat_za_grid,
@@ -1516,6 +1576,7 @@ void RunNewDoit(Workspace& ws,
                                 ppath_lraytrace,
                                 p_path_maxlength,
                                 p_grid,
+                                p_grid_abs,
                                 z_field,
                                 refellipsoid,
                                 t_field,
@@ -1778,6 +1839,7 @@ void UpdateSpectralRadianceField(Workspace& ws,
                                  const Numeric& ppath_lraytrace,
                                  const Tensor3& p_path_maxlength,
                                  const Vector& p_grid,
+                                 const Vector& p_grid_abs,
                                  const Tensor3& z_field,
                                  const Vector& refellipsoid,
                                  // Calculate thermal emission:
@@ -1800,6 +1862,7 @@ void UpdateSpectralRadianceField(Workspace& ws,
                                   ppath_lraytrace,
                                   p_path_maxlength,
                                   p_grid,
+                                  p_grid_abs,
                                   z_field,
                                   refellipsoid,
                                   t_field,
@@ -1847,6 +1910,7 @@ void UpdateSpectralRadianceField1D(
     const Numeric& ppath_lraytrace,
     const Tensor3& p_path_maxlength,
     const Vector& p_grid,
+    const Vector& p_grid_abs,
     const Tensor3& z_field,
     const Vector& refellipsoid,
     // Calculate thermal emission:
@@ -1943,6 +2007,7 @@ void UpdateSpectralRadianceField1D(
                                      ppath_lmax_temp,
                                      ppath_lraytrace_temp,
                                      p_grid,
+                                     p_grid_abs,
                                      z_field,
                                      refellipsoid,
                                      t_field,
@@ -1975,6 +2040,7 @@ void UpdateSpectralRadianceField1D(
                                      ppath_lmax_temp,
                                      ppath_lraytrace_temp,
                                      p_grid,
+                                     p_grid_abs,
                                      z_field,
                                      refellipsoid,
                                      t_field,
@@ -2025,6 +2091,7 @@ void UpdateSpectralRadianceField1D(
                                          ppath_lmax_temp,
                                          ppath_lraytrace_temp,
                                          p_grid,
+                                         p_grid_abs,
                                          z_field,
                                          refellipsoid,
                                          t_field,
@@ -2102,6 +2169,7 @@ void UpdateCloudPropagationPath1D(
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
     const ConstVectorView& p_grid,
+    const ConstVectorView& p_grid_abs,
     const ConstTensor3View& z_field,
     const ConstVectorView& refellipsoid,
     const ConstTensor3View& t_field,
@@ -2182,6 +2250,7 @@ void UpdateCloudPropagationPath1D(
                          doit_scat_field,
                          doit_i_field_mono,
                          p_grid,
+                         p_grid_abs,
                          t_field,
                          ppath_step,
                          cloudbox_limits,
@@ -2244,6 +2313,7 @@ void InterpolateOnPropagation1D(  //Output
     const ConstTensor6View& doit_scat_field,
     const ConstTensor6View& doit_i_field_mono,
     const ConstVectorView& p_grid,
+    const ConstVectorView& p_grid_abs,
     const ConstTensor3View& t_field,
     const Ppath& ppath_step,
     const ArrayOfIndex& cloudbox_limits,
@@ -2277,12 +2347,12 @@ void InterpolateOnPropagation1D(  //Output
   itw2p(p_int, p_grid, cloud_gp_p, itw);
 
   // prepare poly interpolation
-  Index order=3;
+  Index order=1;
   if (order > ppath_step.np-1){
     order = ppath_step.np-1;
   }
   ArrayOfGridPosPoly gp_poly(ppath_step.np);
-  gridpos_poly(gp_poly,p_grid,p_int,order);
+  gridpos_poly(gp_poly,p_grid_abs,p_int,order);
   Matrix itw_poly(gp_poly.nelem(),order+1);
   interpweights(itw_poly,gp_poly);
 
