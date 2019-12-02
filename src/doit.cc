@@ -1811,12 +1811,13 @@ void interp_cloud_coeff1D(  //Output
     }
   }
   //
-  // Planck function
+  const Index Np_cldbx = cloudbox_limits[1] - cloudbox_limits[0] + 1;
   //
   // Interpolate temperature field
   //
   out3 << "Interpolate temperature field\n";
-  interp(t_int, itw, t_field(joker, 0, 0), ppath_step.gp_p);
+  interp(t_int, itw, t_field(Range(cloudbox_limits[0], Np_cldbx), 0, 0), cloud_gp_p);
+//  interp(t_int, itw, t_field(joker, 0, 0), ppath_step.gp_p);
   //
   // The vmr_field is needed for the gaseous absorption
   // calculation.
@@ -1830,18 +1831,18 @@ void interp_cloud_coeff1D(  //Output
 
   for (Index i_sp = 0; i_sp < N_species; i_sp++) {
     out3 << "Interpolate vmr field\n";
-    interp(vmr_int, itw, vmr_field(i_sp, joker, 0, 0), ppath_step.gp_p);
+    interp(vmr_int, itw, vmr_field(i_sp, Range(cloudbox_limits[0], Np_cldbx), 0, 0), cloud_gp_p);
+//    interp(vmr_int, itw, vmr_field(i_sp, joker, 0, 0), ppath_step.gp_p);
     vmr_list_int(i_sp, joker) = vmr_int;
   }
   //
   // Interpolate pressure
   //
 
-  const Index Np_cldbx = cloudbox_limits[1] - cloudbox_limits[0] + 1;
-  Vector p_grid_test(Np_cldbx);
-  p_grid_test = p_grid[Range(cloudbox_limits[0], Np_cldbx)];
-  itw2p(p_int, p_grid_test, cloud_gp_p, itw);
 
+//  Vector p_grid_test(Np_cldbx);
+//  p_grid_test = p_grid[Range(cloudbox_limits[0], Np_cldbx)];
+  itw2p(p_int, p_grid[Range(cloudbox_limits[0], Np_cldbx)], cloud_gp_p, itw);
 //  itw2p(p_int, p_grid, ppath_step.gp_p, itw);
 }
 
