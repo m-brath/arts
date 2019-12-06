@@ -5762,15 +5762,28 @@ void Workspace::define_wsv_data() {
   //TODO: Remove later or add documentation and move it to correct position
   wsv_data.push_back(
       WsvRecord(NAME("gas_extinction_doit"),
-                DESCRIPTION("gas extinction field within cloudbox.\n"
-                            "\n"
+                DESCRIPTION("Array of gas extinction fields (Tensor3)\n"
+                            "within cloudbox for each frequency of *f_grid*\n"
                             "\n"
                             "Usage:      Output of *NewDoitCalc*\n"
                             "\n"
                             "Unit:       1/m\n"
                             "\n"
-                            "Dimensions: [ Nf, p_grid, lat_grid, lon_grid ]\n"),
-                GROUP("Tensor4")));
+                            "Dimensions: [ Nf ]\n"),
+                GROUP("ArrayOfTensor3")));
+
+  //TODO: Remove later or add documentation and move it to correct position
+  wsv_data.push_back(
+      WsvRecord(NAME("p_grid_gas_extinction"),
+                DESCRIPTION("Array of pressures (Vector)\n"
+                            "within cloudbox for each frequency of *f_grid*\n"
+                            "\n"
+                            "Usage:      Output of *NewDoitCalc*\n"
+                            "\n"
+                            "Unit:       1/m\n"
+                            "\n"
+                            "Dimensions: [ Nf ]\n"),
+                GROUP("ArrayOfVector")));
 
   //TODO: Remove later or add documentation and move it to correct position
   wsv_data.push_back(WsvRecord(

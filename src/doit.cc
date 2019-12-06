@@ -1838,10 +1838,6 @@ void interp_cloud_coeff1D(  //Output
   //
   // Interpolate pressure
   //
-
-
-//  Vector p_grid_test(Np_cldbx);
-//  p_grid_test = p_grid[Range(cloudbox_limits[0], Np_cldbx)];
   itw2p(p_int, p_grid[Range(cloudbox_limits[0], Np_cldbx)], cloud_gp_p, itw);
 //  itw2p(p_int, p_grid, ppath_step.gp_p, itw);
 }

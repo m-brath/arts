@@ -31,11 +31,12 @@
   === External declarations
   ===========================================================================*/
 
-#include "newdoit.h"
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+#include <algorithm>
+#include "newdoit.h"
 #include "agenda_class.h"
 #include "array.h"
 #include "auto_md.h"
@@ -728,6 +729,7 @@ void NewDoitMonoCalc(Workspace& ws,
     //Input and Output:
                      Tensor6& doit_i_field_mono,
                      Tensor3& gas_extinction,
+                     Vector& p_grid_abs,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
                      Tensor7& scattering_matrix,
@@ -767,25 +769,8 @@ void NewDoitMonoCalc(Workspace& ws,
 {
 
   CREATE_OUT0;
-
-  Vector p_grid_abs;
-
-  //calculate gas extinction
-  CalcGasExtinction(ws,
-                    gas_extinction,
-                    p_grid_abs,
-                    propmat_clearsky_agenda,
-                    t_field,
-                    vmr_field,
-                    p_grid,
-                    lat_grid,
-                    lon_grid,
-                    f_mono);
-
   ostringstream os, os1, os2;
-  os << "gas absorption calculated \n";
-  out0 << os.str();
-  os.clear();
+
 
   //calculate par_optpropCalc_doit
   CalcParticleOpticalProperties(extinction_matrix,
@@ -860,20 +845,83 @@ void NewDoitMonoCalc(Workspace& ws,
     }
   }
 
+
+
+
   Tensor3 p_path_maxlength;
   if (tau_max > 0) {
-    //calculate local ppath_lmax
-    CalcPropagationPathMaxLength(
-        p_path_maxlength,
-        extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
-        p_grid,
-        gas_extinction,
-        p_grid_abs,
-        lat_grid,
-        lon_grid,
-        za_grid,
-        tau_max);
+    //To estimate the maximum ppath length, we need gas and particle extinction,
+    //so we calculate the gas extinction on the cloud box pressure grid first.
+    //The actual gas extinction which will be used for the RT calculation will
+    //calculated additionally.
+
+//    CalcGasExtinction(ws,
+//                      gas_extinction,
+//                      p_grid,
+//                      propmat_clearsky_agenda,
+//                      t_field,
+//                      vmr_field,
+//                      p_grid,
+//                      lat_grid,
+//                      lon_grid,
+//                      f_mono);
+//
+//    //calculate local ppath_lmax
+//    CalcPropagationPathMaxLength(
+//        p_path_maxlength,
+//        extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+//        p_grid,
+//        gas_extinction,
+//        p_grid,
+//        lat_grid,
+//        lon_grid,
+//        za_grid,
+//        tau_max);
   }
+
+  Vector temperature_abs;
+  Matrix vmr_abs;
+  ArrayOfGridPos Gpos_abs;
+  Matrix InterpWeights_abs;
+  EstimatePressurePoints1D(ws,
+                           p_grid_abs,
+                           temperature_abs,
+                           vmr_abs,
+                           Gpos_abs,
+                           InterpWeights_abs,
+                           cloudbox_limits,
+                           za_grid,
+                           ppath_step_agenda,
+                           ppath_lmax,
+                           ppath_lraytrace,
+                           p_path_maxlength,
+                           p_grid,
+                           z_field,
+                           t_field,
+                           vmr_field,
+                           refellipsoid,
+                           Vector(1,f_mono),
+                           verbosity);
+
+
+
+  //calculate gas extinction for the standard grid
+  CalcGasExtinction(ws,
+                    gas_extinction,
+                    p_grid_abs,
+                    temperature_abs,
+                    vmr_abs,
+                    propmat_clearsky_agenda,
+                    lat_grid,
+                    lon_grid,
+                    f_mono);
+
+
+  os << "gas absorption calculated \n";
+  out0 << os.str();
+  os.clear();
+
+
 
   //run new doit
   RunNewDoit(ws,
@@ -918,24 +966,21 @@ void NewDoitMonoCalc(Workspace& ws,
 
 void CalcGasExtinction(Workspace& ws,
                      Tensor3& gas_extinct,
-                     Vector& p_grid_abs,
+                     const ConstVectorView& p_grid_abs,
+                     const ConstVectorView& t_field_abs,
+                     const ConstMatrixView& vmr_field_abs,
                      const Agenda& propmat_clearsky_agenda,
-                     const ConstTensor3View& t_field,
-                     const ConstTensor4View& vmr_field,
-                     const ConstVectorView& p_grid,
                      const ConstVectorView& lat_grid,
                      const ConstVectorView& lon_grid,
                      const ConstVectorView& f_mono) {
-  // Initialization
-  gas_extinct = 0.;
 
-  const Index Np = gas_extinct.npages();
+  const Index Np = p_grid_abs.nelem();
   const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
   const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
 
-
-  //create pressure grid for absorption
-  nlogspace(p_grid_abs,p_grid[0],p_grid[p_grid.nelem()-1],Np);
+  // Initialization
+  gas_extinct.resize(Np,Nlat,Nlon);
+  gas_extinct = 0.;
 
   // Local variables to be used in agendas
 
@@ -943,31 +988,7 @@ void CalcGasExtinction(Workspace& ws,
 
   const Vector rtp_temperature_nlte_local_dummy(0);
 
-  //interpolate t and vmr field on absorption pressure grid
-  Tensor3 t_field_int(Np,Nlat,Nlon);
-  Tensor4 vmr_field_int(vmr_field.nbooks(),Np,Nlat,Nlon);
-  ArrayOfGridPos gp_p;
-  Matrix itw_p(Np, 2);
 
-  gp_p.resize(p_grid_abs.nelem());
-  gridpos(gp_p, p_grid, p_grid_abs);
-  interpweights(itw_p, gp_p);
-
-  for (Index ilat = 0; ilat < Nlat; ilat++) {
-    for (Index ilon = 0; ilon < Nlon; ilon++) {
-      interp(t_field_int(joker, ilat, ilon),
-             itw_p,
-             t_field(joker, ilon, ilat),
-             gp_p);
-
-      for (Index ispc = 0; ispc < vmr_field.nbooks(); ispc++) {
-        interp(vmr_field_int(ispc, joker, ilat, ilon),
-               itw_p,
-               vmr_field(ispc, joker, ilon, ilat),
-               gp_p);
-      }
-    }
-  }
 
     // Calculate layer averaged gaseous extinction
   for (Index ip = 0; ip < Np; ip++) {
@@ -990,16 +1011,16 @@ void CalcGasExtinction(Workspace& ws,
                                        rtp_mag_dummy,
                                        ppath_los_dummy,
                                        p_grid_abs[ip],
-                                       t_field_int(ip, ilat, ilon),
+                                       t_field_abs[ip],
                                        rtp_temperature_nlte_local_dummy,
-                                       vmr_field_int(joker, ip, ilat, ilon),
+                                       vmr_field_abs(joker, ip),
                                        propmat_clearsky_agenda);
 
         //Assuming non-polarized light and only one frequency
         //TODO: Check if polarization is needed for absorption
         if (propmat_clearsky_local.nelem()) {
           for (Index j = 0; j < propmat_clearsky_local.nelem(); j++) {
-            gas_extinct(ip, ilat, ilon) += propmat_clearsky_local[j].Kjj()[0];
+            gas_extinct(ip, ilat, ilon) += propmat_clearsky_local[j].GetData()(0,0,0,0);
           }
         }
       }
@@ -2235,6 +2256,7 @@ void UpdateCloudPropagationPath1D(
     Matrix sca_vec_int(stokes_dim, ppath_step.np, 0.);
     Matrix doit_i_field_mono_int(stokes_dim, ppath_step.np, 0.);
     Vector t_int(ppath_step.np, 0.);
+    Vector p_int(ppath_step.np, 0.);
 
 
     InterpolateOnPropagation1D(
@@ -2244,6 +2266,7 @@ void UpdateCloudPropagationPath1D(
                          sca_vec_int,
                          doit_i_field_mono_int,
                          t_int,
+                         p_int,
                          gas_extinction,
                          ext_mat_field,
                          abs_vec_field,
@@ -2269,6 +2292,7 @@ void UpdateCloudPropagationPath1D(
     RTStepInCloudNoBackground(doit_i_field_mono,
                               ppath_step,
                               t_int,
+                              p_int,
                               gas_abs_int,
                               ext_mat_int,
                               abs_vec_int,
@@ -2307,6 +2331,7 @@ void InterpolateOnPropagation1D(  //Output
     MatrixView& sca_vec_int,
     MatrixView& doit_i_field_mono_int,
     VectorView& t_int,
+    VectorView& p_int,
     const ConstTensor3View& gas_extinction,
     const ConstTensor5View& ext_mat_field,
     const ConstTensor4View& abs_vec_field,
@@ -2343,18 +2368,18 @@ void InterpolateOnPropagation1D(  //Output
   interpweights(itw, cloud_gp_p);
 
   //pressure interpolation
-  Vector p_int(ppath_step.np);
+//  Vector p_int(ppath_step.np);
   itw2p(p_int, p_grid, cloud_gp_p, itw);
 
-  // prepare poly interpolation
-  Index order=1;
-  if (order > ppath_step.np-1){
-    order = ppath_step.np-1;
-  }
-  ArrayOfGridPosPoly gp_poly(ppath_step.np);
-  gridpos_poly(gp_poly,p_grid_abs,p_int,order);
-  Matrix itw_poly(gp_poly.nelem(),order+1);
-  interpweights(itw_poly,gp_poly);
+  // prepare gas absorption interpolation
+//  Index order=1;
+//  if (order > ppath_step.np-1){
+//    order = ppath_step.np-1;
+//  }
+  ArrayOfGridPos gp_gas(ppath_step.np);
+  gridpos(gp_gas,p_grid_abs,p_int);
+  Matrix itw_gas(gp_gas.nelem(), 2);
+  interpweights(itw_gas,gp_gas);
 
 
   // The zenith angles of the propagation path are needed as we have to
@@ -2412,8 +2437,8 @@ void InterpolateOnPropagation1D(  //Output
 
   // Interpolate gas extinction
   out3 << "Interpolate vmr field\n";
-//  interp(gas_abs_int, itw, gas_extinction(joker, 0, 0), cloud_gp_p);
-  interp(gas_abs_int, itw_poly, gas_extinction(joker, 0, 0), gp_poly );
+  interp(gas_abs_int, itw_gas, gas_extinction(joker, 0, 0), gp_gas);
+//  interp(gas_abs_int, itw_poly, gas_extinction(joker, 0, 0), gp_poly );
 
 
 }
@@ -2421,7 +2446,8 @@ void InterpolateOnPropagation1D(  //Output
 void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
                                const Ppath& ppath_step,
                                const ConstVectorView& t_int,
-                               const VectorView& gas_abs_int,
+                               const ConstVectorView& p_int,
+                               const ConstVectorView& gas_abs_int,
                                const ConstTensor3View& ext_mat_int,
                                const ConstMatrixView& abs_vec_int,
                                const ConstMatrixView& sca_vec_int,
@@ -2734,6 +2760,392 @@ void CheckConvergence(
   }
 }
 
+
+void EstimatePressurePoints1D(
+    Workspace& ws,
+    Vector& pressure_abs,
+    Vector& temperature_abs,
+    Matrix& vmr_abs,
+    ArrayOfGridPos& Gpos,
+    Matrix& InterpWeights,
+    // WS Input:
+    const ArrayOfIndex& cloudbox_limits,
+    const Vector& za_grid,
+    // Propagation path calculation:
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Tensor3& p_path_maxlength,
+    const Vector& p_grid,
+    const Tensor3& z_field,
+    const ConstTensor3View& t_field,
+    const ConstTensor4View& vmr_field,
+    const Vector& refellipsoid,
+    const Vector& f_grid,
+    const Verbosity& verbosity) {
+  CREATE_OUT2;
+  CREATE_OUT3;
+
+  out2
+      << "  EstimatePressurePoints1D for absorption\n";
+  out2 << "  ------------------------------------------------------------- \n";
+
+  // Number of zenith angles.
+  const Index N_za = za_grid.nelem();
+  const Index N_p = p_grid.nelem();
+
+
+  // If theta is between 90° and the limiting value, the intersection point
+  // is exactly at the same level as the starting point (cp. AUG)
+  Numeric theta_lim =
+      180. - asin((refellipsoid[0] + z_field(0, 0, 0)) /
+                  (refellipsoid[0] + z_field(N_p-1, 0, 0))) *
+             RAD2DEG;
+
+
+  ArrayOfVector PressureArrays(N_p*N_za);
+  ArrayOfVector TemperatureArrays(N_p*N_za);
+  ArrayOfMatrix VmrArrays(N_p*N_za);
+  ArrayOfMatrix InterpWeightsArrays(N_p*N_za);
+  ArrayOfArrayOfGridPos GposArrays(N_p*N_za);
+
+  const bool adaptive = (p_path_maxlength.npages() > 0);
+  Numeric ppath_lmax_temp = ppath_lmax;
+  Numeric ppath_lraytrace_temp = ppath_lraytrace;
+
+  Index counter=-1;
+  Index pressure_counter=0;
+  //Loop over all directions, defined by za_grid
+  for (Index i_za = 0; i_za < N_za; i_za++) {
+
+
+
+    // Sequential update for uplooking angles
+    if (za_grid[i_za] <= 90.) {
+      // Loop over all positions inside the cloud box defined by the
+      // cloudbox_limits excluding the upper boundary. For uplooking
+      // directions, we start from cloudbox_limits[1]-1 and go down
+      // to cloudbox_limits[0] to do a sequential update of the
+      // radiation field
+      for (Index i_p = N_p - 2; i_p >= 0; i_p--) {
+        if (adaptive) {
+          ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
+          ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
+        }
+        Vector Pressures;
+        Vector Temperatures;
+        Matrix Vmrs;
+        ArrayOfGridPos cloud_gp_p;
+        Matrix itw;
+        counter++;
+        CloudPropagationPath1D(ws,
+                               Pressures,
+                               Temperatures,
+                               Vmrs,
+                               cloud_gp_p,
+                               itw,
+                               i_p,
+                               i_za,
+                               za_grid,
+                               cloudbox_limits,
+                               ppath_step_agenda,
+                               ppath_lmax_temp,
+                               ppath_lraytrace_temp,
+                               p_grid,
+                               z_field,
+                               t_field,
+                               vmr_field,
+                               refellipsoid,
+                               f_grid,
+                               verbosity);
+
+        PressureArrays[counter]=Pressures;
+        TemperatureArrays[counter]=Temperatures;
+        VmrArrays[counter]=Vmrs;
+        InterpWeightsArrays[counter]=itw;
+        GposArrays[counter]=cloud_gp_p;
+        pressure_counter+=Pressures.nelem();
+
+      }
+    } else if (za_grid[i_za] >= theta_lim) {
+      //
+      // Sequential updating for downlooking angles
+      //
+      for (Index i_p = 0 + 1; i_p <= N_p-1; i_p++) {
+        if (adaptive) {
+          ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
+          ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
+        }
+
+        Vector Pressures;
+        Vector Temperatures;
+        Matrix Vmrs;
+        ArrayOfGridPos cloud_gp_p;
+        Matrix itw;
+        counter++;
+        CloudPropagationPath1D(ws,
+                               Pressures,
+                               Temperatures,
+                               Vmrs,
+                               cloud_gp_p,
+                               itw,
+                               i_p,
+                               i_za,
+                               za_grid,
+                               cloudbox_limits,
+                               ppath_step_agenda,
+                               ppath_lmax_temp,
+                               ppath_lraytrace_temp,
+                               p_grid,
+                               z_field,
+                               t_field,
+                               vmr_field,
+                               refellipsoid,
+                               f_grid,
+                               verbosity);
+
+        PressureArrays[counter]=Pressures;
+        TemperatureArrays[counter]=Temperatures;
+        VmrArrays[counter]=Vmrs;
+        InterpWeightsArrays[counter]=itw;
+        GposArrays[counter]=cloud_gp_p;
+        pressure_counter+=Pressures.nelem();
+      }  // Close loop over p_grid (inside cloudbox).
+    }    // end if downlooking.
+
+      //
+      // Limb looking:
+      // We have to include a special case here, as we may miss the endpoints
+      // when the intersection point is at the same level as the aactual point.
+      // To be save we loop over the full cloudbox. Inside the function
+      // cloud_ppath_update1D it is checked whether the intersection point is
+      // inside the cloudbox or not.
+
+    else {
+      for (Index i_p = 0; i_p <= N_p - 1; i_p++) {
+        // For this case the cloudbox goes down to the surface and we
+        // look downwards. These cases are outside the cloudbox and
+        // not needed. Switch is included here, as ppath_step_agenda
+        // gives an error for such cases.
+
+        if (i_p != 0) {
+          if (adaptive) {
+            ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
+            ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
+          }
+
+          Vector Pressures;
+          Vector Temperatures;
+          Matrix Vmrs;
+          ArrayOfGridPos cloud_gp_p;
+          Matrix itw;
+          counter++;
+          CloudPropagationPath1D(ws,
+                                 Pressures,
+                                 Temperatures,
+                                 Vmrs,
+                                 cloud_gp_p,
+                                 itw,
+                                 i_p,
+                                 i_za,
+                                 za_grid,
+                                 cloudbox_limits,
+                                 ppath_step_agenda,
+                                 ppath_lmax_temp,
+                                 ppath_lraytrace_temp,
+                                 p_grid,
+                                 z_field,
+                                 t_field,
+                                 vmr_field,
+                                 refellipsoid,
+                                 f_grid,
+                                 verbosity);
+
+          PressureArrays[counter]=Pressures;
+          TemperatureArrays[counter]=Temperatures;
+          VmrArrays[counter]=Vmrs;
+          InterpWeightsArrays[counter]=itw;
+          GposArrays[counter]=cloud_gp_p;
+          pressure_counter+=Pressures.nelem();
+        }
+      }
+    }
+  }  // Closes loop over za_grid.
+
+  Vector PressurePointsArray(pressure_counter);
+  Vector TemperaturesArray(pressure_counter);
+  Matrix VmrsArray(vmr_field.nbooks(),pressure_counter);
+  ArrayOfGridPos GposArray(pressure_counter);
+  Matrix InterpWeightsArray(pressure_counter,2);
+
+  counter = -1;
+  for (Index i_pa = 0; i_pa < PressureArrays.nelem(); i_pa++) {
+    for (Index i_pt = 0; i_pt < PressureArrays[i_pa].nelem(); i_pt++) {
+      counter++;
+      PressurePointsArray[counter] = PressureArrays[i_pa][i_pt];
+      TemperaturesArray[counter] = TemperatureArrays[i_pa][i_pt];
+      VmrsArray(joker,counter) = VmrArrays[i_pa](joker,i_pt);
+      InterpWeightsArray(counter,joker) = InterpWeightsArrays[i_pa](i_pt,joker);
+      GposArray[counter]= GposArrays[i_pa][i_pt];
+    }
+  }
+
+  // sort it according to pressure
+  ArrayOfIndex Index_sorted;
+  get_sorted_indexes(Index_sorted, PressurePointsArray);
+
+  Vector PressurePointsArraySorted(pressure_counter);
+  Vector TemperaturesArraySorted(pressure_counter);
+  Matrix VmrsArraySorted(vmr_field.nbooks(),pressure_counter);
+  ArrayOfGridPos GposArraySorted(pressure_counter);
+  Matrix InterpWeightsArraySorted(pressure_counter,2);
+
+  for (Index i_idx = 0; i_idx < Index_sorted.nelem(); i_idx++){
+    PressurePointsArraySorted[i_idx] = PressurePointsArray[Index_sorted[i_idx]];
+    TemperaturesArraySorted[i_idx] = TemperaturesArray[Index_sorted[i_idx]];
+    VmrsArraySorted(joker, i_idx) = VmrsArray(joker,Index_sorted[i_idx]);
+    InterpWeightsArraySorted(i_idx, joker) = InterpWeightsArray(i_idx, joker);
+    GposArraySorted[i_idx] = GposArray[Index_sorted[i_idx]];
+  }
+  DEBUG_VAR(PressurePointsArraySorted)
+  DEBUG_VAR(TemperaturesArraySorted)
+
+  //get unique pressures indices
+  Numeric delta;
+  ArrayOfIndex IndexArrayTemp(PressurePointsArraySorted.nelem());
+  Index count_idx=0;
+  for (Index i_idx = 0; i_idx < PressurePointsArraySorted.nelem()-1; i_idx++){
+
+    delta=PressurePointsArraySorted[i_idx+1]-PressurePointsArraySorted[i_idx];
+
+    if (delta!=0){
+      count_idx++;
+      IndexArrayTemp[count_idx]=i_idx+1;
+    }
+  }
+
+  //remove non unique pressures and the other ones according to pressure
+  pressure_abs.resize(count_idx+1);
+  temperature_abs.resize(count_idx+1);
+  vmr_abs.resize(vmr_field.nbooks(),count_idx+1);
+  Gpos.resize(count_idx+1);
+  InterpWeights.resize(count_idx+1,2);
+
+  for (Index i_idx = 0; i_idx <= count_idx ; i_idx++){
+    pressure_abs[i_idx] = PressurePointsArraySorted[IndexArrayTemp[i_idx]];
+    temperature_abs[i_idx] = TemperaturesArraySorted[IndexArrayTemp[i_idx]];
+    vmr_abs(joker,i_idx) = VmrsArraySorted(joker,IndexArrayTemp[i_idx]);
+    InterpWeights(i_idx, joker) = InterpWeightsArraySorted(IndexArrayTemp[i_idx],joker);
+    Gpos[i_idx] = GposArraySorted[IndexArrayTemp[i_idx]];
+  }
+  DEBUG_VAR(pressure_abs)
+  DEBUG_VAR(temperature_abs)
+
+  out3 << "  Pressure points estimated and sorted\n";
+}
+
+void CloudPropagationPath1D(
+    Workspace& ws,
+    Vector& Pressures,
+    Vector& Temperatures,
+    Matrix& Vmrs,
+    ArrayOfGridPos& cloud_gp_p,
+    Matrix& itw,
+    const Index& p_index,
+    const Index& za_index,
+    const ConstVectorView& za_grid,
+    const ArrayOfIndex& cloudbox_limits,
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const ConstVectorView& p_grid,
+    const ConstTensor3View& z_field,
+    const ConstTensor3View& t_field,
+    const ConstTensor4View& vmr_field,
+    const ConstVectorView& refellipsoid,
+    const ConstVectorView& f_grid,
+    const Verbosity& verbosity) {
+
+  CREATE_OUT3;
+
+  Ppath ppath_step;
+  // Input variables are checked in the WSMs i_fieldUpdateSeqXXX, from
+  // where this function is called.
+
+  //Initialize ppath for 1D.
+  ppath_init_structure(ppath_step, 1, 1);
+  // See documentation of ppath_init_structure for understanding
+  // the parameters.
+
+  // Assign value to ppath.pos:
+  ppath_step.pos(0, 0) = z_field(p_index, 0, 0);
+  ppath_step.r[0] = refellipsoid[0] + z_field(p_index, 0, 0);
+
+  // Define the direction:
+  ppath_step.los(0, 0) = za_grid[za_index];
+
+  // Define the grid positions:
+  ppath_step.gp_p[0].idx = p_index+cloudbox_limits[0];
+  ppath_step.gp_p[0].fd[0] = 0;
+  ppath_step.gp_p[0].fd[1] = 1;
+
+  // Call ppath_step_agenda:
+  ppath_step_agendaExecute(ws,
+                           ppath_step,
+                           ppath_lmax,
+                           ppath_lraytrace,
+                           f_grid,
+                           ppath_step_agenda);
+
+  // Check whether the next point is inside or outside the
+  // cloudbox. Only if the next point lies inside the
+  // cloudbox a radiative transfer step caclulation has to
+  // be performed.
+
+  if ((cloudbox_limits[0] <= ppath_step.gp_p[1].idx &&
+       cloudbox_limits[1] > ppath_step.gp_p[1].idx) ||
+      (cloudbox_limits[1] == ppath_step.gp_p[1].idx &&
+       abs(ppath_step.gp_p[1].fd[0]) < 1e-6)) {
+
+    // Ppath_step normally has 2 points, the starting
+    // point and the intersection point.
+    // But there can be points in between, when a maximum
+    // lstep is given. We have to interpolate on all the
+    // points in the ppath_step.
+
+
+    cloud_gp_p = ppath_step.gp_p;
+
+    for (Index i = 0; i < ppath_step.np; i++)
+      cloud_gp_p[i].idx -= cloudbox_limits[0];
+
+    // Grid index for points at upper limit of cloudbox must be shifted
+    const Index n1 = cloudbox_limits[1] - cloudbox_limits[0];
+    gridpos_upperend_check(cloud_gp_p[0], n1);
+    gridpos_upperend_check(cloud_gp_p[ppath_step.np - 1], n1);
+
+    itw.resize(cloud_gp_p.nelem(), 2);
+    interpweights(itw, cloud_gp_p);
+
+    //pressure interpolation
+    out3 << "Interpolate pressure for ppath\n";
+    Pressures.resize(ppath_step.np);
+    itw2p(Pressures, p_grid, cloud_gp_p, itw);
+
+    //temperature interpolation
+    out3 << "Interpolate temperature for ppath\n";
+    Temperatures.resize(ppath_step.np);
+    interp(Temperatures,itw, t_field(joker,0,0), cloud_gp_p);
+
+    Vmrs.resize(vmr_field.nbooks(),ppath_step.np);
+    for (Index i_v = 0; i_v < vmr_field.nbooks(); i_v++){
+      interp(Vmrs(i_v,joker),itw, vmr_field(i_v,joker,0,0), cloud_gp_p);
+    }
+
+
+  }  //end if inside cloudbox
+}
+
 void FlattenMeshGrid(Matrix& flattened_meshgrid,
                      const Vector& grid1,
                      const Vector& grid2) {
@@ -2755,7 +3167,6 @@ void FlattenMeshGrid(Matrix& flattened_meshgrid,
     }
   }
 }
-
 
 void FlattenMeshGridIndex(ArrayOfIndex& index_grid1,
                           ArrayOfIndex& index_grid2,

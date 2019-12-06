@@ -139,6 +139,7 @@ void NewDoitMonoCalc(Workspace& ws,
                      //Output
                      Tensor6& doit_i_field_mono,
                      Tensor3& gas_extinction,
+                     Vector& p_grid_abs,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
                      Tensor7& scattering_matrix,
@@ -178,14 +179,11 @@ void NewDoitMonoCalc(Workspace& ws,
 
 //TODO:Add doxygen doc
 void CalcGasExtinction(Workspace& ws,
-                       //Output
                        Tensor3& gas_extinct,
-                       Vector& p_grid_abs,
-                       //Input
+                       const ConstVectorView& p_grid_abs,
+                       const ConstVectorView& t_field_abs,
+                       const ConstMatrixView& vmr_field_abs,
                        const Agenda& propmat_clearsky_agenda,
-                       const ConstTensor3View& t_field,
-                       const ConstTensor4View& vmr_field,
-                       const ConstVectorView& p_grid,
                        const ConstVectorView& lat_grid,
                        const ConstVectorView& lon_grid,
                        const ConstVectorView& f_mono);
@@ -463,6 +461,7 @@ void InterpolateOnPropagation1D(  //Output
     MatrixView& sca_vec_int,
     MatrixView& doit_i_field_mono_int,
     VectorView& t_int,
+    VectorView& p_int,
     const ConstTensor3View& gas_extinction,
     const ConstTensor5View& ext_mat_field,
     const ConstTensor4View& abs_vec_field,
@@ -480,7 +479,8 @@ void InterpolateOnPropagation1D(  //Output
 void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
                                const Ppath& ppath_step,
                                const ConstVectorView& t_int,
-                               const VectorView& gas_abs_int,
+                               const ConstVectorView& p_int,
+                               const ConstVectorView& gas_abs_int,
                                const ConstTensor3View& ext_mat_int,
                                const ConstMatrixView& abs_vec_int,
                                const ConstMatrixView& sca_vec_int,
@@ -516,6 +516,53 @@ void CheckConvergence(  //WS Input and Output:
     const Vector& epsilon,
     const Index& max_iterations,
     const String& iy_unit,
+    const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void EstimatePressurePoints1D(
+    Workspace& ws,
+    Vector& pressure_abs,
+    Vector& temperature_abs,
+    Matrix& vmr_abs,
+    ArrayOfGridPos& Gpos,
+    Matrix& InterpWeights,
+    // WS Input:
+    const ArrayOfIndex& cloudbox_limits,
+    const Vector& za_grid,
+    // Propagation path calculation:
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Tensor3& p_path_maxlength,
+    const Vector& p_grid,
+    const Tensor3& z_field,
+    const ConstTensor3View& t_field,
+    const ConstTensor4View& vmr_field,
+    const Vector& refellipsoid,
+    const Vector& f_grid,
+    const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
+void CloudPropagationPath1D(
+    Workspace& ws,
+    Vector& Pressures,
+    Vector& Temperatures,
+    Matrix& Vmrs,
+    ArrayOfGridPos& cloud_gp_p,
+    Matrix& itw,
+    const Index& p_index,
+    const Index& za_index,
+    const ConstVectorView& za_grid,
+    const ArrayOfIndex& cloudbox_limits,
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const ConstVectorView& p_grid,
+    const ConstTensor3View& z_field,
+    const ConstTensor3View& t_field,
+    const ConstTensor4View& vmr_field,
+    const ConstVectorView& refellipsoid,
+    const ConstVectorView& f_grid,
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
