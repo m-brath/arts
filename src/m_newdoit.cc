@@ -72,7 +72,8 @@ void NewDoitCalc(Workspace& ws,
                  Vector& aa_grid,
                  Vector& scat_za_grid,
                  Vector& scat_aa_grid,
-                 Tensor4& gas_extinction_doit,
+                 ArrayOfTensor3& gas_extinction_doit,
+                 ArrayOfVector& p_grid_gas_extinction,
                  Tensor7& extinction_matrix_doit,
                  Tensor6& absorption_vector_doit,
                  ArrayOfTensor7& scattering_matrix_doit_array,
@@ -113,7 +114,6 @@ void NewDoitCalc(Workspace& ws,
                  const Vector& epsilon,
                  const Index& max_num_iterations,
                  const Numeric& tau_max,
-                 const Numeric& refine_absorption_p_grid,
                  const Index& accelerated,
                  const Index& t_interp_order,
                  const Index& N_za_grid,
@@ -255,12 +255,13 @@ void NewDoitCalc(Workspace& ws,
 
   const Index nf = f_grid.nelem();
   const Index Np_cloud = cloudbox_limits[1] - cloudbox_limits[0] + 1;
-  const Index Np_cloud_abs =
-      Index(Numeric(Np_cloud) * refine_absorption_p_grid);
+
 
   // Resize and initialize fields
+  gas_extinction_doit.resize(nf);
+  p_grid_gas_extinction.resize(nf);
   if (atmosphere_dim == 1) {
-    gas_extinction_doit.resize(nf, Np_cloud_abs, 1, 1);
+
     extinction_matrix_doit.resize(
         nf, Np_cloud, 1, 1, za_grid.nelem(), stokes_dim, stokes_dim);
     absorption_vector_doit.resize(
@@ -270,7 +271,6 @@ void NewDoitCalc(Workspace& ws,
     const Index Nlat_cloud = cloudbox_limits[3] - cloudbox_limits[2] + 1;
     const Index Nlon_cloud = cloudbox_limits[5] - cloudbox_limits[4] + 1;
 
-    gas_extinction_doit.resize(nf, Np_cloud_abs, Nlat_cloud, Nlon_cloud);
     extinction_matrix_doit.resize(nf,
                                   Np_cloud,
                                   Nlat_cloud,
@@ -285,7 +285,6 @@ void NewDoitCalc(Workspace& ws,
   convergence_flag_doit.resize(f_grid.nelem());
   iteration_counter_doit.resize(f_grid.nelem());
 
-  gas_extinction_doit = NAN;
   extinction_matrix_doit = NAN;
   absorption_vector_doit = NAN;
 
@@ -298,7 +297,8 @@ void NewDoitCalc(Workspace& ws,
     for (Index f_index = 0; f_index < nf; f_index++) {
       if (failed) {
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
-        gas_extinction_doit(f_index, joker, joker, joker) = NAN;
+        gas_extinction_doit[f_index] = Tensor3();
+        p_grid_gas_extinction[f_index] = Vector();
         extinction_matrix_doit(
             f_index, joker, joker, joker, joker, joker, joker) = 0;
         absorption_vector_doit(f_index, joker, joker, joker, joker, joker) =
@@ -317,8 +317,8 @@ void NewDoitCalc(Workspace& ws,
         Tensor6 doit_i_field_mono_local =
             doit_i_field(f_index, joker, joker, joker, joker, joker, joker);
 
-        Tensor3 gas_extinction_doit_local =
-            gas_extinction_doit(f_index, joker, joker, joker);
+        Tensor3 gas_extinction_doit_local;
+        Vector p_grid_gas_extinction_local;
 
         Tensor6 extinction_matrix_doit_local = extinction_matrix_doit(
             f_index, joker, joker, joker, joker, joker, joker);
@@ -333,6 +333,7 @@ void NewDoitCalc(Workspace& ws,
         NewDoitMonoCalc(ws,
                         doit_i_field_mono_local,
                         gas_extinction_doit_local,
+                        p_grid_gas_extinction_local,
                         extinction_matrix_doit_local,
                         absorption_vector_doit_local,
                         scattering_matrix_doit_local,
@@ -377,7 +378,9 @@ void NewDoitCalc(Workspace& ws,
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) =
             doit_i_field_mono_local;
 
-        gas_extinction_doit(f_index, joker, joker, joker) = gas_extinction_doit_local;
+        gas_extinction_doit[f_index] = gas_extinction_doit_local;
+
+        p_grid_gas_extinction[f_index] = p_grid_gas_extinction_local;
 
         extinction_matrix_doit(f_index, joker, joker, joker, joker, joker, joker) =
             extinction_matrix_doit_local;
@@ -394,7 +397,8 @@ void NewDoitCalc(Workspace& ws,
 
       } catch (const std::exception& e) {
         doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
-        gas_extinction_doit(f_index, joker, joker, joker) = NAN;
+        gas_extinction_doit[f_index] = Tensor3();
+        p_grid_gas_extinction[f_index] = Vector();
         extinction_matrix_doit(
             f_index, joker, joker, joker, joker, joker, joker) = NAN;
         absorption_vector_doit(
