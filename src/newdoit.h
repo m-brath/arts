@@ -179,14 +179,23 @@ void NewDoitMonoCalc(Workspace& ws,
 
 //TODO:Add doxygen doc
 void CalcGasExtinction(Workspace& ws,
-                       Tensor3& gas_extinct,
+                       Vector& gas_extinct,
                        const ConstVectorView& p_grid_abs,
-                       const ConstVectorView& t_field_abs,
-                       const ConstMatrixView& vmr_field_abs,
+                       const ConstVectorView& t_vector_abs,
+                       const ConstMatrixView& vmr_matrix_abs,
                        const Agenda& propmat_clearsky_agenda,
-                       const ConstVectorView& lat_grid,
-                       const ConstVectorView& lon_grid,
                        const ConstVectorView& f_mono);
+
+//TODO:Add doxygen doc
+void CalcGasExtinctionField(Workspace& ws,
+                            Tensor3& gas_extinct,
+                            const ConstVectorView& p_grid,
+                            const ConstVectorView& lat_grid,
+                            const ConstVectorView& lon_grid,
+                            const ConstTensor3View& t_field,
+                            const ConstTensor4View& vmr_field,
+                            const Agenda& propmat_clearsky_agenda,
+                            const ConstVectorView& f_mono);
 
 //TODO:Add doxygen doc
 void CalcParticleOpticalProperties(
@@ -254,44 +263,50 @@ void CalcPropagationPathMaxLength(
     const Numeric& tau_max);
 
 //TODO:Add doxygen doc
-void RunNewDoit(Workspace& ws,
-                Tensor6& doit_i_field_mono,
-                Index& convergence_flag,
-                Index& iteration_counter,
-                const ConstTensor3View& gas_extinction,
-                const ConstTensor6View& extinction_matrix,
-                const ConstTensor5View& absorption_vector,
-                const ConstTensor7View& scattering_matrix,
-                const ConstTensor6View& surface_reflection_matrix,
-                const ConstTensor5View& surface_emission,
-                const ArrayOfIndex& cloudbox_limits,
-                const Agenda& ppath_step_agenda,
-                const Index& atmosphere_dim,
-                const Tensor3& t_field,
-                const Tensor3& z_field,
-                const Vector& p_grid,
-                const Vector& p_grid_abs,
-                const Vector& za_grid,
-                const Vector& aa_grid,
-                const Vector& scat_za_grid,
-                const Vector& scat_aa_grid,
-                ArrayOfIndex& idir_idx0,
-                ArrayOfIndex& idir_idx1,
-                ArrayOfIndex& pdir_idx0,
-                ArrayOfIndex& pdir_idx1,
-                ArrayOfGridPos& gp_za_i,
-                ArrayOfGridPos& gp_aa_i,
-                Tensor3& itw,
-                const Numeric& f_mono,
-                const String& iy_unit,
-                const Numeric& ppath_lmax,
-                const Numeric& ppath_lraytrace,
-                const Tensor3& p_path_maxlength,
-                const Vector& refellipsoid,
-                const Vector& epsilon,
-                const Index& max_num_iterations,
-                const Index& accelerated,
-                const Verbosity& verbosity);
+void RunNewDoit(//Input and Output:
+    Tensor6& doit_i_field_mono,
+    Index& convergence_flag,
+    Index& iteration_counter,
+    //Input
+    const ConstTensor6View& extinction_matrix,
+    const ConstTensor5View& absorption_vector,
+    const ConstTensor7View& scattering_matrix,
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const ArrayOfIndex& cloudbox_limits,
+    const Index& atmosphere_dim,
+    const Tensor3& z_field,
+    //Grids
+    const Vector& p_grid,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid,
+    // Precalculated quantities on the propagation path
+    const ArrayOfVector& PressureArray,
+    const ArrayOfVector& TemperatureArray,
+    const ArrayOfVector& GasExtinctionArray,
+    const ArrayOfMatrix& InterpWeightsArray,
+    const ArrayOfMatrix& InterpWeightsZenithArray,
+    const ArrayOfArrayOfGridPos& GposArray,
+    const ArrayOfArrayOfGridPos& GposZenithArray,
+    const ArrayOfVector& LstepArray,
+    //Precalculated quantities for scattering integral calulation
+    ArrayOfIndex& idir_idx0,
+    ArrayOfIndex& idir_idx1,
+    ArrayOfIndex& pdir_idx0,
+    ArrayOfIndex& pdir_idx1,
+    ArrayOfGridPos& gp_za_i,
+    ArrayOfGridPos& gp_aa_i,
+    Tensor3& itw,
+    //Additional input
+    const Numeric& f_mono,
+    const String& iy_unit,
+    const Vector& refellipsoid,
+    const Vector& epsilon,
+    const Index& max_num_iterations,
+    const Index& accelerated,
+    const Verbosity& verbosity);
 
 
 //TODO:Add doxygen doc
@@ -345,13 +360,10 @@ void CalcScatteredField3D(
 
 
 //TODO:Add doxygen doc
-void UpdateSpectralRadianceField(
-    Workspace& ws,
-    // WS Input and Output:
+void UpdateSpectralRadianceField(//Input and Output:
     Tensor6& doit_i_field_mono,
     Tensor6& doit_scat_field,
-    // WS Input:
-    const ConstTensor3View& gas_extinction,
+    //Input:
     const ConstTensor6View& extinction_matrix,
     const ConstTensor5View& absorption_vector,
     const ConstTensor6View& surface_reflection_matrix,
@@ -360,45 +372,46 @@ void UpdateSpectralRadianceField(
     const Vector& za_grid,
     const Vector& aa_grid,
     const Index& atmosphere_dim,
-    // Propagation path calculation:
-    const Agenda& ppath_step_agenda,
-    const Numeric& ppath_lmax,
-    const Numeric& ppath_lraytrace,
-    const Tensor3& p_path_maxlength,
+    // Precalculated quantities on the propagation path
+    const ArrayOfVector& PressureArray,
+    const ArrayOfVector& TemperatureArray,
+    const ArrayOfVector& GasExtinctionArray,
+    const ArrayOfMatrix& InterpWeightsArray,
+    const ArrayOfMatrix& InterpWeightsZenithArray,
+    const ArrayOfArrayOfGridPos& GposArray,
+    const ArrayOfArrayOfGridPos& GposZenithArray,
+    const ArrayOfVector& LstepArray,
+
     const Vector& p_grid,
-    const Vector& p_grid_abs,
     const Tensor3& z_field,
     const Vector& refellipsoid,
-    // Calculate thermal emission:
-    const Tensor3& t_field,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
 void UpdateSpectralRadianceField1D(
-    Workspace& ws,
-    // WS Input and Output:
+    //Input and Output:
     Tensor6& doit_i_field_mono,
     Tensor6& doit_scat_field,
-    // WS Input:
-    const ConstTensor3View& gas_extinction,
     const ConstTensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
     const ConstTensor5View& absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
-    // Propagation path calculation:
-    const Agenda& ppath_step_agenda,
-    const Numeric& ppath_lmax,
-    const Numeric& ppath_lraytrace,
-    const Tensor3& p_path_maxlength,
+    // Precalculated quantities on the propagation path
+    const ArrayOfVector& PressureArray,
+    const ArrayOfVector& TemperatureArray,
+    const ArrayOfVector& GasExtinctionArray,
+    const ArrayOfMatrix& InterpWeightsArray,
+    const ArrayOfMatrix& InterpWeightsZenithArray,
+    const ArrayOfArrayOfGridPos& GposArray,
+    const ArrayOfArrayOfGridPos& GposZenithArray,
+    const ArrayOfVector& LstepArray,
+    //additional quantities
     const Vector& p_grid,
-    const Vector& p_grid_abs,
     const Tensor3& z_field,
     const Vector& refellipsoid,
-    // Calculate thermal emission:
-    const Tensor3& t_field,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
@@ -430,57 +443,48 @@ void UpdateSpectralRadianceField3D(
 
 //TODO:Add doxygen doc
 void UpdateCloudPropagationPath1D(
-    Workspace& ws,
     Tensor6View& doit_i_field_mono,
     const Index& p_index,
     const Index& za_index,
-    const ConstVectorView& za_grid,
     const ArrayOfIndex& cloudbox_limits,
     const ConstTensor6View& doit_scat_field,
-    const Agenda& ppath_step_agenda,
-    const Numeric& ppath_lmax,
-    const Numeric& ppath_lraytrace,
-    const ConstVectorView& p_grid,
-    const ConstVectorView& p_grid_abs,
-    const ConstTensor3View& z_field,
-    const ConstVectorView& refellipsoid,
-    const ConstTensor3View& t_field,
+    const ConstVectorView& pressure_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstVectorView& lstep_ppath,
+    const ArrayOfGridPos& cloud_gp_p_ppath,
+    const ArrayOfGridPos& cloud_gp_za_ppath,
+    const MatrixView& itw_ppath,
+    const MatrixView& itw_za_ppath,
     const ConstVectorView& f_grid,
     const ConstTensor5View& ext_mat_field,
     const ConstTensor4View& abs_vec_field,
-    const ConstTensor3View& gas_extinction,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
 void InterpolateOnPropagation1D(  //Output
-    VectorView&  gas_abs_int,
     Tensor3View& ext_mat_int,
     MatrixView& abs_vec_int,
     MatrixView& sca_vec_int,
     MatrixView& doit_i_field_mono_int,
-    VectorView& t_int,
-    VectorView& p_int,
-    const ConstTensor3View& gas_extinction,
     const ConstTensor5View& ext_mat_field,
     const ConstTensor4View& abs_vec_field,
     const ConstTensor6View& doit_scat_field,
     const ConstTensor6View& doit_i_field_mono,
-    const ConstVectorView& p_grid,
-    const ConstVectorView& p_grid_abs,
-    const ConstTensor3View& t_field,
-    const Ppath& ppath_step,
-    const ArrayOfIndex& cloudbox_limits,
-    const ConstVectorView& za_grid,
+    const ArrayOfGridPos& cloud_gp_p,
+    const ArrayOfGridPos& cloud_gp_za,
+    const MatrixView& itw,
+    const MatrixView& itw_za,
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
 void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
-                               const Ppath& ppath_step,
-                               const ConstVectorView& t_int,
-                               const ConstVectorView& p_int,
-                               const ConstVectorView& gas_abs_int,
+                               const ConstVectorView& lstep_ppath,
+                               const ConstVectorView& temperature_ppath,
+                               const ConstVectorView& pressure_ppath,
+                               const ConstVectorView& gas_extinction_ppath,
                                const ConstTensor3View& ext_mat_int,
                                const ConstMatrixView& abs_vec_int,
                                const ConstMatrixView& sca_vec_int,
@@ -519,17 +523,18 @@ void CheckConvergence(  //WS Input and Output:
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
-void EstimatePressurePoints1D(
+void EstimatePPathElements1D(
     Workspace& ws,
-    Vector& pressure_abs,
-    Vector& temperature_abs,
-    Matrix& vmr_abs,
-    ArrayOfGridPos& Gpos,
-    Matrix& InterpWeights,
-    // WS Input:
+    ArrayOfVector& PressureArray,
+    ArrayOfVector& TemperatureArray,
+    ArrayOfMatrix& VmrArray,
+    ArrayOfMatrix& InterpWeightsArray,
+    ArrayOfMatrix& InterpWeightsZenithArray,
+    ArrayOfArrayOfGridPos& GposArray,
+    ArrayOfArrayOfGridPos& GposZenithArray,
+    ArrayOfVector& LstepArray,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
-    // Propagation path calculation:
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
@@ -543,27 +548,35 @@ void EstimatePressurePoints1D(
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
-void CloudPropagationPath1D(
-    Workspace& ws,
-    Vector& Pressures,
-    Vector& Temperatures,
-    Matrix& Vmrs,
-    ArrayOfGridPos& cloud_gp_p,
-    Matrix& itw,
-    const Index& p_index,
-    const Index& za_index,
-    const ConstVectorView& za_grid,
-    const ArrayOfIndex& cloudbox_limits,
-    const Agenda& ppath_step_agenda,
-    const Numeric& ppath_lmax,
-    const Numeric& ppath_lraytrace,
-    const ConstVectorView& p_grid,
-    const ConstTensor3View& z_field,
-    const ConstTensor3View& t_field,
-    const ConstTensor4View& vmr_field,
-    const ConstVectorView& refellipsoid,
-    const ConstVectorView& f_grid,
-    const Verbosity& verbosity);
+void CloudPropagationPath1D(Workspace& ws,
+                            Vector& Pressures,
+                            Vector& Temperatures,
+                            Matrix& Vmrs,
+                            ArrayOfGridPos& cloud_gp_p,
+                            ArrayOfGridPos& cloud_gp_za,
+                            Vector& lstep,
+                            Matrix& itw,
+                            Matrix& itw_za,
+                            const Index& p_index,
+                            const Index& za_index,
+                            const ConstVectorView& za_grid,
+                            const ArrayOfIndex& cloudbox_limits,
+                            const Agenda& ppath_step_agenda,
+                            const Numeric& ppath_lmax,
+                            const Numeric& ppath_lraytrace,
+                            const ConstVectorView& p_grid,
+                            const ConstTensor3View& z_field,
+                            const ConstTensor3View& t_field,
+                            const ConstTensor4View& vmr_field,
+                            const ConstVectorView& refellipsoid,
+                            const ConstVectorView& f_grid,
+                            const Verbosity& verbosity);
+
+//------------------------------------------------------------------------------
+// Auxilary functions-----------------------------------------------------------
+//
+//------------------------------------------------------------------------------
+
 
 //TODO:Add doxygen doc
 void FlattenMeshGrid(Matrix& flattened_meshgrid,
@@ -575,3 +588,45 @@ void FlattenMeshGridIndex(ArrayOfIndex& index_grid1,
                           ArrayOfIndex& index_grid2,
                           const Vector& grid1,
                           const Vector& grid2);
+
+// Subscript to index functions-------------------------------------------------
+//TODO:Add doxygen doc
+//2d
+Index subscript2index(Index i, Index j, Index Ni);
+
+//3d
+Index subscript2index(Index i, Index j, Index k, Index Ni, Index Nj);
+
+//4d
+Index subscript2index(
+    Index i, Index j, Index k, Index l, Index Ni, Index Nj, Index Nk);
+
+//5d
+Index subscript2index(Index i,
+                     Index j,
+                     Index k,
+                     Index l,
+                     Index m,
+                     Index Ni,
+                     Index Nj,
+                     Index Nk,
+                     Index Nl);
+
+
+// Index to subscript functions-------------------------------------------------
+//TODO:Add doxygen doc
+//2d array
+typedef std::tuple<int, int> Tuple2D;
+Tuple2D index2subscript(Index idx, Index Ni);
+
+//3d array
+typedef std::tuple<int, int, int> Tuple3D;
+Tuple3D index2subscript(Index idx, Index Ni, Index Nj);
+
+//4d array
+typedef std::tuple<int, int, int, int> Tuple4D;
+Tuple4D index2subscript(Index idx, Index Ni, Index Nj, Index Nk);
+
+//5d array
+typedef std::tuple<int, int, int, int, int> Tuple5D;
+Tuple5D index2subscript(Index idx, Index Ni, Index Nj, Index Nk, Index Nl);
