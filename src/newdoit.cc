@@ -855,67 +855,81 @@ void NewDoitMonoCalc(Workspace& ws,
     //The actual gas extinction which will be used for the RT calculation will
     //calculated additionally.
 
-//    CalcGasExtinction(ws,
-//                      gas_extinction,
-//                      p_grid,
-//                      propmat_clearsky_agenda,
-//                      t_field,
-//                      vmr_field,
-//                      p_grid,
-//                      lat_grid,
-//                      lon_grid,
-//                      f_mono);
-//
-//    //calculate local ppath_lmax
-//    CalcPropagationPathMaxLength(
-//        p_path_maxlength,
-//        extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
-//        p_grid,
-//        gas_extinction,
-//        p_grid,
-//        lat_grid,
-//        lon_grid,
-//        za_grid,
-//        tau_max);
-  }
-
-  Vector temperature_abs;
-  Matrix vmr_abs;
-  ArrayOfGridPos Gpos_abs;
-  Matrix InterpWeights_abs;
-  EstimatePressurePoints1D(ws,
-                           p_grid_abs,
-                           temperature_abs,
-                           vmr_abs,
-                           Gpos_abs,
-                           InterpWeights_abs,
-                           cloudbox_limits,
-                           za_grid,
-                           ppath_step_agenda,
-                           ppath_lmax,
-                           ppath_lraytrace,
-                           p_path_maxlength,
+    CalcGasExtinctionField(ws,
+                           gas_extinction,
                            p_grid,
-                           z_field,
+                           lat_grid,
+                           lon_grid,
                            t_field,
                            vmr_field,
-                           refellipsoid,
-                           Vector(1,f_mono),
-                           verbosity);
+                           propmat_clearsky_agenda,
+                           f_mono);
+
+    //calculate local ppath_lmax
+    CalcPropagationPathMaxLength(
+        p_path_maxlength,
+        extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+        p_grid,
+        gas_extinction,
+        p_grid,
+        lat_grid,
+        lon_grid,
+        za_grid,
+        tau_max);
+  }
+
+  ArrayOfVector PressureArray;
+  ArrayOfVector TemperatureArray;
+  ArrayOfMatrix VmrArray;
+  ArrayOfMatrix InterpWeightsArray;
+  ArrayOfMatrix InterpWeightsZenithArray;
+  ArrayOfArrayOfGridPos GposArray;
+  ArrayOfArrayOfGridPos GposZenithArray;
+  ArrayOfVector LstepArray;
+
+
+  EstimatePPathElements1D(ws,
+                          PressureArray,
+                          TemperatureArray,
+                          VmrArray,
+                          InterpWeightsArray,
+                          InterpWeightsZenithArray,
+                          GposArray,
+                          GposZenithArray,
+                          LstepArray,
+                          cloudbox_limits,
+                          za_grid,
+                          ppath_step_agenda,
+                          ppath_lmax,
+                          ppath_lraytrace,
+                          p_path_maxlength,
+                          p_grid,
+                          z_field,
+                          t_field,
+                          vmr_field,
+                          refellipsoid,
+                          Vector(1, f_mono),
+                          verbosity);
 
 
 
-  //calculate gas extinction for the standard grid
-  CalcGasExtinction(ws,
-                    gas_extinction,
-                    p_grid_abs,
-                    temperature_abs,
-                    vmr_abs,
-                    propmat_clearsky_agenda,
-                    lat_grid,
-                    lon_grid,
-                    f_mono);
 
+  //calculate gas extinction
+  ArrayOfVector GasExtinctionArray(PressureArray.nelem());
+
+  for (Index i = 0; i < PressureArray.nelem(); i++) {
+    Vector gas_extinction_temp;
+    CalcGasExtinction(ws,
+                      gas_extinction_temp,
+                      PressureArray[i],
+                      TemperatureArray[i],
+                      VmrArray[i],
+                      propmat_clearsky_agenda,
+                      f_mono);
+
+    GasExtinctionArray[i] = gas_extinction_temp;
+
+  }
 
   os << "gas absorption calculated \n";
   out0 << os.str();
@@ -924,27 +938,35 @@ void NewDoitMonoCalc(Workspace& ws,
 
 
   //run new doit
-  RunNewDoit(ws,
+  RunNewDoit(
              doit_i_field_mono,
              convergence_flag,
              iteration_counter,
-             gas_extinction,
+             //Input
              extinction_matrix,
              absorption_vector,
              scattering_matrix,
              surface_reflection_matrix,
              surface_emission,
              cloudbox_limits,
-             ppath_step_agenda,
              atmosphere_dim,
-             t_field,
              z_field,
+             //Grids
              p_grid,
-             p_grid_abs,
              za_grid,
              aa_grid,
              scat_za_grid,
              scat_aa_grid,
+             // Precalculated quantities on the propagation path
+             PressureArray,
+             TemperatureArray,
+             GasExtinctionArray,
+             InterpWeightsArray,
+             InterpWeightsZenithArray,
+             GposArray,
+             GposZenithArray,
+             LstepArray,
+             //Precalculated quantities for scattering integral calulation
              idir_idx0,
              idir_idx1,
              pdir_idx0,
@@ -952,11 +974,9 @@ void NewDoitMonoCalc(Workspace& ws,
              gp_za_i,
              gp_aa_i,
              itw,
+             //Additional input
              f_mono,
              iy_unit,
-             ppath_lmax,
-             ppath_lraytrace,
-             p_path_maxlength,
              refellipsoid,
              epsilon,
              max_num_iterations,
@@ -965,21 +985,16 @@ void NewDoitMonoCalc(Workspace& ws,
 }
 
 void CalcGasExtinction(Workspace& ws,
-                     Tensor3& gas_extinct,
-                     const ConstVectorView& p_grid_abs,
-                     const ConstVectorView& t_field_abs,
-                     const ConstMatrixView& vmr_field_abs,
-                     const Agenda& propmat_clearsky_agenda,
-                     const ConstVectorView& lat_grid,
-                     const ConstVectorView& lon_grid,
-                     const ConstVectorView& f_mono) {
-
+                       Vector& gas_extinct,
+                       const ConstVectorView& p_grid_abs,
+                       const ConstVectorView& t_vector_abs,
+                       const ConstMatrixView& vmr_matrix_abs,
+                       const Agenda& propmat_clearsky_agenda,
+                       const ConstVectorView& f_mono) {
   const Index Np = p_grid_abs.nelem();
-  const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
-  const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
 
   // Initialization
-  gas_extinct.resize(Np,Nlat,Nlon);
+  gas_extinct.resize(Np);
   gas_extinct = 0.;
 
   // Local variables to be used in agendas
@@ -988,42 +1003,70 @@ void CalcGasExtinction(Workspace& ws,
 
   const Vector rtp_temperature_nlte_local_dummy(0);
 
-
-
-    // Calculate layer averaged gaseous extinction
+  // Calculate layer averaged gaseous extinction
   for (Index ip = 0; ip < Np; ip++) {
-    for (Index ilat = 0; ilat < Nlat; ilat++) {
-      for (Index ilon = 0; ilon < Nlon; ilon++) {
-        const Vector rtp_mag_dummy(3, 0);
-        const Vector ppath_los_dummy;
+    const Vector rtp_mag_dummy(3, 0);
+    const Vector ppath_los_dummy;
 
-        ArrayOfStokesVector nlte_dummy;
-        ArrayOfPropagationMatrix partial_dummy;
-        ArrayOfStokesVector partial_source_dummy, partial_nlte_dummy;
-        propmat_clearsky_agendaExecute(ws,
-                                       propmat_clearsky_local,
-                                       nlte_dummy,
-                                       partial_dummy,
-                                       partial_source_dummy,
-                                       partial_nlte_dummy,
-                                       ArrayOfRetrievalQuantity(0),
-                                       (Vector) f_mono,  // monochromatic calculation
-                                       rtp_mag_dummy,
-                                       ppath_los_dummy,
-                                       p_grid_abs[ip],
-                                       t_field_abs[ip],
-                                       rtp_temperature_nlte_local_dummy,
-                                       vmr_field_abs(joker, ip),
-                                       propmat_clearsky_agenda);
+    ArrayOfStokesVector nlte_dummy;
+    ArrayOfPropagationMatrix partial_dummy;
+    ArrayOfStokesVector partial_source_dummy, partial_nlte_dummy;
+    propmat_clearsky_agendaExecute(ws,
+                                   propmat_clearsky_local,
+                                   nlte_dummy,
+                                   partial_dummy,
+                                   partial_source_dummy,
+                                   partial_nlte_dummy,
+                                   ArrayOfRetrievalQuantity(0),
+                                   (Vector)f_mono,  // monochromatic calculation
+                                   rtp_mag_dummy,
+                                   ppath_los_dummy,
+                                   p_grid_abs[ip],
+                                   t_vector_abs[ip],
+                                   rtp_temperature_nlte_local_dummy,
+                                   vmr_matrix_abs(joker, ip),
+                                   propmat_clearsky_agenda);
 
-        //Assuming non-polarized light and only one frequency
-        //TODO: Check if polarization is needed for absorption
-        if (propmat_clearsky_local.nelem()) {
-          for (Index j = 0; j < propmat_clearsky_local.nelem(); j++) {
-            gas_extinct(ip, ilat, ilon) += propmat_clearsky_local[j].GetData()(0,0,0,0);
-          }
-        }
+    //Assuming non-polarized light and only one frequency
+    //TODO: Check if polarization is needed for absorption
+    if (propmat_clearsky_local.nelem()) {
+      for (Index j = 0; j < propmat_clearsky_local.nelem(); j++) {
+        gas_extinct[ip] += propmat_clearsky_local[j].GetData()(0, 0, 0, 0);
       }
+    }
+  }
+}
+
+void CalcGasExtinctionField(Workspace& ws,
+                            Tensor3& gas_extinct,
+                            const ConstVectorView& p_grid,
+                            const ConstVectorView& lat_grid,
+                            const ConstVectorView& lon_grid,
+                            const ConstTensor3View& t_field,
+                            const ConstTensor4View& vmr_field,
+                            const Agenda& propmat_clearsky_agenda,
+                            const ConstVectorView& f_mono) {
+
+  const Index Np = p_grid.nelem();
+  const Index Nlat = lat_grid.nelem();
+  const Index Nlon = lon_grid.nelem();
+
+  // Initialization
+  gas_extinct.resize(Np, Nlat, Nlon);
+  gas_extinct = 0.;
+
+  for (Index ilat = 0; ilat < Nlat; ilat++) {
+    for (Index ilon = 0; ilon < Nlon; ilon++) {
+      Vector gas_extinc_temp;
+      CalcGasExtinction(ws,
+                        gas_extinc_temp,
+                        p_grid,
+                        t_field(joker, ilat, ilon),
+                        vmr_field(joker, joker, ilat, ilon),
+                        propmat_clearsky_agenda,
+                        f_mono);
+
+      gas_extinct(joker, ilat, ilon) = gas_extinc_temp;
     }
   }
 }
@@ -1478,45 +1521,50 @@ void CalcPropagationPathMaxLength(
   }
 }
 
-void RunNewDoit(Workspace& ws,
-                //Input and Output:
-                Tensor6& doit_i_field_mono,
-                Index& convergence_flag,
-                Index& iteration_counter,
-                const ConstTensor3View& gas_extinction,
-                const ConstTensor6View& extinction_matrix,
-                const ConstTensor5View& absorption_vector,
-                const ConstTensor7View& scattering_matrix,
-                const ConstTensor6View& surface_reflection_matrix,
-                const ConstTensor5View& surface_emission,
-                const ArrayOfIndex& cloudbox_limits,
-                const Agenda& ppath_step_agenda,
-                const Index& atmosphere_dim,
-                const Tensor3& t_field,
-                const Tensor3& z_field,
-                const Vector& p_grid,
-                const Vector& p_grid_abs,
-                const Vector& za_grid,
-                const Vector& aa_grid,
-                const Vector& scat_za_grid,
-                const Vector& scat_aa_grid,
-                ArrayOfIndex& idir_idx0,
-                ArrayOfIndex& idir_idx1,
-                ArrayOfIndex& pdir_idx0,
-                ArrayOfIndex& pdir_idx1,
-                ArrayOfGridPos& gp_za_i,
-                ArrayOfGridPos& gp_aa_i,
-                Tensor3& itw,
-                const Numeric& f_mono,
-                const String& iy_unit,
-                const Numeric& ppath_lmax,
-                const Numeric& ppath_lraytrace,
-                const Tensor3& p_path_maxlength,
-                const Vector& refellipsoid,
-                const Vector& epsilon,
-                const Index& max_num_iterations,
-                const Index& accelerated,
-                const Verbosity& verbosity) {
+void RunNewDoit(  //Input and Output:
+    Tensor6& doit_i_field_mono,
+    Index& convergence_flag,
+    Index& iteration_counter,
+    //Input
+    const ConstTensor6View& extinction_matrix,
+    const ConstTensor5View& absorption_vector,
+    const ConstTensor7View& scattering_matrix,
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const ArrayOfIndex& cloudbox_limits,
+    const Index& atmosphere_dim,
+    const Tensor3& z_field,
+    //Grids
+    const Vector& p_grid,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid,
+    // Precalculated quantities on the propagation path
+    const ArrayOfVector& PressureArray,
+    const ArrayOfVector& TemperatureArray,
+    const ArrayOfVector& GasExtinctionArray,
+    const ArrayOfMatrix& InterpWeightsArray,
+    const ArrayOfMatrix& InterpWeightsZenithArray,
+    const ArrayOfArrayOfGridPos& GposArray,
+    const ArrayOfArrayOfGridPos& GposZenithArray,
+    const ArrayOfVector& LstepArray,
+    //Precalculated quantities for scattering integral calulation
+    ArrayOfIndex& idir_idx0,
+    ArrayOfIndex& idir_idx1,
+    ArrayOfIndex& pdir_idx0,
+    ArrayOfIndex& pdir_idx1,
+    ArrayOfGridPos& gp_za_i,
+    ArrayOfGridPos& gp_aa_i,
+    Tensor3& itw,
+    //Additional input
+    const Numeric& f_mono,
+    const String& iy_unit,
+    const Vector& refellipsoid,
+    const Vector& epsilon,
+    const Index& max_num_iterations,
+    const Index& accelerated,
+    const Verbosity& verbosity) {
   CREATE_OUT2;
 
   for (Index v = 0; v < doit_i_field_mono.nvitrines(); v++)
@@ -1580,10 +1628,9 @@ void RunNewDoit(Workspace& ws,
     // Update doit_i_field.
     out2 << "  Execute doit_rte_agenda. \n";
     Vector f_grid(1, f_mono);
-    UpdateSpectralRadianceField(ws,
+    UpdateSpectralRadianceField(
                                 doit_i_field_mono,
                                 doit_scat_field,
-                                gas_extinction,
                                 extinction_matrix,
                                 absorption_vector,
                                 surface_reflection_matrix,
@@ -1592,15 +1639,17 @@ void RunNewDoit(Workspace& ws,
                                 za_grid,
                                 aa_grid,
                                 atmosphere_dim,
-                                ppath_step_agenda,
-                                ppath_lmax,
-                                ppath_lraytrace,
-                                p_path_maxlength,
+                                PressureArray,
+                                TemperatureArray,
+                                GasExtinctionArray,
+                                InterpWeightsArray,
+                                InterpWeightsZenithArray,
+                                GposArray,
+                                GposZenithArray,
+                                LstepArray,
                                 p_grid,
-                                p_grid_abs,
                                 z_field,
                                 refellipsoid,
-                                t_field,
                                 f_grid,
                                 verbosity);
 
@@ -1840,12 +1889,10 @@ void CalcScatteredField3D(
   }
 }
 
-void UpdateSpectralRadianceField(Workspace& ws,
-                                 // WS Input and Output:
+void UpdateSpectralRadianceField(//Input and Output:
                                  Tensor6& doit_i_field_mono,
                                  Tensor6& doit_scat_field,
-                                 // WS Input:
-                                 const ConstTensor3View& gas_extinction,
+                                 //Input:
                                  const ConstTensor6View& extinction_matrix,
                                  const ConstTensor5View& absorption_vector,
                                  const ConstTensor6View& surface_reflection_matrix,
@@ -1854,39 +1901,42 @@ void UpdateSpectralRadianceField(Workspace& ws,
                                  const Vector& za_grid,
                                  const Vector& aa_grid,
                                  const Index& atmosphere_dim,
-                                 // Propagation path calculation:
-                                 const Agenda& ppath_step_agenda,
-                                 const Numeric& ppath_lmax,
-                                 const Numeric& ppath_lraytrace,
-                                 const Tensor3& p_path_maxlength,
+                            // Precalculated quantities on the propagation path
+                                 const ArrayOfVector& PressureArray,
+                                 const ArrayOfVector& TemperatureArray,
+                                 const ArrayOfVector& GasExtinctionArray,
+                                 const ArrayOfMatrix& InterpWeightsArray,
+                                 const ArrayOfMatrix& InterpWeightsZenithArray,
+                                 const ArrayOfArrayOfGridPos& GposArray,
+                                 const ArrayOfArrayOfGridPos& GposZenithArray,
+                                 const ArrayOfVector& LstepArray,
+
                                  const Vector& p_grid,
-                                 const Vector& p_grid_abs,
                                  const Tensor3& z_field,
                                  const Vector& refellipsoid,
-                                 // Calculate thermal emission:
-                                 const Tensor3& t_field,
                                  const Vector& f_grid,
                                  const Verbosity& verbosity) {
   if (atmosphere_dim == 1) {
-    UpdateSpectralRadianceField1D(ws,
+    UpdateSpectralRadianceField1D(
                                   doit_i_field_mono,
                                   doit_scat_field,
-                                  gas_extinction,
                                   extinction_matrix,
                                   absorption_vector,
                                   surface_reflection_matrix,
                                   surface_emission,
                                   cloudbox_limits,
                                   za_grid,
-                                  ppath_step_agenda,
-                                  ppath_lmax,
-                                  ppath_lraytrace,
-                                  p_path_maxlength,
+                                  PressureArray,
+                                  TemperatureArray,
+                                  GasExtinctionArray,
+                                  InterpWeightsArray,
+                                  InterpWeightsZenithArray,
+                                  GposArray,
+                                  GposZenithArray,
+                                  LstepArray,
                                   p_grid,
-                                  p_grid_abs,
                                   z_field,
                                   refellipsoid,
-                                  t_field,
                                   f_grid,
                                   verbosity);
   } else if (atmosphere_dim == 3) {
@@ -1913,29 +1963,28 @@ void UpdateSpectralRadianceField(Workspace& ws,
 }
 
 void UpdateSpectralRadianceField1D(
-    Workspace& ws,
-    // WS Input and Output:
+    //Input and Output:
     Tensor6& doit_i_field_mono,
     Tensor6& doit_scat_field,
-    // WS Input:
-    const ConstTensor3View& gas_extinction,
     const ConstTensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
     const ConstTensor5View& absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
-    // Propagation path calculation:
-    const Agenda& ppath_step_agenda,
-    const Numeric& ppath_lmax,
-    const Numeric& ppath_lraytrace,
-    const Tensor3& p_path_maxlength,
+    // Precalculated quantities on the propagation path
+    const ArrayOfVector& PressureArray,
+    const ArrayOfVector& TemperatureArray,
+    const ArrayOfVector& GasExtinctionArray,
+    const ArrayOfMatrix& InterpWeightsArray,
+    const ArrayOfMatrix& InterpWeightsZenithArray,
+    const ArrayOfArrayOfGridPos& GposArray,
+    const ArrayOfArrayOfGridPos& GposZenithArray,
+    const ArrayOfVector& LstepArray,
+    //additional quantities
     const Vector& p_grid,
-    const Vector& p_grid_abs,
     const Tensor3& z_field,
     const Vector& refellipsoid,
-    // Calculate thermal emission:
-    const Tensor3& t_field,
     const Vector& f_grid,
     const Verbosity& verbosity) {
   CREATE_OUT2;
@@ -1950,8 +1999,6 @@ void UpdateSpectralRadianceField1D(
   const Index N_p = p_grid.nelem();
   const Index stokes_dim = doit_scat_field.ncols();
 
-  const Index c_idx1 = cloudbox_limits[1];
-  const Index c_idx0 = cloudbox_limits[0];
 
   // If theta is between 90° and the limiting value, the intersection point
   // is exactly at the same level as the starting point (cp. AUG)
@@ -1991,9 +2038,7 @@ void UpdateSpectralRadianceField1D(
   //                             verbosity);
   //  }
 
-  const bool adaptive = (p_path_maxlength.npages() > 0);
-  Numeric ppath_lmax_temp = ppath_lmax;
-  Numeric ppath_lraytrace_temp = ppath_lraytrace;
+
 
   //Loop over all directions, defined by za_grid
   for (Index i_za = 0; i_za < N_za; i_za++) {
@@ -2012,30 +2057,34 @@ void UpdateSpectralRadianceField1D(
       // to cloudbox_limits[0] to do a sequential update of the
       // radiation field
       for (Index i_p = N_p - 2; i_p >= 0; i_p--) {
-        if (adaptive) {
-          ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
-          ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
-        }
 
-        UpdateCloudPropagationPath1D(ws,
-                                     doit_i_field_mono,
+        const Index idx = subscript2index(i_za, i_p, N_za);
+
+        const Vector pressure_ppath=PressureArray[idx];
+        const Vector temperature_ppath=TemperatureArray[idx];
+        const Vector gas_extinction_ppath=GasExtinctionArray[idx];
+        const Vector lstep_ppath=LstepArray[idx];
+        const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
+        const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
+        const Matrix itw_ppath = InterpWeightsArray[idx];
+        const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
+
+        UpdateCloudPropagationPath1D(doit_i_field_mono,
                                      i_p,
                                      i_za,
-                                     za_grid,
                                      cloudbox_limits,
                                      doit_scat_field,
-                                     ppath_step_agenda,
-                                     ppath_lmax_temp,
-                                     ppath_lraytrace_temp,
-                                     p_grid,
-                                     p_grid_abs,
-                                     z_field,
-                                     refellipsoid,
-                                     t_field,
+                                     pressure_ppath,
+                                     temperature_ppath,
+                                     gas_extinction_ppath,
+                                     lstep_ppath,
+                                     cloud_gp_p_ppath,
+                                     cloud_gp_za_ppath,
+                                     itw_ppath,
+                                     itw_za_ppath,
                                      f_grid,
                                      ext_mat_field,
                                      abs_vec_field,
-                                     gas_extinction,
                                      surface_reflection_matrix,
                                      surface_emission,
                                      verbosity);
@@ -2045,30 +2094,34 @@ void UpdateSpectralRadianceField1D(
       // Sequential updating for downlooking angles
       //
       for (Index i_p = 0 + 1; i_p <= N_p-1; i_p++) {
-        if (adaptive) {
-          ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
-          ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
-        }
 
-        UpdateCloudPropagationPath1D(ws,
-                                     doit_i_field_mono,
+        const Index idx = subscript2index(i_za, i_p, N_za);
+
+        const Vector pressure_ppath=PressureArray[idx];
+        const Vector temperature_ppath=TemperatureArray[idx];
+        const Vector gas_extinction_ppath=GasExtinctionArray[idx];
+        const Vector lstep_ppath=LstepArray[idx];
+        const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
+        const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
+        const Matrix itw_ppath = InterpWeightsArray[idx];
+        const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
+
+        UpdateCloudPropagationPath1D(doit_i_field_mono,
                                      i_p,
                                      i_za,
-                                     za_grid,
                                      cloudbox_limits,
                                      doit_scat_field,
-                                     ppath_step_agenda,
-                                     ppath_lmax_temp,
-                                     ppath_lraytrace_temp,
-                                     p_grid,
-                                     p_grid_abs,
-                                     z_field,
-                                     refellipsoid,
-                                     t_field,
+                                     pressure_ppath,
+                                     temperature_ppath,
+                                     gas_extinction_ppath,
+                                     lstep_ppath,
+                                     cloud_gp_p_ppath,
+                                     cloud_gp_za_ppath,
+                                     itw_ppath,
+                                     itw_za_ppath,
                                      f_grid,
                                      ext_mat_field,
                                      abs_vec_field,
-                                     gas_extinction,
                                      surface_reflection_matrix,
                                      surface_emission,
                                      verbosity);
@@ -2096,30 +2149,33 @@ void UpdateSpectralRadianceField1D(
           // gives an error for such cases.
 
           if (i_p != 0) {
-            if (adaptive) {
-              ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
-              ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
-            }
+            const Index idx = subscript2index(i_za, i_p, N_za);
 
-            UpdateCloudPropagationPath1D(ws,
-                                         doit_i_field_mono,
+            const Vector pressure_ppath=PressureArray[idx];
+            const Vector temperature_ppath=TemperatureArray[idx];
+            const Vector gas_extinction_ppath=GasExtinctionArray[idx];
+            const Vector lstep_ppath=LstepArray[idx];
+            const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
+            const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
+            const Matrix itw_ppath = InterpWeightsArray[idx];
+            const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
+
+            UpdateCloudPropagationPath1D(doit_i_field_mono,
                                          i_p,
                                          i_za,
-                                         za_grid,
                                          cloudbox_limits,
                                          doit_scat_field,
-                                         ppath_step_agenda,
-                                         ppath_lmax_temp,
-                                         ppath_lraytrace_temp,
-                                         p_grid,
-                                         p_grid_abs,
-                                         z_field,
-                                         refellipsoid,
-                                         t_field,
+                                         pressure_ppath,
+                                         temperature_ppath,
+                                         gas_extinction_ppath,
+                                         lstep_ppath,
+                                         cloud_gp_p_ppath,
+                                         cloud_gp_za_ppath,
+                                         itw_ppath,
+                                         itw_za_ppath,
                                          f_grid,
                                          ext_mat_field,
                                          abs_vec_field,
-                                         gas_extinction,
                                          surface_reflection_matrix,
                                          surface_emission,
                                          verbosity);
@@ -2179,105 +2235,62 @@ void UpdateSpectralRadianceField3D(Workspace& ws,
 }
 
 void UpdateCloudPropagationPath1D(
-    Workspace& ws,
     Tensor6View& doit_i_field_mono,
     const Index& p_index,
     const Index& za_index,
-    const ConstVectorView& za_grid,
     const ArrayOfIndex& cloudbox_limits,
     const ConstTensor6View& doit_scat_field,
-    const Agenda& ppath_step_agenda,
-    const Numeric& ppath_lmax,
-    const Numeric& ppath_lraytrace,
-    const ConstVectorView& p_grid,
-    const ConstVectorView& p_grid_abs,
-    const ConstTensor3View& z_field,
-    const ConstVectorView& refellipsoid,
-    const ConstTensor3View& t_field,
+    const ConstVectorView& pressure_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstVectorView& lstep_ppath,
+    const ArrayOfGridPos& cloud_gp_p_ppath,
+    const ArrayOfGridPos& cloud_gp_za_ppath,
+    const MatrixView& itw_ppath,
+    const MatrixView& itw_za_ppath,
     const ConstVectorView& f_grid,
     const ConstTensor5View& ext_mat_field,
     const ConstTensor4View& abs_vec_field,
-    const ConstTensor3View& gas_extinction,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const Verbosity& verbosity) {
 
-  Ppath ppath_step;
-  // Input variables are checked in the WSMs i_fieldUpdateSeqXXX, from
-  // where this function is called.
-
-  //Initialize ppath for 1D.
-  ppath_init_structure(ppath_step, 1, 1);
-  // See documentation of ppath_init_structure for understanding
-  // the parameters.
-
-  // Assign value to ppath.pos:
-  ppath_step.pos(0, 0) = z_field(p_index, 0, 0);
-  ppath_step.r[0] = refellipsoid[0] + z_field(p_index, 0, 0);
-
-  // Define the direction:
-  ppath_step.los(0, 0) = za_grid[za_index];
-
-  // Define the grid positions:
-  ppath_step.gp_p[0].idx = p_index+cloudbox_limits[0];
-  ppath_step.gp_p[0].fd[0] = 0;
-  ppath_step.gp_p[0].fd[1] = 1;
-
-  // Call ppath_step_agenda:
-  ppath_step_agendaExecute(ws,
-                           ppath_step,
-                           ppath_lmax,
-                           ppath_lraytrace,
-                           f_grid,
-                           ppath_step_agenda);
+  Index Npath = pressure_ppath.nelem();
+  Index Ncloud = doit_scat_field.nvitrines();
 
   // Check whether the next point is inside or outside the
   // cloudbox. Only if the next point lies inside the
   // cloudbox a radiative transfer step caclulation has to
   // be performed.
-
-  if ((cloudbox_limits[0] <= ppath_step.gp_p[1].idx &&
-       cloudbox_limits[1] > ppath_step.gp_p[1].idx) ||
-      (cloudbox_limits[1] == ppath_step.gp_p[1].idx &&
-       abs(ppath_step.gp_p[1].fd[0]) < 1e-6)) {
+  // FIXME: It may be that I have to adjust NCloud by minus 1 ??
+  if ((0 <= cloud_gp_p_ppath[1].idx &&
+       Ncloud > cloud_gp_p_ppath[1].idx) ||
+      (Ncloud == cloud_gp_p_ppath[1].idx &&
+       abs(cloud_gp_p_ppath[1].fd[0]) < 1e-6)) {
     // Stokes dimension
     const Index stokes_dim = doit_i_field_mono.ncols();
-    // Number of species
-        // Ppath_step normally has 2 points, the starting
-    // point and the intersection point.
-    // But there can be points in between, when a maximum
-    // lstep is given. We have to interpolate on all the
-    // points in the ppath_step.
+
 
     // Initialize variables for interpolated values
-    Vector gas_abs_int(ppath_step.np, 0.);
-    Tensor3 ext_mat_int(stokes_dim, stokes_dim, ppath_step.np, 0.);
-    Matrix abs_vec_int(stokes_dim, ppath_step.np, 0.);
-    Matrix sca_vec_int(stokes_dim, ppath_step.np, 0.);
-    Matrix doit_i_field_mono_int(stokes_dim, ppath_step.np, 0.);
-    Vector t_int(ppath_step.np, 0.);
-    Vector p_int(ppath_step.np, 0.);
+    Tensor3 ext_mat_int(stokes_dim, stokes_dim, Npath, 0.);
+    Matrix abs_vec_int(stokes_dim, Npath, 0.);
+    Matrix sca_vec_int(stokes_dim, Npath, 0.);
+    Matrix doit_i_field_mono_int(stokes_dim, Npath, 0.);
 
 
     InterpolateOnPropagation1D(
-                         gas_abs_int,
                          ext_mat_int,
                          abs_vec_int,
                          sca_vec_int,
                          doit_i_field_mono_int,
-                         t_int,
-                         p_int,
-                         gas_extinction,
                          ext_mat_field,
                          abs_vec_field,
                          doit_scat_field,
                          doit_i_field_mono,
-                         p_grid,
-                         p_grid_abs,
-                         t_field,
-                         ppath_step,
-                         cloudbox_limits,
-                         za_grid,
+                         cloud_gp_p_ppath,
+                         cloud_gp_za_ppath,
+                         itw_ppath,
+                         itw_za_ppath,
                          verbosity);
 
     // ppath_what_background(ppath_step) tells the
@@ -2290,10 +2303,10 @@ void UpdateCloudPropagationPath1D(
     // at the intersection with the next layer and propagating
     // to the considered point.
     RTStepInCloudNoBackground(doit_i_field_mono,
-                              ppath_step,
-                              t_int,
-                              p_int,
-                              gas_abs_int,
+                              lstep_ppath,
+                              temperature_ppath,
+                              pressure_ppath,
+                              gas_extinction_ppath,
                               ext_mat_int,
                               abs_vec_int,
                               sca_vec_int,
@@ -2325,24 +2338,18 @@ void UpdateCloudPropagationPath1D(
 }
 
 void InterpolateOnPropagation1D(  //Output
-    VectorView&  gas_abs_int,
     Tensor3View& ext_mat_int,
     MatrixView& abs_vec_int,
     MatrixView& sca_vec_int,
     MatrixView& doit_i_field_mono_int,
-    VectorView& t_int,
-    VectorView& p_int,
-    const ConstTensor3View& gas_extinction,
     const ConstTensor5View& ext_mat_field,
     const ConstTensor4View& abs_vec_field,
     const ConstTensor6View& doit_scat_field,
     const ConstTensor6View& doit_i_field_mono,
-    const ConstVectorView& p_grid,
-    const ConstVectorView& p_grid_abs,
-    const ConstTensor3View& t_field,
-    const Ppath& ppath_step,
-    const ArrayOfIndex& cloudbox_limits,
-    const ConstVectorView& za_grid,
+    const ArrayOfGridPos& cloud_gp_p,
+    const ArrayOfGridPos& cloud_gp_za,
+    const MatrixView& itw,
+    const MatrixView& itw_za,
     const Verbosity& verbosity) {
 
   CREATE_OUT3;
@@ -2350,48 +2357,8 @@ void InterpolateOnPropagation1D(  //Output
   // Stokes dimension
   const Index stokes_dim = doit_i_field_mono.ncols();
 
-  // Gridpositions inside the cloudbox.
-  // The optical properties are stored only inside the
-  // cloudbox. For interpolation we use grids
-  // inside the cloudbox.
-  ArrayOfGridPos cloud_gp_p = ppath_step.gp_p;
-
-  for (Index i = 0; i < ppath_step.np; i++)
-    cloud_gp_p[i].idx -= cloudbox_limits[0];
-
-  // Grid index for points at upper limit of cloudbox must be shifted
-  const Index n1 = cloudbox_limits[1] - cloudbox_limits[0];
-  gridpos_upperend_check(cloud_gp_p[0], n1);
-  gridpos_upperend_check(cloud_gp_p[ppath_step.np - 1], n1);
-
-  Matrix itw(cloud_gp_p.nelem(), 2);
-  interpweights(itw, cloud_gp_p);
-
-  //pressure interpolation
-//  Vector p_int(ppath_step.np);
-  itw2p(p_int, p_grid, cloud_gp_p, itw);
-
-  // prepare gas absorption interpolation
-//  Index order=1;
-//  if (order > ppath_step.np-1){
-//    order = ppath_step.np-1;
-//  }
-  ArrayOfGridPos gp_gas(ppath_step.np);
-  gridpos(gp_gas,p_grid_abs,p_int);
-  Matrix itw_gas(gp_gas.nelem(), 2);
-  interpweights(itw_gas,gp_gas);
-
-
-  // The zenith angles of the propagation path are needed as we have to
-  // interpolate the intensity field and the scattered field on the
-  // right angles.
-  Vector los_grid = ppath_step.los(joker, 0);
-
-  ArrayOfGridPos gp_za(los_grid.nelem());
-  gridpos(gp_za, za_grid, los_grid);
-
-  Matrix itw_p_za(cloud_gp_p.nelem(), 4);
-  interpweights(itw_p_za, cloud_gp_p, gp_za);
+  // For the interpolation, the precalculated weights and grid positions are
+  // used.
 
   //Interpolate the quantities on the ppath_step
   for (Index i = 0; i < stokes_dim; i++) {
@@ -2417,37 +2384,26 @@ void InterpolateOnPropagation1D(  //Output
     out3 << "Interpolate doit_scat_field and doit_i_field_mono:\n";
     // Interpolate scattered field
     interp(sca_vec_int(i, joker),
-             itw_p_za,
+             itw_za,
              doit_scat_field(joker, 0, 0, joker, 0, i),
              cloud_gp_p,
-             gp_za);
+             cloud_gp_za);
 
     // Interpolate radiation field
     interp(doit_i_field_mono_int(i, joker),
-             itw_p_za,
+             itw_za,
              doit_i_field_mono(joker, 0, 0, joker, 0, i),
              cloud_gp_p,
-             gp_za);
+             cloud_gp_za);
 
   }
-
-  // Interpolate temperature field
-  out3 << "Interpolate temperature field\n";
-  interp(t_int, itw, t_field(joker, 0, 0), cloud_gp_p);
-
-  // Interpolate gas extinction
-  out3 << "Interpolate vmr field\n";
-  interp(gas_abs_int, itw_gas, gas_extinction(joker, 0, 0), gp_gas);
-//  interp(gas_abs_int, itw_poly, gas_extinction(joker, 0, 0), gp_poly );
-
-
 }
 
 void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
-                               const Ppath& ppath_step,
-                               const ConstVectorView& t_int,
-                               const ConstVectorView& p_int,
-                               const ConstVectorView& gas_abs_int,
+                               const ConstVectorView& lstep_ppath,
+                               const ConstVectorView& temperature_ppath,
+                               const ConstVectorView& pressure_ppath,
+                               const ConstVectorView& gas_extinction_ppath,
                                const ConstTensor3View& ext_mat_int,
                                const ConstMatrixView& abs_vec_int,
                                const ConstMatrixView& sca_vec_int,
@@ -2464,6 +2420,7 @@ void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
 
   const Index stokes_dim = doit_i_field_mono.ncols();
   const Index atmosphere_dim = cloudbox_limits.nelem() / 2;
+  const Index Nppath = pressure_ppath.nelem();
 
   Vector sca_vec_av(stokes_dim, 0);
   Vector stokes_vec(stokes_dim, 0.);
@@ -2482,18 +2439,18 @@ void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
   Vector vector_tmp(stokes_dim);
 
   // Incoming stokes vector
-  stokes_vec = doit_i_field_mono_int(joker, ppath_step.np - 1);
+  stokes_vec = doit_i_field_mono_int(joker, Nppath - 1);
 
-  for (Index k = ppath_step.np - 1; k >= 0; k--) {
+  for (Index k = Nppath - 1; k >= 0; k--) {
     // Save propmat_clearsky from previous level
     std::swap(cur_propmat_clearsky, prev_propmat_clearsky);
 
     //Set current propmat clearsky
-    cur_propmat_clearsky[0].Kjj() = gas_abs_int[k];
+    cur_propmat_clearsky[0].Kjj() = gas_extinction_ppath[k];
 
     // Skip any further calculations for the first point.
     // We need values at two ppath points before we can average.
-    if (k == ppath_step.np - 1) {
+    if (k == Nppath - 1) {
       continue;
     }
 
@@ -2505,7 +2462,6 @@ void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
         ext_mat_local, abs_vec_local, prev_propmat_clearsky);
 
     for (Index i = 0; i < stokes_dim; i++) {
-
       // Averaging of sca_vec:
       sca_vec_av[i] = 0.5 * (sca_vec_int(i, k) + sca_vec_int(i, k + 1));
     }
@@ -2522,10 +2478,11 @@ void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
     Numeric f = f_grid[0];
 
     // Calculate Planck function
-    Numeric rte_planck_value = planck(f, 0.5 * (t_int[k] + t_int[k + 1]));
+    Numeric rte_planck_value =
+        planck(f, 0.5 * (temperature_ppath[k] + temperature_ppath[k + 1]));
 
     // Length of the path between the two layers.
-    Numeric lstep = ppath_step.lstep[k];
+    Numeric lstep = lstep_ppath[k];
 
     // Some messages:
     if (out3.sufficient_priority()) {
@@ -2551,18 +2508,18 @@ void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
     // Radiative transfer step calculation. The Stokes vector
     // is updated until the considered point is reached.
     RadiativeTransferStep(stokes_vec,
-                              Matrix(stokes_dim, stokes_dim),
-                              ext_mat_local,
-                              abs_vec_local,
-                              sca_vec_av,
-                              lstep,
-                              rte_planck_value);
+                          Matrix(stokes_dim, stokes_dim),
+                          ext_mat_local,
+                          abs_vec_local,
+                          sca_vec_av,
+                          lstep,
+                          rte_planck_value);
 
-  }  // End of loop over ppath_step.
+  }  // End of loop over a ppath step.
+
   // Assign calculated Stokes Vector to doit_i_field_mono.
   if (atmosphere_dim == 1)
-    doit_i_field_mono(p_index , 0, 0, za_index, 0, joker) =
-        stokes_vec;
+    doit_i_field_mono(p_index, 0, 0, za_index, 0, joker) = stokes_vec;
   else if (atmosphere_dim == 3)
     doit_i_field_mono(p_index,
                       lat_index - cloudbox_limits[2],
@@ -2571,8 +2528,6 @@ void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
                       aa_index,
                       joker) = stokes_vec;
 }
-
-
 
 void RadiativeTransferStep(  //Output and Input:
     VectorView stokes_vec,
@@ -2761,17 +2716,18 @@ void CheckConvergence(
 }
 
 
-void EstimatePressurePoints1D(
+void EstimatePPathElements1D(
     Workspace& ws,
-    Vector& pressure_abs,
-    Vector& temperature_abs,
-    Matrix& vmr_abs,
-    ArrayOfGridPos& Gpos,
-    Matrix& InterpWeights,
-    // WS Input:
+    ArrayOfVector& PressureArray,
+    ArrayOfVector& TemperatureArray,
+    ArrayOfMatrix& VmrArray,
+    ArrayOfMatrix& InterpWeightsArray,
+    ArrayOfMatrix& InterpWeightsZenithArray,
+    ArrayOfArrayOfGridPos& GposArray,
+    ArrayOfArrayOfGridPos& GposZenithArray,
+    ArrayOfVector& LstepArray,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
-    // Propagation path calculation:
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
@@ -2803,18 +2759,20 @@ void EstimatePressurePoints1D(
              RAD2DEG;
 
 
-  ArrayOfVector PressureArrays(N_p*N_za);
-  ArrayOfVector TemperatureArrays(N_p*N_za);
-  ArrayOfMatrix VmrArrays(N_p*N_za);
-  ArrayOfMatrix InterpWeightsArrays(N_p*N_za);
-  ArrayOfArrayOfGridPos GposArrays(N_p*N_za);
+  PressureArray.resize(N_p*N_za);
+  TemperatureArray.resize(N_p*N_za);
+  VmrArray.resize(N_p*N_za);
+  InterpWeightsArray.resize(N_p*N_za);
+  InterpWeightsZenithArray.resize(N_p*N_za);
+  GposArray.resize(N_p*N_za);
+  GposZenithArray.resize(N_p*N_za);
+  LstepArray.resize(N_p*N_za);
 
   const bool adaptive = (p_path_maxlength.npages() > 0);
   Numeric ppath_lmax_temp = ppath_lmax;
   Numeric ppath_lraytrace_temp = ppath_lraytrace;
 
-  Index counter=-1;
-  Index pressure_counter=0;
+
   //Loop over all directions, defined by za_grid
   for (Index i_za = 0; i_za < N_za; i_za++) {
 
@@ -2832,40 +2790,49 @@ void EstimatePressurePoints1D(
           ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
           ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
         }
+
+        const Index idx = subscript2index(i_za, i_p, N_za);
+
         Vector Pressures;
         Vector Temperatures;
         Matrix Vmrs;
         ArrayOfGridPos cloud_gp_p;
+        ArrayOfGridPos cloud_gp_za;
+        Vector lstep;
         Matrix itw;
-        counter++;
+        Matrix itw_za;
         CloudPropagationPath1D(ws,
-                               Pressures,
-                               Temperatures,
-                               Vmrs,
-                               cloud_gp_p,
-                               itw,
-                               i_p,
-                               i_za,
-                               za_grid,
-                               cloudbox_limits,
-                               ppath_step_agenda,
-                               ppath_lmax_temp,
-                               ppath_lraytrace_temp,
-                               p_grid,
-                               z_field,
-                               t_field,
-                               vmr_field,
-                               refellipsoid,
-                               f_grid,
-                               verbosity);
+                             Pressures,
+                             Temperatures,
+                             Vmrs,
+                             cloud_gp_p,
+                             cloud_gp_za,
+                             lstep,
+                             itw,
+                             itw_za,
+                             i_p,
+                             i_za,
+                             za_grid,
+                             cloudbox_limits,
+                             ppath_step_agenda,
+                             ppath_lmax_temp,
+                             ppath_lraytrace_temp,
+                             p_grid,
+                             z_field,
+                             t_field,
+                             vmr_field,
+                             refellipsoid,
+                             f_grid,
+                             verbosity);
 
-        PressureArrays[counter]=Pressures;
-        TemperatureArrays[counter]=Temperatures;
-        VmrArrays[counter]=Vmrs;
-        InterpWeightsArrays[counter]=itw;
-        GposArrays[counter]=cloud_gp_p;
-        pressure_counter+=Pressures.nelem();
-
+        PressureArray[idx] = Pressures;
+        TemperatureArray[idx] = Temperatures;
+        VmrArray[idx] = Vmrs;
+        InterpWeightsArray[idx] = itw;
+        InterpWeightsZenithArray[idx] = itw_za;
+        GposArray[idx] = cloud_gp_p;
+        GposZenithArray[idx] = cloud_gp_za;
+        LstepArray[idx] = lstep;
       }
     } else if (za_grid[i_za] >= theta_lim) {
       //
@@ -2877,18 +2844,25 @@ void EstimatePressurePoints1D(
           ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
         }
 
+        const Index idx = subscript2index(i_za, i_p, N_za);
+
         Vector Pressures;
         Vector Temperatures;
         Matrix Vmrs;
         ArrayOfGridPos cloud_gp_p;
+        ArrayOfGridPos cloud_gp_za;
+        Vector lstep;
         Matrix itw;
-        counter++;
+        Matrix itw_za;
         CloudPropagationPath1D(ws,
                                Pressures,
                                Temperatures,
                                Vmrs,
                                cloud_gp_p,
+                               cloud_gp_za,
+                               lstep,
                                itw,
+                               itw_za,
                                i_p,
                                i_za,
                                za_grid,
@@ -2904,12 +2878,15 @@ void EstimatePressurePoints1D(
                                f_grid,
                                verbosity);
 
-        PressureArrays[counter]=Pressures;
-        TemperatureArrays[counter]=Temperatures;
-        VmrArrays[counter]=Vmrs;
-        InterpWeightsArrays[counter]=itw;
-        GposArrays[counter]=cloud_gp_p;
-        pressure_counter+=Pressures.nelem();
+        PressureArray[idx] = Pressures;
+        TemperatureArray[idx] = Temperatures;
+        VmrArray[idx] = Vmrs;
+        InterpWeightsArray[idx] = itw;
+        InterpWeightsZenithArray[idx] = itw_za;
+        GposArray[idx] = cloud_gp_p;
+        GposZenithArray[idx] = cloud_gp_za;
+        LstepArray[idx] = lstep;
+
       }  // Close loop over p_grid (inside cloudbox).
     }    // end if downlooking.
 
@@ -2934,18 +2911,25 @@ void EstimatePressurePoints1D(
             ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
           }
 
+          const Index idx = subscript2index(i_za, i_p, N_za);
+
           Vector Pressures;
           Vector Temperatures;
           Matrix Vmrs;
           ArrayOfGridPos cloud_gp_p;
+          ArrayOfGridPos cloud_gp_za;
+          Vector lstep;
           Matrix itw;
-          counter++;
+          Matrix itw_za;
           CloudPropagationPath1D(ws,
                                  Pressures,
                                  Temperatures,
                                  Vmrs,
                                  cloud_gp_p,
+                                 cloud_gp_za,
+                                 lstep,
                                  itw,
+                                 itw_za,
                                  i_p,
                                  i_za,
                                  za_grid,
@@ -2961,110 +2945,44 @@ void EstimatePressurePoints1D(
                                  f_grid,
                                  verbosity);
 
-          PressureArrays[counter]=Pressures;
-          TemperatureArrays[counter]=Temperatures;
-          VmrArrays[counter]=Vmrs;
-          InterpWeightsArrays[counter]=itw;
-          GposArrays[counter]=cloud_gp_p;
-          pressure_counter+=Pressures.nelem();
+          PressureArray[idx] = Pressures;
+          TemperatureArray[idx] = Temperatures;
+          VmrArray[idx] = Vmrs;
+          InterpWeightsArray[idx] = itw;
+          InterpWeightsZenithArray[idx] = itw_za;
+          GposArray[idx] = cloud_gp_p;
+          GposZenithArray[idx] = cloud_gp_za;
+          LstepArray[idx] = lstep;
+
         }
       }
     }
-  }  // Closes loop over za_grid.
-
-  Vector PressurePointsArray(pressure_counter);
-  Vector TemperaturesArray(pressure_counter);
-  Matrix VmrsArray(vmr_field.nbooks(),pressure_counter);
-  ArrayOfGridPos GposArray(pressure_counter);
-  Matrix InterpWeightsArray(pressure_counter,2);
-
-  counter = -1;
-  for (Index i_pa = 0; i_pa < PressureArrays.nelem(); i_pa++) {
-    for (Index i_pt = 0; i_pt < PressureArrays[i_pa].nelem(); i_pt++) {
-      counter++;
-      PressurePointsArray[counter] = PressureArrays[i_pa][i_pt];
-      TemperaturesArray[counter] = TemperatureArrays[i_pa][i_pt];
-      VmrsArray(joker,counter) = VmrArrays[i_pa](joker,i_pt);
-      InterpWeightsArray(counter,joker) = InterpWeightsArrays[i_pa](i_pt,joker);
-      GposArray[counter]= GposArrays[i_pa][i_pt];
-    }
   }
-
-  // sort it according to pressure
-  ArrayOfIndex Index_sorted;
-  get_sorted_indexes(Index_sorted, PressurePointsArray);
-
-  Vector PressurePointsArraySorted(pressure_counter);
-  Vector TemperaturesArraySorted(pressure_counter);
-  Matrix VmrsArraySorted(vmr_field.nbooks(),pressure_counter);
-  ArrayOfGridPos GposArraySorted(pressure_counter);
-  Matrix InterpWeightsArraySorted(pressure_counter,2);
-
-  for (Index i_idx = 0; i_idx < Index_sorted.nelem(); i_idx++){
-    PressurePointsArraySorted[i_idx] = PressurePointsArray[Index_sorted[i_idx]];
-    TemperaturesArraySorted[i_idx] = TemperaturesArray[Index_sorted[i_idx]];
-    VmrsArraySorted(joker, i_idx) = VmrsArray(joker,Index_sorted[i_idx]);
-    InterpWeightsArraySorted(i_idx, joker) = InterpWeightsArray(i_idx, joker);
-    GposArraySorted[i_idx] = GposArray[Index_sorted[i_idx]];
-  }
-  DEBUG_VAR(PressurePointsArraySorted)
-  DEBUG_VAR(TemperaturesArraySorted)
-
-  //get unique pressures indices
-  Numeric delta;
-  ArrayOfIndex IndexArrayTemp(PressurePointsArraySorted.nelem());
-  Index count_idx=0;
-  for (Index i_idx = 0; i_idx < PressurePointsArraySorted.nelem()-1; i_idx++){
-
-    delta=PressurePointsArraySorted[i_idx+1]-PressurePointsArraySorted[i_idx];
-
-    if (delta!=0){
-      count_idx++;
-      IndexArrayTemp[count_idx]=i_idx+1;
-    }
-  }
-
-  //remove non unique pressures and the other ones according to pressure
-  pressure_abs.resize(count_idx+1);
-  temperature_abs.resize(count_idx+1);
-  vmr_abs.resize(vmr_field.nbooks(),count_idx+1);
-  Gpos.resize(count_idx+1);
-  InterpWeights.resize(count_idx+1,2);
-
-  for (Index i_idx = 0; i_idx <= count_idx ; i_idx++){
-    pressure_abs[i_idx] = PressurePointsArraySorted[IndexArrayTemp[i_idx]];
-    temperature_abs[i_idx] = TemperaturesArraySorted[IndexArrayTemp[i_idx]];
-    vmr_abs(joker,i_idx) = VmrsArraySorted(joker,IndexArrayTemp[i_idx]);
-    InterpWeights(i_idx, joker) = InterpWeightsArraySorted(IndexArrayTemp[i_idx],joker);
-    Gpos[i_idx] = GposArraySorted[IndexArrayTemp[i_idx]];
-  }
-  DEBUG_VAR(pressure_abs)
-  DEBUG_VAR(temperature_abs)
-
-  out3 << "  Pressure points estimated and sorted\n";
 }
 
-void CloudPropagationPath1D(
-    Workspace& ws,
-    Vector& Pressures,
-    Vector& Temperatures,
-    Matrix& Vmrs,
-    ArrayOfGridPos& cloud_gp_p,
-    Matrix& itw,
-    const Index& p_index,
-    const Index& za_index,
-    const ConstVectorView& za_grid,
-    const ArrayOfIndex& cloudbox_limits,
-    const Agenda& ppath_step_agenda,
-    const Numeric& ppath_lmax,
-    const Numeric& ppath_lraytrace,
-    const ConstVectorView& p_grid,
-    const ConstTensor3View& z_field,
-    const ConstTensor3View& t_field,
-    const ConstTensor4View& vmr_field,
-    const ConstVectorView& refellipsoid,
-    const ConstVectorView& f_grid,
-    const Verbosity& verbosity) {
+void CloudPropagationPath1D(Workspace& ws,
+                          Vector& Pressures,
+                          Vector& Temperatures,
+                          Matrix& Vmrs,
+                          ArrayOfGridPos& cloud_gp_p,
+                          ArrayOfGridPos& cloud_gp_za,
+                          Vector& lstep,
+                          Matrix& itw,
+                          Matrix& itw_za,
+                          const Index& p_index,
+                          const Index& za_index,
+                          const ConstVectorView& za_grid,
+                          const ArrayOfIndex& cloudbox_limits,
+                          const Agenda& ppath_step_agenda,
+                          const Numeric& ppath_lmax,
+                          const Numeric& ppath_lraytrace,
+                          const ConstVectorView& p_grid,
+                          const ConstTensor3View& z_field,
+                          const ConstTensor3View& t_field,
+                          const ConstTensor4View& vmr_field,
+                          const ConstVectorView& refellipsoid,
+                          const ConstVectorView& f_grid,
+                          const Verbosity& verbosity) {
 
   CREATE_OUT3;
 
@@ -3097,6 +3015,7 @@ void CloudPropagationPath1D(
                            f_grid,
                            ppath_step_agenda);
 
+
   // Check whether the next point is inside or outside the
   // cloudbox. Only if the next point lies inside the
   // cloudbox a radiative transfer step caclulation has to
@@ -3112,10 +3031,9 @@ void CloudPropagationPath1D(
     // But there can be points in between, when a maximum
     // lstep is given. We have to interpolate on all the
     // points in the ppath_step.
-
-
     cloud_gp_p = ppath_step.gp_p;
 
+    //get the right indices for the cloudbox
     for (Index i = 0; i < ppath_step.np; i++)
       cloud_gp_p[i].idx -= cloudbox_limits[0];
 
@@ -3124,6 +3042,19 @@ void CloudPropagationPath1D(
     gridpos_upperend_check(cloud_gp_p[0], n1);
     gridpos_upperend_check(cloud_gp_p[ppath_step.np - 1], n1);
 
+    //Additionally to the gridpos, we need only lstep from ppath_step
+    lstep = ppath_step.lstep;
+
+    //Precalculate interpolation weights and gridpos for angular interpolation
+    Vector los_grid = ppath_step.los(joker, 0);
+    cloud_gp_za.resize(los_grid.nelem());
+    gridpos(cloud_gp_za, za_grid, los_grid);
+
+    itw_za.resize(cloud_gp_p.nelem(), 4);
+    interpweights(itw_za, cloud_gp_p, cloud_gp_za);
+
+
+    // interpolate pressure, temperature and vmr
     itw.resize(cloud_gp_p.nelem(), 2);
     interpweights(itw, cloud_gp_p);
 
@@ -3143,8 +3074,16 @@ void CloudPropagationPath1D(
     }
 
 
+
+
   }  //end if inside cloudbox
 }
+
+//------------------------------------------------------------------------------
+// Auxilary functions-----------------------------------------------------------
+//
+//------------------------------------------------------------------------------
+
 
 void FlattenMeshGrid(Matrix& flattened_meshgrid,
                      const Vector& grid1,
@@ -3190,4 +3129,84 @@ void FlattenMeshGridIndex(ArrayOfIndex& index_grid1,
       Idir_idx += 1;
     }
   }
+}
+
+
+// Subscript to index functions-------------------------------------------------
+
+//2d array
+Index subscript2index(Index i, Index j, Index Ni) { return j * Ni + i; }
+
+//3d array
+Index subscript2index(Index i, Index j, Index k, Index Ni, Index Nj) {
+  return k * Nj * Ni + subscript2index(i, j, Ni);
+}
+
+//4d array
+Index subscript2index(
+    Index i, Index j, Index k, Index l, Index Ni, Index Nj, Index Nk) {
+  return l * Nk * Nj * Ni + subscript2index(i, j, k, Ni, Nj);
+}
+
+//5d array
+Index subscript2index(Index i,
+                     Index j,
+                     Index k,
+                     Index l,
+                     Index m,
+                     Index Ni,
+                     Index Nj,
+                     Index Nk,
+                     Index Nl) {
+  return m * Nl * Nk * Nj * Ni + subscript2index(i, j, k, l, Ni, Nj, Nk);
+}
+
+
+// Index to subscript functions-------------------------------------------------
+//2d array
+Tuple2D index2subscript(Index idx, Index Ni) {
+  const Index j = int(idx / Ni);
+
+  const Index i = idx - j * Ni;
+
+  return std::make_tuple(i, j);
+}
+
+//3d array
+Tuple3D index2subscript(Index idx, Index Ni, Index Nj) {
+  const Index k = int(idx / (Ni * Nj));
+
+  Tuple2D t = index2subscript(idx - k * Ni * Nj, Ni);
+
+  Index i = std::get<0>(t);
+  Index j = std::get<1>(t);
+
+  return std::make_tuple(i, j, k);
+}
+
+//4d array
+Tuple4D index2subscript(Index idx, Index Ni, Index Nj, Index Nk) {
+  const Index l = int(idx / (Ni * Nj * Nk));
+
+  Tuple3D t = index2subscript(idx - l * Ni * Nj * Nk, Ni, Nj);
+
+  Index i = std::get<0>(t);
+  Index j = std::get<1>(t);
+  Index k = std::get<2>(t);
+
+  return std::make_tuple(i, j, k, l);
+}
+
+//5d array
+Tuple5D index2subscript(Index idx, Index Ni, Index Nj, Index Nk, Index Nl) {
+  const Index m = int(idx / (Ni * Nj * Nk * Nl));
+
+  Tuple4D t = index2subscript(idx - m * Ni * Nj * Nk * Nl, Ni, Nj, Nk);
+
+  Index i = std::get<0>(t);
+  Index j = std::get<1>(t);
+  Index k = std::get<2>(t);
+  Index l = std::get<3>(t);
+
+  return std::make_tuple(i, j, k, l, m);
 }
