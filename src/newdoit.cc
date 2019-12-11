@@ -1724,12 +1724,12 @@ void CalcScatteredField1D(
     // Output
     Tensor6& doit_scat_field,
     // Input:
-    const Tensor6& doit_i_field_mono,
-    const Tensor7& scattering_matrix,
-    const Vector& iza_grid,  // incoming direction
-    ArrayOfIndex& pdir_idx0,//index array of propagation direction
-    ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
-    Tensor3& itw, //interpolation weights
+    const ConstTensor6View& doit_i_field_mono,
+    const ConstTensor7View& scattering_matrix,
+    const VectorView& iza_grid,  // incoming direction
+    const ArrayOfIndex& pdir_idx0,//index array of propagation direction
+    const ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
+    const Tensor3View& itw, //interpolation weights
     const Verbosity& verbosity) {
 
   CREATE_OUT3;
