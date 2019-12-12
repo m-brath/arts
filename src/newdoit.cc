@@ -148,6 +148,12 @@ void SetAngularGrids(Vector& za_grid,
     //#sort weights and theta in increasing direction of scat_za_grid
     za_grid = za_grid_temp[Range(x.nelem() - 1, x.nelem(), -1)];
 
+    //dirty hack to be asure that 90 deg is exactly 90 deg.
+    if (N_za_grid % 2){
+      za_grid[int(N_za_grid/2)]=90.;
+    }
+
+
   } else {
     ostringstream os;
     os << "The selected grid type is not implemented";
