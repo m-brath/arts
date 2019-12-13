@@ -875,12 +875,12 @@ void NewDoitMonoCalc(Workspace& ws,
     CalcPropagationPathMaxLength(
         p_path_maxlength,
         extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
-        p_grid,
         gas_extinction,
         p_grid,
         lat_grid,
         lon_grid,
         za_grid,
+        ppath_lmax,
         tau_max);
   }
 
@@ -1054,8 +1054,8 @@ void CalcGasExtinctionField(Workspace& ws,
                             const ConstVectorView& f_mono) {
 
   const Index Np = p_grid.nelem();
-  const Index Nlat = lat_grid.nelem();
-  const Index Nlon = lon_grid.nelem();
+  const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
+  const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
 
   // Initialization
   gas_extinct.resize(Np, Nlat, Nlon);
@@ -1466,12 +1466,12 @@ void CalcSurfaceProperties(Workspace& ws,
 void CalcPropagationPathMaxLength(
     Tensor3& p_path_maxlength,
     const Tensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
-    const ConstVectorView& p_grid,
     const ConstTensor3View& gas_extinct,
-    const ConstVectorView& p_grid_abs,
+    const ConstVectorView& p_grid,
     const ConstVectorView& lat_grid,
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
+    const Numeric& ppath_lmax,
     const Numeric& tau_max) {
 
 
@@ -1481,28 +1481,10 @@ void CalcPropagationPathMaxLength(
   const Index Ndir = extinction_matrix.npages();
   Numeric ext_mat_elem;
 
-  //gas extinction has a different grid than extinction matrix, so we have to
-  // interpolate
-  Tensor3 gas_ext_int(Np, Nlat, Nlon);
-  ArrayOfGridPos gp_p;
-  Matrix itw_p(Np, 2);
-
-  gp_p.resize(p_grid.nelem());
-  gridpos(gp_p, p_grid_abs, p_grid);
-  interpweights(itw_p, gp_p);
-
-  for (Index ilat = 0; ilat < Nlat; ilat++) {
-    for (Index ilon = 0; ilon < Nlon; ilon++) {
-      interp(gas_ext_int(joker, ilat, ilon),
-             itw_p,
-             gas_extinct(joker, ilon, ilat),
-             gp_p);
-    }
-  }
 
   //prepare output container
   p_path_maxlength.resize(Np, Nlat, Nlon);
-  p_path_maxlength = 0.;
+  p_path_maxlength = ppath_lmax;
 
   for (Index ip = 0; ip < Np; ip++) {
     for (Index ilat = 0; ilat < Nlat; ilat++) {
@@ -1520,8 +1502,11 @@ void CalcPropagationPathMaxLength(
         ext_mat_elem /= Numeric(Ndir);
 
         // maximum propagation path length for each grid point.
-        p_path_maxlength(ip, ilat, ilon) =
-            tau_max / (ext_mat_elem + gas_extinct(ip, ilat, ilon));
+        const Numeric maxlength=tau_max / (ext_mat_elem + gas_extinct(ip, ilat, ilon));
+
+        if (maxlength < p_path_maxlength(ip, ilat, ilon)){
+          p_path_maxlength(ip, ilat, ilon) = maxlength;
+        }
       }
     }
   }
