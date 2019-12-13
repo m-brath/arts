@@ -254,12 +254,12 @@ void CalcSurfaceProperties(Workspace& ws,
 void CalcPropagationPathMaxLength(
     Tensor3& p_path_maxlength,
     const Tensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
-    const ConstVectorView& p_grid,
     const ConstTensor3View& gas_extinct,
-    const ConstVectorView& p_grid_abs,
+    const ConstVectorView& p_grid,
     const ConstVectorView& lat_grid,
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
+    const Numeric& ppath_lmax,
     const Numeric& tau_max);
 
 //TODO:Add doxygen doc
