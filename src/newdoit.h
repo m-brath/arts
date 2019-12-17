@@ -59,7 +59,19 @@ extern const Numeric PI;
 extern const Numeric RAD2DEG;
 extern const Numeric DEG2RAD;
 
-//TODO:Add doxygen doc
+/** Initialises variables for DOIT scattering calculations.
+ *
+ * Note that doit_i_field is Nan-initialzed
+ *
+ * @param[out] doit_i_field Spectral radiance field inside the cloudbox
+ * @param[in] stokes_dim The dimensionality of the Stokes vector (1-4).
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] rt_za_grid Zenith angle grid.
+ * @param[in] rt_aa_grid Azimuth angle grid.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ */
 void Initialize_doit_i_field(
     //Output
     Tensor7& doit_i_field,
@@ -71,7 +83,22 @@ void Initialize_doit_i_field(
     const Vector& rt_aa_grid,
     const ArrayOfIndex& cloudbox_limits);
 
-//TODO:Add doxygen doc
+/** Set the angular grids for DOIT scattering calculations.
+ *
+ * @param[out] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[out] aa_grid Azimuth angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[out] scat_za_grid Zenith angle grid for the scattering calculation.
+ * @param[out] scat_aa_grid Azimuth angle grid for the scattering calculation.
+ * @param[in] N_za_grid Number of zenith angle grid points.
+ * @param[in] N_aa_grid Number of azimuth angle grid points.
+ * @param[in] N_scat_za_grid Number of zenith angle grid points for the
+ *              scattering calculation.
+ * @param[in] N_scat_aa_grid Number of azimuth angle grid points for the
+ *              scattering calculation.
+ * @param[in] za_grid_type String with the type of the grid for za_grid.
+ */
 void SetAngularGrids(
     //Output
     Vector& za_grid,
@@ -85,7 +112,18 @@ void SetAngularGrids(
     const Index& N_scat_aa_grid,
     const String& za_grid_type);
 
-//TODO:Add doxygen doc
+/** Interpolate clearsky field on all gridpoints in cloudbox.
+ *
+ * @param[out] doit_i_field Spectral radiance field inside the cloudbox.
+ * @param[in] f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] p_grid Pressure grid.
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] verbosity Verbosity setting.
+ */
 void SetClearsky_doit_i_field(
     //Output
     Tensor7& doit_i_field,
@@ -98,7 +136,32 @@ void SetClearsky_doit_i_field(
     const Index& atmosphere_dim,
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Calculates incoming radiation field of the cloudbox.
+ *
+ * The method performs monochromatic pencil beam calculations for
+ * all grid positions on the cloudbox boundary, and all directions
+ * given by angle grids (*za/aa_grid*). Found radiances
+ * are stored in doit_i_field which can be used as boundary
+ * conditions when scattering inside the cloud box is solved.
+ *
+ * @param[in,out] ws Current workspace.
+ * @param[out] doit_i_field Spectral radiance field inside the cloudbox.
+ * @param[in] iy_main_agenda Agenda calculating the single monochromatic pencil
+ *              beam spectrum.
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
+ * @param[in] z_field Field of geometrical altitudes.
+ * @param[in] nlte_field The field of NLTE temperatures and/or ratios.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] aa_grid Azimuth angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] verbosity Verbosity setting.
+ */
 void GetIncomingRadiation(Workspace& ws,
                           //Output
                           Tensor7& doit_i_field,
@@ -115,7 +178,23 @@ void GetIncomingRadiation(Workspace& ws,
                           const Vector& aa_grid,
                           const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Limits the atmospheric input fields to the cloudbox.
+ *
+ * @param[out] p_grid_cldbx Pressure grid within the cloudbox.
+ * @param[out] lat_grid_cldbx Latitude grid within the cloudbox.
+ * @param[out] lon_grid_cldbx Longitude grid within the cloudbox.
+ * @param[out] t_field_cldbx Temperature field within the cloudbox.
+ * @param[out] z_field_cldbx Field of geometrical altitudes within the cloudbox.
+ * @param[out] vmr_field_cldbx Field of volume mixing ratios within the cloudbox.
+ * @param[in] p_grid Pressure grid.
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
+ * @param[in] t_field Temperature field
+ * @param[in] z_field Field of geometrical altitudes.
+ * @param[in] vmr_field Field of volume mixing ratios.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] verbosity Verbosity setting.
+ */
 void LimitInputGridsAndFieldsToCloudbox(
                                         //Output
                                         Vector& p_grid_cldbx,
@@ -134,12 +213,75 @@ void LimitInputGridsAndFieldsToCloudbox(
                                         const ArrayOfIndex& cloudbox_limits,
                                         const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Main function of the DOIT solver.
+ *
+ * Iterative solution of the VRTE (DOIT method). A solution for the RTE
+ * with scattering is found using the DOIT method:
+ * 1. Calculate scattering integral.
+ * 2. Calculate RT with fixed scattered field using
+ * 3. Convergence check
+ *
+ * Note: The atmospheric dimensionality atmosphere_dim can be
+ * either 1 or 3. To these dimensions the method adapts
+ * automatically. 2D scattering calculations are not
+ * supported.
+ *
+ * @param[in,out] ws Current workspace.
+ * @param[out] doit_i_field_mono Monochromatic radiation field inside the
+ *              cloudbox.
+ * @param[out] gas_extinction Field with the gas extinction, this is not used
+ *              for the actual RT calculation. It is just used for the adaptive
+ *              ppath length.
+ * @param[out] extinction_matrix Extinction matrix field
+ *              (Np,Nlat,Nlon,ndir,nst,nst).
+ * @param[out] absorption_vector absorption vector field (Np,Nlat,Nlon,ndir,nst)
+ * @param[out]scattering_matrix Scattering matrix field
+ *              (Np,Nlat,Nlon,pdir,idir,nst,nst).
+ * @param[out] convergence_flag Flag for the convergence test.
+ * @param[out] iteration_counter  Counter for number of iterations.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] propmat_clearsky_agenda Agenda to calculate the absorption
+ *              coefficient matrix.
+ * @param[in] surface_rtprop_agenda Agenda to calculate radiative properties of
+ *              the surface.
+ * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] stokes_dim The dimensionality of the Stokes vector (1-4).
+ * @param[in] pnd_field Particle number density field.
+ * @param[in] t_field Temperature field
+ * @param[in] z_field Field of geometrical altitudes.
+ * @param[in] vmr_field Field of volume mixing ratios.
+ * @param[in] z_surface Surface altitude field.
+ * @param[in] p_grid Pressure grid.
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] aa_grid Azimuth angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
+ * @param[in] scat_aa_grid Azimuth angle grid for the scattering calculation.
+ * @param[in] f_mono Monochromatic frequency.
+ * @param[in] scat_data Array of single scattering data.
+ * @param[in] t_interp_order Temperature interpolation order.
+ * @param[in] iy_unit Unit in which the convergence is checked.
+ * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] epsilon Limits for convergence. A vector with length matching
+ *              stokes_dim with unit of iy_unit.
+ * @param[in] max_num_iterations Maximum number of iterations.
+ * @param[in] tau_max Maximum optical thickness per propagation step.
+ * @param[in] accelerated Index wether to accelerate only the intensity (1) or
+ *              the whole Stokes Vector(>1).
+ * @param[in] ppath_lmax Maximum length between points describing propagation
+ *              paths.
+ * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
+ *              determining propagation paths.
+ * @param[in] verbosity Verbosity setting.
+ */
 void NewDoitMonoCalc(Workspace& ws,
                      //Output
                      Tensor6& doit_i_field_mono,
                      Tensor3& gas_extinction,
-                     Vector& p_grid_abs,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
                      Tensor7& scattering_matrix,
@@ -260,6 +402,7 @@ void CalcPropagationPathMaxLength(
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
     const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
     const Numeric& tau_max);
 
 //TODO:Add doxygen doc
