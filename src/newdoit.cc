@@ -735,7 +735,6 @@ void NewDoitMonoCalc(Workspace& ws,
     //Input and Output:
                      Tensor6& doit_i_field_mono,
                      Tensor3& gas_extinction,
-                     Vector& p_grid_abs,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
                      Tensor7& scattering_matrix,
@@ -881,6 +880,7 @@ void NewDoitMonoCalc(Workspace& ws,
         lon_grid,
         za_grid,
         ppath_lmax,
+        ppath_lraytrace,
         tau_max);
   }
 
@@ -1472,6 +1472,7 @@ void CalcPropagationPathMaxLength(
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
     const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
     const Numeric& tau_max) {
 
 
@@ -1484,7 +1485,7 @@ void CalcPropagationPathMaxLength(
 
   //prepare output container
   p_path_maxlength.resize(Np, Nlat, Nlon);
-  p_path_maxlength = ppath_lmax;
+  p_path_maxlength = min(ppath_lmax,ppath_lraytrace);
 
   for (Index ip = 0; ip < Np; ip++) {
     for (Index ilat = 0; ilat < Nlat; ilat++) {
