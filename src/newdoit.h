@@ -63,7 +63,7 @@ extern const Numeric DEG2RAD;
  *
  * Note that doit_i_field is Nan-initialzed
  *
- * @param[out] doit_i_field Spectral radiance field inside the cloudbox
+ * @param[out] cloudbox_field Spectral radiance field inside the cloudbox
  * @param[in] stokes_dim The dimensionality of the Stokes vector (1-4).
  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
  * @param[in] f_grid The frequency grid for monochromatic pencil beam
@@ -74,7 +74,7 @@ extern const Numeric DEG2RAD;
  */
 void Initialize_doit_i_field(
     //Output
-    Tensor7& doit_i_field,
+    Tensor7& cloudbox_field,
     //Input
     const Index& stokes_dim,
     const Index& atmosphere_dim,
@@ -114,7 +114,7 @@ void SetAngularGrids(
 
 /** Interpolate clearsky field on all gridpoints in cloudbox.
  *
- * @param[out] doit_i_field Spectral radiance field inside the cloudbox.
+ * @param[out] cloudbox_field Spectral radiance field inside the cloudbox.
  * @param[in] f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
  * @param[in] p_grid Pressure grid.
@@ -124,9 +124,9 @@ void SetAngularGrids(
  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
  * @param[in] verbosity Verbosity setting.
  */
-void SetClearsky_doit_i_field(
+void SetClearsky_cloudbox(
     //Output
-    Tensor7& doit_i_field,
+    Tensor7& cloudbox_field,
     //Input
     const Vector& f_grid,
     const Vector& p_grid,
@@ -145,7 +145,7 @@ void SetClearsky_doit_i_field(
  * conditions when scattering inside the cloud box is solved.
  *
  * @param[in,out] ws Current workspace.
- * @param[out] doit_i_field Spectral radiance field inside the cloudbox.
+ * @param[out] cloudbox_field Spectral radiance field inside the cloudbox.
  * @param[in] iy_main_agenda Agenda calculating the single monochromatic pencil
  *              beam spectrum.
  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
@@ -164,7 +164,7 @@ void SetClearsky_doit_i_field(
  */
 void GetIncomingRadiation(Workspace& ws,
                           //Output
-                          Tensor7& doit_i_field,
+                          Tensor7& cloudbox_field,
                           //Input
                           const Agenda& iy_main_agenda,
                           const Index& atmosphere_dim,
@@ -227,7 +227,7 @@ void LimitInputGridsAndFieldsToCloudbox(
  * supported.
  *
  * @param[in,out] ws Current workspace.
- * @param[out] doit_i_field_mono Monochromatic radiation field inside the
+ * @param[out] cloudbox_field_mono Monochromatic radiation field inside the
  *              cloudbox.
  * @param[out] gas_extinction Field with the gas extinction, this is not used
  *              for the actual RT calculation. It is just used for the adaptive
@@ -280,7 +280,7 @@ void LimitInputGridsAndFieldsToCloudbox(
  */
 void NewDoitMonoCalc(Workspace& ws,
                      //Output
-                     Tensor6& doit_i_field_mono,
+                     Tensor6& cloudbox_field_mono,
                      Tensor3& gas_extinction,
                      Tensor6& extinction_matrix,
                      Tensor5& absorption_vector,
@@ -322,9 +322,9 @@ void NewDoitMonoCalc(Workspace& ws,
 //TODO:Add doxygen doc
 void CalcGasExtinction(Workspace& ws,
                        Vector& gas_extinct,
-                       const ConstVectorView& p_grid_abs,
-                       const ConstVectorView& t_vector_abs,
-                       const ConstMatrixView& vmr_matrix_abs,
+                       const ConstVectorView& p_grid,
+                       const ConstVectorView& t_vector,
+                       const ConstMatrixView& vmr_matrix,
                        const Agenda& propmat_clearsky_agenda,
                        const ConstVectorView& f_mono);
 
@@ -407,7 +407,7 @@ void CalcPropagationPathMaxLength(
 
 //TODO:Add doxygen doc
 void RunNewDoit(//Input and Output:
-    Tensor6& doit_i_field_mono,
+    Tensor6& cloudbox_field_mono,
     Index& convergence_flag,
     Index& iteration_counter,
     //Input
@@ -454,7 +454,7 @@ void RunNewDoit(//Input and Output:
 
 //TODO:Add doxygen doc
 void CalcScatteredField(  // WS Output and Input
-    Tensor6& doit_scat_field,
+    Tensor6& cloudbox_scat_field,
     //WS Input:
     const Tensor6& doit_i_field_mono,
     const Tensor7& scattering_matrix,
@@ -473,9 +473,9 @@ void CalcScatteredField(  // WS Output and Input
 //TODO:Add doxygen doc
 void CalcScatteredField1D(
     // Output
-    Tensor6& doit_scat_field,
+    Tensor6& cloudbox_scat_field,
     // Input:
-    const ConstTensor6View& doit_i_field_mono,
+    const ConstTensor6View& cloudbox_field_mono,
     const ConstTensor7View& scattering_matrix,
     const VectorView& iza_grid,  // incoming direction
     const ArrayOfIndex& pdir_idx0,//index array of propagation direction
@@ -486,9 +486,9 @@ void CalcScatteredField1D(
 //TODO:Add doxygen doc
 void CalcScatteredField3D(
     // WS Output and Input
-    Tensor6& doit_scat_field,
+    Tensor6& cloudbox_scat_field,
     //WS Input:
-    const Tensor6& doit_i_field_mono,
+    const Tensor6& cloudbox_field_mono,
     const Tensor7& scattering_matrix,
     const Vector& iza_grid,  // incoming direction
     const Vector& iaa_grid,  // incoming direction
@@ -504,8 +504,8 @@ void CalcScatteredField3D(
 
 //TODO:Add doxygen doc
 void UpdateSpectralRadianceField(//Input and Output:
-    Tensor6& doit_i_field_mono,
-    Tensor6& doit_scat_field,
+    Tensor6& cloudbox_field_mono,
+    Tensor6& cloudbox_scat_field,
     //Input:
     const ConstTensor6View& extinction_matrix,
     const ConstTensor5View& absorption_vector,
@@ -534,8 +534,8 @@ void UpdateSpectralRadianceField(//Input and Output:
 //TODO:Add doxygen doc
 void UpdateSpectralRadianceField1D(
     //Input and Output:
-    Tensor6& doit_i_field_mono,
-    Tensor6& doit_scat_field,
+    Tensor6& cloudbox_field_mono,
+    Tensor6& cloudbox_scat_field,
     const ConstTensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
     const ConstTensor5View& absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
     const ConstTensor6View& surface_reflection_matrix,
@@ -562,8 +562,8 @@ void UpdateSpectralRadianceField1D(
 void UpdateSpectralRadianceField3D(
     Workspace& ws,
     // WS Input and Output:
-    Tensor6& doit_i_field_mono,
-    Tensor6& doit_scat_field,
+    Tensor6& cloudbox_field_mono,
+    Tensor6& cloudbox_scat_field,
     // WS Input:
     const ConstTensor3View& gas_extinction,
     const ConstTensor6View& extinction_matrix,
@@ -586,11 +586,11 @@ void UpdateSpectralRadianceField3D(
 
 //TODO:Add doxygen doc
 void UpdateCloudPropagationPath1D(
-    Tensor6View& doit_i_field_mono,
+    Tensor6View& cloudbox_field_mono,
     const Index& p_index,
     const Index& za_index,
     const ArrayOfIndex& cloudbox_limits,
-    const ConstTensor6View& doit_scat_field,
+    const ConstTensor6View& cloudbox_scat_field,
     const ConstVectorView& pressure_ppath,
     const ConstVectorView& temperature_ppath,
     const ConstVectorView& gas_extinction_ppath,
@@ -611,11 +611,11 @@ void InterpolateOnPropagation1D(  //Output
     Tensor3View& ext_mat_int,
     MatrixView& abs_vec_int,
     MatrixView& sca_vec_int,
-    MatrixView& doit_i_field_mono_int,
+    MatrixView& cloudbox_field_mono_int,
     const ConstTensor5View& ext_mat_field,
     const ConstTensor4View& abs_vec_field,
-    const ConstTensor6View& doit_scat_field,
-    const ConstTensor6View& doit_i_field_mono,
+    const ConstTensor6View& cloudbox_scat_field,
+    const ConstTensor6View& cloudbox_field_mono,
     const ArrayOfGridPos& cloud_gp_p,
     const ArrayOfGridPos& cloud_gp_za,
     const MatrixView& itw,
@@ -623,7 +623,7 @@ void InterpolateOnPropagation1D(  //Output
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
-void RTStepInCloudNoBackground(Tensor6View doit_i_field_mono,
+void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
                                const ConstVectorView& lstep_ppath,
                                const ConstVectorView& temperature_ppath,
                                const ConstVectorView& pressure_ppath,
@@ -657,8 +657,8 @@ void RadiativeTransferStep(  //Output and Input:
 void CheckConvergence(  //WS Input and Output:
     Index& convergence_flag,
     Index& iteration_counter,
-    Tensor6&  doit_i_field_mono,
-    const Tensor6& doit_i_field_mono_old,
+    Tensor6&  cloudbox_field_mono,
+    const Tensor6& cloudbox_field_mono_old,
     const Numeric& f_mono,
     const Vector& epsilon,
     const Index& max_iterations,
