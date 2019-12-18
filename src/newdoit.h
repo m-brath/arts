@@ -248,7 +248,7 @@ void LimitInputGridsAndFieldsToCloudbox(
  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
  * @param[in] stokes_dim The dimensionality of the Stokes vector (1-4).
  * @param[in] pnd_field Particle number density field.
- * @param[in] t_field Temperature field
+ * @param[in] t_field Temperature field.
  * @param[in] z_field Field of geometrical altitudes.
  * @param[in] vmr_field Field of volume mixing ratios.
  * @param[in] z_surface Surface altitude field.
@@ -319,7 +319,18 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Numeric& ppath_lraytrace,
                      const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Calculates the gas extinction for an atmospheric column
+ *
+ *
+ * @param[in,out] ws Current workspace.
+ * @param[out] gas_extinct Column with the gas extinction.
+ * @param[in] p_grid Pressure grid.
+ * @param[in] t_vector Temperature field
+ * @param[in] vmr_matrix Column of n volume mixing ratios.
+ * @param[in] propmat_clearsky_agenda Agenda to calculate the absorption
+ *              coefficient matrix.
+ * @param[in] f_mono Monochromatic frequency.
+ */
 void CalcGasExtinction(Workspace& ws,
                        Vector& gas_extinct,
                        const ConstVectorView& p_grid,
@@ -328,7 +339,21 @@ void CalcGasExtinction(Workspace& ws,
                        const Agenda& propmat_clearsky_agenda,
                        const ConstVectorView& f_mono);
 
-//TODO:Add doxygen doc
+/** Calculates gas extinction for a field.
+ *
+ * @param[in,out] ws Current workspace.
+ * @param[out] gas_extinct Field with the gas extinction, this is not used
+ *              for the actual RT calculation. It is just used for the adaptive
+ *              ppath length.
+ * @param[in] p_grid Pressure grid.
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
+ * @param[in] t_field Temperature field.
+ * @param[in] vmr_field Field of volume mixing ratios.
+ * @param[in] propmat_clearsky_agenda Agenda to calculate the absorption
+ *              coefficient matrix.
+ * @param[in] f_mono Monochromatic frequency.
+ */
 void CalcGasExtinctionField(Workspace& ws,
                             Tensor3& gas_extinct,
                             const ConstVectorView& p_grid,
