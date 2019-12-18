@@ -207,14 +207,14 @@ void NewDoitCalc(Workspace& ws,
                          aa_grid,
                          verbosity);
 
-    SetClearsky_doit_i_field(doit_i_field,
-                             f_grid,
-                             p_grid,
-                             lat_grid,
-                             lon_grid,
-                             cloudbox_limits,
-                             atmosphere_dim,
-                             verbosity);
+    SetClearsky_cloudbox(doit_i_field,
+                         f_grid,
+                         p_grid,
+                         lat_grid,
+                         lon_grid,
+                         cloudbox_limits,
+                         atmosphere_dim,
+                         verbosity);
   }
 
   ostringstream os, os1, os2, os3;
