@@ -1671,7 +1671,7 @@ void RunNewDoit(  //Input and Output:
 void CalcScatteredField(// WS Output and Input
                         Tensor6& cloudbox_scat_field,
                         //WS Input:
-                        const Tensor6& doit_i_field_mono,
+                        const Tensor6& cloudbox_field_mono,
                         const Tensor7& scattering_matrix,
                         const Index& atmosphere_dim,
                         const Vector& scat_za_grid,
@@ -1687,7 +1687,7 @@ void CalcScatteredField(// WS Output and Input
 
   if (atmosphere_dim == 1) {
     CalcScatteredField1D(cloudbox_scat_field,
-                         doit_i_field_mono,
+                         cloudbox_field_mono,
                          scattering_matrix,
                          scat_za_grid,
                          pdir_idx0,
@@ -1697,7 +1697,7 @@ void CalcScatteredField(// WS Output and Input
 
   } else {
     CalcScatteredField3D(cloudbox_scat_field,
-                         doit_i_field_mono,
+                         cloudbox_field_mono,
                          scattering_matrix,
                          scat_za_grid,
                          scat_aa_grid,
@@ -2399,7 +2399,7 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
                                const ConstTensor3View& ext_mat_int,
                                const ConstMatrixView& abs_vec_int,
                                const ConstMatrixView& sca_vec_int,
-                               const ConstMatrixView& doit_i_field_mono_int,
+                               const ConstMatrixView& cloudbox_field_mono_int,
                                const ArrayOfIndex& cloudbox_limits,
                                const ConstVectorView& f_grid,
                                const Index& p_index,
@@ -2431,7 +2431,7 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
   Vector vector_tmp(stokes_dim);
 
   // Incoming stokes vector
-  stokes_vec = doit_i_field_mono_int(joker, Nppath - 1);
+  stokes_vec = cloudbox_field_mono_int(joker, Nppath - 1);
 
   for (Index k = Nppath - 1; k >= 0; k--) {
     // Save propmat_clearsky from previous level
@@ -2522,6 +2522,7 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
 }
 
 void RadiativeTransferStep(  //Output and Input:
+    //TODO: Remove trans_mat, it is not used within doit.
     VectorView stokes_vec,
     MatrixView trans_mat,
     //Input
