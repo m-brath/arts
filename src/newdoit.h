@@ -364,7 +364,18 @@ void CalcGasExtinctionField(Workspace& ws,
                             const Agenda& propmat_clearsky_agenda,
                             const ConstVectorView& f_mono);
 
-//TODO:Add doxygen doc
+/** Calculates bulk optical properties from per-scat-species bulk properties.
+ *
+ * @param[in,out] ws Current workspace.
+ * @param[out] extinction_matrix Bulk extinction matrix (Np,Nlat,Nlon,ndir,nst,nst)
+ * @param[out] absorption_vector absorption vector (Np,Nlat,Nlon,ndir,nst)
+ * @param[in] scat_data Array of single scattering data.
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *             cloudbox.
+ * @param[in] pnd_field Particle number density field.
+ * @param[in] t_field Temperature field.
+ * @param[in] stokes_dim The dimensionality of the Stokes vector (1-4).
+ */
 void CalcParticleOpticalProperties(
     //Output
     Tensor6& extinction_matrix,
@@ -376,7 +387,30 @@ void CalcParticleOpticalProperties(
     const ConstTensor3View& t_field,
     const Index& stokes_dim);
 
-//TODO:Add doxygen doc
+/**Calculates bulk scattering properties from per-scat-species bulk properties.
+ *
+ * @param[out] scattering_matrix scattering matrix (Np,Nlat,Nlon,npdir,nidir,nst,nst)
+ * @param[out] idir_idx0 index of flattened incidence zenith angle meshgrid
+ * @param[out] idir_idx1 index of flattened incidence azimuth angle meshgrid
+ * @param[out] pdir_idx0 index of flattened propagation zenith angle meshgrid
+ * @param[out] pdir_idx1 index of flattened propagation azimuth angle meshgrid
+ * @param[out] gp_za_i interpolation gridpoints zenith incidence angle
+ * @param[out] gp_aa_i interpolation gridpoints azimuth incidence angle
+ * @param[out] itw interpolation weight for incidence angles
+ * @param[in] t_field Temperature field.
+ * @param[in] scat_data Array of single scattering data.
+ * @param[in] pnd_field Particle number density field.
+ * @param[in] stokes_dim The dimensionality of the Stokes vector (1-4).
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] aa_grid Azimuth angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
+ * @param[in] scat_aa_grid Azimuth angle grid for the scattering calculation.
+ * @param[in] t_interp_order Temperature interpolation order.
+ * @param[in] verbosity Verbosity setting.
+*/
 void CalcScatteringProperties(  //Output
     Tensor7& scattering_matrix,
     ArrayOfIndex& idir_idx0,
@@ -398,7 +432,28 @@ void CalcScatteringProperties(  //Output
     const Index& t_interp_order,
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/**Calculates surface properties
+ *
+ * @param ws[in,out] Current workspace.
+ * @param[out] surface_skin_t Surface skin temperature
+ * @param[out] surface_los Downwelling radiation directions to consider in surface
+ *              reflection.
+ * @param[out] surface_reflection_matrix The reflection coefficients for the directions
+ *              given by surface_los to the direction of interest.
+ * @param[out] surface_emission The emission from the surface.
+ * @param[in] surface_rtprop_agenda Agenda providing radiative properties of the surface.
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] aa_grid Azimuth angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] stokes_dim The dimensionality of the Stokes vector (1-4).
+ * @param[in] surface_field Surface altitude field.
+ */
 void CalcSurfaceProperties(Workspace& ws,
                            //Output
                            Matrix& surface_skin_t,
@@ -417,7 +472,24 @@ void CalcSurfaceProperties(Workspace& ws,
                            const Index& stokes_dim,
                            const Matrix& surface_field);
 
-//TODO:Add doxygen doc
+/**Calculates maximum propagation path length according to tau_max
+ *
+ * @param[out] p_path_maxlength maximum length of propagation path
+ * @param[in] extinction_matrix extinction_matrix Bulk extinction matrix
+ *              (Np,Nlat,Nlon,ndir,nst,nst)
+ * @param[in] gas_extinct Field with the gas extinction, this is not used
+ *              for the actual RT calculation. It is just used for the adaptive
+ *              ppath length.
+ * @param[in] p_grid Pressure grid.
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
+ * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
+ * @param[in] ppath_lmax Maximum length between points describing propagation
+ *              paths outside of cloudbox
+ * @param[in] ppath_lraytrace Maximum length of ray tracing steps when determining
+ *              propagation paths otside of cloudbox
+ * @param[in] tau_max Maximum optical thickness per propagation step.
+ */
 void CalcPropagationPathMaxLength(
     Tensor3& p_path_maxlength,
     const Tensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
@@ -430,7 +502,59 @@ void CalcPropagationPathMaxLength(
     const Numeric& ppath_lraytrace,
     const Numeric& tau_max);
 
-//TODO:Add doxygen doc
+/** The actual DOIT scattering solver
+ *
+ * @param[out] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox.
+ * @param[out] convergence_flag Flag for the convergence test.
+ * @param[out] iteration_counter  Counter for number of iterations.
+ * @param[in] extinction_matrix Extinction matrix field
+ *              (Np,Nlat,Nlon,ndir,nst,nst).
+ * @param[in] absorption_vector absorption vector field (Np,Nlat,Nlon,ndir,nst)
+ * @param[in] scattering_matrix Scattering matrix field
+ *              (Np,Nlat,Nlon,pdir,idir,nst,nst).
+ * @param[in] surface_reflection_matrix The reflection coefficients for the directions
+ *              given by surface_los to the direction of interest.
+ * @param[in] surface_emission The emission from the surface.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] z_field Field of geometrical altitudes.
+ * @param[in] p_grid Pressure grid.
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] aa_grid Azimuth angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
+ * @param[in] scat_aa_grid Azimuth angle grid for the scattering calculation.
+ * @param[in] PressureArray Array with the pressures of each propagation step
+ * @param[in] TemperatureArray Array with the temperature at each propagation step
+ * @param[in] GasExtinctionArray Array with the gas extinction at each propagation step
+ * @param[in] InterpWeightsArray Array with the pressure interpolation weights
+ *              at each propagation step
+ * @param[in] InterpWeightsZenithArray Array with the zenith angle interpolation
+ *              weights at each propagation step
+ * @param[in] GposArray Array with the pressure gridpoints at each propagation step
+ * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
+ *              propagation step
+ * @param[in] LstepArray Array with the length of each propagation step
+ * @param[out] idir_idx0 index of flattened incidence zenith angle meshgrid
+ * @param[out] idir_idx1 index of flattened incidence azimuth angle meshgrid
+ * @param[out] pdir_idx0 index of flattened propagation zenith angle meshgrid
+ * @param[out] pdir_idx1 index of flattened propagation azimuth angle meshgrid
+ * @param[out] gp_za_i interpolation gridpoints zenith incidence angle
+ * @param[out] gp_aa_i interpolation gridpoints azimuth incidence angle
+ * @param[out] itw interpolation weight for incidence angles
+ * @param[in] f_mono Monochromatic frequency.
+ * @param[in] iy_unit Unit in which the convergence is checked.
+ * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] epsilon Limits for convergence. A vector with length matching
+ *              stokes_dim with unit of iy_unit.
+ * @param[in] max_num_iterations Maximum number of iterations.
+ * @param[in] tau_max Maximum optical thickness per propagation step.
+ * @param[in] accelerated Index wether to accelerate only the intensity (1) or
+ *              the whole Stokes Vector(>1).
+ * @param[in] verbosity Verbosity setting.
+ */
 void RunNewDoit(//Input and Output:
     Tensor6& cloudbox_field_mono,
     Index& convergence_flag,
@@ -477,11 +601,30 @@ void RunNewDoit(//Input and Output:
     const Verbosity& verbosity);
 
 
-//TODO:Add doxygen doc
+/** Calculates the scattered field during DOIT iteration step
+ *
+ * @param[out] cloudbox_scat_field Monochromatic scattered radiation field inside the
+ *              cloudbox at iteration step.
+ * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox.
+ * @param[in] scattering_matrix Scattering matrix field
+ *              (Np,Nlat,Nlon,pdir,idir,nst,nst).
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
+ * @param[in] scat_aa_grid Azimuth angle grid for the scattering calculation.
+ * @param[out] idir_idx0 index of flattened incidence zenith angle meshgrid
+ * @param[out] idir_idx1 index of flattened incidence azimuth angle meshgrid
+ * @param[out] pdir_idx0 index of flattened propagation zenith angle meshgrid
+ * @param[out] pdir_idx1 index of flattened propagation azimuth angle meshgrid
+ * @param[out] gp_za_i interpolation gridpoints zenith incidence angle
+ * @param[out] gp_aa_i interpolation gridpoints azimuth incidence angle
+ * @param[out] itw interpolation weight for incidence angles
+ * @param[in] verbosity Verbosity setting.
+ */
 void CalcScatteredField(  // WS Output and Input
     Tensor6& cloudbox_scat_field,
     //WS Input:
-    const Tensor6& doit_i_field_mono,
+    const Tensor6& cloudbox_field_mono,
     const Tensor7& scattering_matrix,
     const Index& atmosphere_dim,
     const Vector& scat_za_grid,
@@ -495,7 +638,20 @@ void CalcScatteredField(  // WS Output and Input
     Tensor3& itw,
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Calculates the 1D scattered field during DOIT iteration step
+ *
+ * @param[out] cloudbox_scat_field Monochromatic scattered radiation field inside the
+ *              cloudbox at iteration step.
+ * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox.
+ * @param[in] scattering_matrix Scattering matrix field
+ *              (Np,Nlat,Nlon,pdir,idir,nst,nst).
+ * @param[out] iza_grid incidence zenith angle grid.
+ * @param[out] pdir_idx0 index of flattened propagation zenith angle meshgrid
+ * @param[out] gp_za_i interpolation gridpoints zenith incidence angle
+ * @param[out] itw interpolation weight for incidence angles
+ * @param[in] verbosity Verbosity setting.
+ */
 void CalcScatteredField1D(
     // Output
     Tensor6& cloudbox_scat_field,
@@ -508,7 +664,26 @@ void CalcScatteredField1D(
     const Tensor3View& itw, //interpolation weights
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Calculates the 3D scattered field during DOIT iteration step
+ *
+ * @param[out] cloudbox_scat_field Monochromatic scattered radiation field inside the
+ *              cloudbox at iteration step.
+ * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox.
+ * @param[in] scattering_matrix Scattering matrix field
+ *              (Np,Nlat,Nlon,pdir,idir,nst,nst).
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] iza_grid incidence zenith angle grid
+ * @param[in] iaa_grid incidence azimuth angle grid
+ * @param[out] idir_idx0 index of flattened incidence zenith angle meshgrid
+ * @param[out] idir_idx1 index of flattened incidence azimuth angle meshgrid
+ * @param[out] pdir_idx0 index of flattened propagation zenith angle meshgrid
+ * @param[out] pdir_idx1 index of flattened propagation azimuth angle meshgrid
+ * @param[out] gp_za_i interpolation gridpoints zenith incidence angle
+ * @param[out] gp_aa_i interpolation gridpoints azimuth incidence angle
+ * @param[out] itw interpolation weight for incidence angles
+ * @param[in] verbosity Verbosity setting.
+ */
 void CalcScatteredField3D(
     // WS Output and Input
     Tensor6& cloudbox_scat_field,
@@ -527,7 +702,42 @@ void CalcScatteredField3D(
     const Verbosity& verbosity);
 
 
-//TODO:Add doxygen doc
+/** RT calculation at iteration step
+ *
+ * @param[in,out] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox at iteration step.
+ * @param[in,out] cloudbox_scat_field Monochromatic scattered radiation field
+ *              inside the cloudbox at iteration step.
+ * @param[in] extinction_matrix Extinction matrix field
+ *              (Np,Nlat,Nlon,ndir,nst,nst).
+ * @param[in] absorption_vector absorption vector field (Np,Nlat,Nlon,ndir,nst)
+ * @param[in] surface_reflection_matrix The reflection coefficients for the directions
+ *              given by surface_los to the direction of interest.
+ * @param[in] surface_emission The emission from the surface.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] aa_grid Azimuth angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] PressureArray Array with the pressures of each propagation step
+ * @param[in] TemperatureArray Array with the temperature at each propagation step
+ * @param[in] GasExtinctionArray Array with the gas extinction at each propagation step
+ * @param[in] InterpWeightsArray Array with the pressure interpolation weights
+ *              at each propagation step
+ * @param[in] InterpWeightsZenithArray Array with the zenith angle interpolation
+ *              weights at each propagation step
+ * @param[in] GposArray Array with the pressure gridpoints at each propagation step
+ * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
+ *              propagation step
+ * @param[in] LstepArray Array with the length of each propagation step
+ * @param[in] p_grid Pressure grid.
+ * @param[in] z_field Field of geometrical altitudes.
+ * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] verbosity Verbosity setting.
+ */
 void UpdateSpectralRadianceField(//Input and Output:
     Tensor6& cloudbox_field_mono,
     Tensor6& cloudbox_scat_field,
@@ -556,7 +766,39 @@ void UpdateSpectralRadianceField(//Input and Output:
     const Vector& f_grid,
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** RT calculation for 1D atmosphere at iteration step
+ *
+ * @param[in,out] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox at iteration step.
+ * @param[in,out] cloudbox_scat_field Monochromatic scattered radiation field
+ *              inside the cloudbox at iteration step.
+ * @param[in] extinction_matrix Extinction matrix field
+ *              (Np,Nlat,Nlon,ndir,nst,nst).
+ * @param[in] absorption_vector absorption vector field (Np,Nlat,Nlon,ndir,nst)
+ * @param[in] surface_reflection_matrix The reflection coefficients for the directions
+ *              given by surface_los to the direction of interest.
+ * @param[in] surface_emission The emission from the surface.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] PressureArray Array with the pressures of each propagation step
+ * @param[in] TemperatureArray Array with the temperature at each propagation step
+ * @param[in] GasExtinctionArray Array with the gas extinction at each propagation step
+ * @param[in] InterpWeightsArray Array with the pressure interpolation weights
+ *              at each propagation step
+ * @param[in] InterpWeightsZenithArray Array with the zenith angle interpolation
+ *              weights at each propagation step
+ * @param[in] GposArray Array with the pressure gridpoints at each propagation step
+ * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
+ *              propagation step
+ * @param[in] LstepArray Array with the length of each propagation step
+ * @param[in] p_grid Pressure grid.
+ * @param[in] z_field Field of geometrical altitudes.
+ * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] verbosity Verbosity setting.
+ */
 void UpdateSpectralRadianceField1D(
     //Input and Output:
     Tensor6& cloudbox_field_mono,
@@ -609,7 +851,34 @@ void UpdateSpectralRadianceField3D(
     const Vector& f_grid,
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Calculates the radiation at propagation path for a grid point and direction in 1D cloudbox
+ *
+ * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox at iteration step.
+ * @param[in] p_index Index of pressure gridpoint
+ * @param[in] za_index index of zenith angle gridpoint
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] cloudbox_scat_field Monochromatic scattered radiation field
+ *              inside the cloudbox at iteration step.
+ * @param[in] pressure_ppath Pressure at ppath steps
+ * @param[in] temperature_ppath Temperature at ppath steps
+ * @param[in] gas_extinction_ppath Gas extinction at ppath steps
+ * @param[in] lstep_ppath Length of ppath steps
+ * @param[in] cloud_gp_p_ppath grid pos for pressure interpolation at ppath step
+ * @param[in] cloud_gp_za_ppath grid pos for zenith angle interpolation at ppath step
+ * @param[in] itw_ppath pressure interpolation weights at propagation step
+ * @param[in] itw_za_ppath zenith angle interpolation weights at propagation step
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] ext_mat_field Extinction matrix field for given direction
+ *              (Np,Nlat,Nlon,nst,nst).
+ * @param[in] abs_vec_field Absorption vector field for given direction
+ *              (Np,Nlat,Nlon,ndir,nst)
+ * @param[in] surface_reflection_matrix The reflection coefficients for the directions
+ *              given by surface_los to the direction of interest.
+ * @param[in] surface_emission The emission from the surface.
+ * @param[in] verbosity Verbosity setting.
+ */
 void UpdateCloudPropagationPath1D(
     Tensor6View& cloudbox_field_mono,
     const Index& p_index,
@@ -631,7 +900,27 @@ void UpdateCloudPropagationPath1D(
     const ConstTensor5View& surface_emission,
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Interpolates fields on propagation path
+ *
+ * @param[out] ext_mat_int Extinction matrix field on propagation path
+ * @param[out] abs_vec_int Absorption vector field on propagation path
+ * @param[out] sca_vec_int Scattered field on propagation path
+ * @param[out] cloudbox_field_mono_int Monochromatic radiation field on propagation
+ *              path
+ * @param[in] ext_mat_field Extinction matrix field for given direction
+ *              (Np,Nlat,Nlon,nst,nst).
+ * @param[in] abs_vec_field Absorption vector field for given direction
+ *              (Np,Nlat,Nlon,ndir,nst)
+ * @param[in] cloudbox_scat_field Monochromatic scattered radiation field
+ *              inside the cloudbox at iteration step.
+ * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox at iteration step.
+ * @param[in] cloud_gp_p grid pos for pressure interpolation on propagation path
+ * @param[in] cloud_gp_za grid pos for zenith angle interpolation on propagation path
+ * @param[in] itw pressure interpolation weights
+ * @param[in] itw_za zenith angle interpolation weights
+ * @param[in] verbosity verbosity Verbosity setting.
+ */
 void InterpolateOnPropagation1D(  //Output
     Tensor3View& ext_mat_int,
     MatrixView& abs_vec_int,
@@ -647,7 +936,29 @@ void InterpolateOnPropagation1D(  //Output
     const MatrixView& itw_za,
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Calculates the radiation transport along propagation path
+ *
+ * @param[out] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox at iteration step.
+ * @param[in] lstep_ppath Length of ppath steps
+ * @param[in] temperature_ppath Temperature at ppath steps
+ * @param[in] pressure_ppath Pressure at ppath steps
+ * @param[in] gas_extinction_ppath Gas extinction at ppath steps
+ * @param[in] ext_mat_int Extinction matrix field on propagation path
+ * @param[in] abs_vec_int Absorption vector field on propagation path
+ * @param[in] sca_vec_int Scattered field on propagation path
+ * @param[in] cloudbox_field_mono_int Monochromatic radiation field on propagation
+ *              path
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] p_index Index of pressure gridpoint
+ * @param[in] lat_index Index of latitude gridpoint
+ * @param[in] lon_index Index of longitude gridpoint
+ * @param[in] za_index index of zenith angle gridpoint
+ * @param[in] aa_index index of azimuth angle gridpoint
+ * @param[in] verbosity verbosity Verbosity setting.
+ */
 void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
                                const ConstVectorView& lstep_ppath,
                                const ConstVectorView& temperature_ppath,
@@ -656,7 +967,7 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
                                const ConstTensor3View& ext_mat_int,
                                const ConstMatrixView& abs_vec_int,
                                const ConstMatrixView& sca_vec_int,
-                               const ConstMatrixView& doit_i_field_mono_int,
+                               const ConstMatrixView& cloudbox_field_mono_int,
                                const ArrayOfIndex& cloudbox_limits,
                                const ConstVectorView& f_grid,
                                const Index& p_index,
@@ -666,7 +977,50 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
                                const Index& aa_index,
                                const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Calculates the radiation transport for one propagation path
+ *
+ * The function can be used for cloudbox calculations.
+ *
+ * The function is best explained by considering a homogenous layer. That is,
+ * the physical conditions inside the layer are constant. In reality they
+ * are not constant, so in practical all coefficients have to be averaged
+ * before calling this function.
+ * Total extinction and absorption inside the layer are described by
+ * *ext_mat_av* and *abs_vec_av* respectively,
+ * the blackbdody radiation of the layer is given by *rte_planck_value*
+ * and the propagation path length through the layer is *lstep*.
+ *
+ * There is an additional scattering source term in the
+ * VRTE, the scattering integral term. For this function a constant
+ * scattering term is assumed. The radiative transfer step is only a part
+ * the iterative solution of the scattering problem, for more
+ * information consider AUG. In the clearsky case this variable has to be
+ * set to 0.
+ *
+ * When calling the function, the vector *stokes_vec* shall contain the
+ * Stokes vector for the incoming radiation. The function returns this
+ * vector, then containing the outgoing radiation on the other side of the
+ * layer.
+ *
+ * The function performs the calculations differently depending on the
+ * conditions to improve the speed. There are three cases: <br>
+ *  1. Scalar absorption (stokes_dim = 1). <br>
+ *  2. The matrix ext_mat_gas is diagonal (unpolarised absorption). <br>
+ *  3. The total general case.
+ *
+ * @param[in,out] stokes_vec Stokes vector of propagation step.
+ * @param[in,out] trans_mat Transmission matrix of propagation step.
+ * @param[in] ext_mat_av Averaged extinction matrix of propagation step.
+ * @param[in] abs_vec_av Averaged absorption vector.
+ * @param[in] sca_vec_av averaged scattering vector.
+ * @param[in] lstep The length of propagation step.
+ * @param[in] rtp_planck_value Blackbody radiation.
+ * @param[in] trans_is_precalc FIXMEDOC
+ *
+ * \author Richard Larsson, Manfred Brath
+    \date   2017-08-14, 2020-02-10
+
+ */
 void RadiativeTransferStep(  //Output and Input:
     VectorView stokes_vec,
     MatrixView trans_mat,
