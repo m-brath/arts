@@ -518,8 +518,6 @@ void CalcPropagationPathMaxLength(
  * @param[in] surface_emission The emission from the surface.
  * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
- * @param[in] z_field Field of geometrical altitudes.
- * @param[in] p_grid Pressure grid.
  * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
  *              cloudbox.
  * @param[in] aa_grid Azimuth angle grid of Spectral radiance field inside the
@@ -537,6 +535,7 @@ void CalcPropagationPathMaxLength(
  * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
  *              propagation step
  * @param[in] LstepArray Array with the length of each propagation step
+ * @param[in] theta_lim Limiting angle for limb calculation.
  * @param[in] idir_idx0 index of flattened incidence zenith angle meshgrid
  * @param[in] idir_idx1 index of flattened incidence azimuth angle meshgrid
  * @param[in] pdir_idx0 index of flattened propagation zenith angle meshgrid
@@ -546,7 +545,6 @@ void CalcPropagationPathMaxLength(
  * @param[in] itw interpolation weight for incidence angles
  * @param[in] f_mono Monochromatic frequency.
  * @param[in] iy_unit Unit in which the convergence is checked.
- * @param[in] refellipsoid Reference ellipsoid.
  * @param[in] epsilon Limits for convergence. A vector with length matching
  *              stokes_dim with unit of iy_unit.
  * @param[in] max_num_iterations Maximum number of iterations.
@@ -567,9 +565,7 @@ void RunNewDoit(//Input and Output:
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
-    const Tensor3& z_field,
     //Grids
-    const Vector& p_grid,
     const Vector& za_grid,
     const Vector& aa_grid,
     const Vector& scat_za_grid,
@@ -583,6 +579,7 @@ void RunNewDoit(//Input and Output:
     const ArrayOfArrayOfGridPos& GposArray,
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
+    const Numeric& theta_lim,
     //Precalculated quantities for scattering integral calulation
     ArrayOfIndex& idir_idx0,
     ArrayOfIndex& idir_idx1,
@@ -594,7 +591,6 @@ void RunNewDoit(//Input and Output:
     //Additional input
     const Numeric& f_mono,
     const String& iy_unit,
-    const Vector& refellipsoid,
     const Vector& epsilon,
     const Index& max_num_iterations,
     const Index& accelerated,
@@ -731,9 +727,7 @@ void CalcScatteredField3D(
  * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
  *              propagation step
  * @param[in] LstepArray Array with the length of each propagation step
- * @param[in] p_grid Pressure grid.
- * @param[in] z_field Field of geometrical altitudes.
- * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] theta_lim Limiting angle for limb calculation.
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
  * @param[in] verbosity Verbosity setting.
@@ -760,9 +754,7 @@ void UpdateSpectralRadianceField(//Input and Output:
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
 
-    const Vector& p_grid,
-    const Tensor3& z_field,
-    const Vector& refellipsoid,
+    const Numeric& theta_lim,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
@@ -792,9 +784,7 @@ void UpdateSpectralRadianceField(//Input and Output:
  * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
  *              propagation step
  * @param[in] LstepArray Array with the length of each propagation step
- * @param[in] p_grid Pressure grid.
- * @param[in] z_field Field of geometrical altitudes.
- * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] theta_lim Limiting angle for limb calculation.
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
  * @param[in] verbosity Verbosity setting.
@@ -819,9 +809,7 @@ void UpdateSpectralRadianceField1D(
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
     //additional quantities
-    const Vector& p_grid,
-    const Tensor3& z_field,
-    const Vector& refellipsoid,
+    const Numeric& theta_lim,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
@@ -1101,6 +1089,7 @@ void EstimatePPathElements1D(
     ArrayOfArrayOfGridPos& GposArray,
     ArrayOfArrayOfGridPos& GposZenithArray,
     ArrayOfVector& LstepArray,
+    Numeric& theta_lim,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
     const Agenda& ppath_step_agenda,

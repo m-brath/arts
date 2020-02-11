@@ -778,6 +778,7 @@ void NewDoitMonoCalc(Workspace& ws,
 
 
   //calculate par_optpropCalc_doit
+  //It assumens at least azimuthally randomly oriented particles
   CalcParticleOpticalProperties(extinction_matrix,
                                 absorption_vector,
                                 scat_data,
@@ -892,7 +893,7 @@ void NewDoitMonoCalc(Workspace& ws,
   ArrayOfArrayOfGridPos GposArray;
   ArrayOfArrayOfGridPos GposZenithArray;
   ArrayOfVector LstepArray;
-
+  Numeric theta_lim;
 
   EstimatePPathElements1D(ws,
                           PressureArray,
@@ -903,6 +904,7 @@ void NewDoitMonoCalc(Workspace& ws,
                           GposArray,
                           GposZenithArray,
                           LstepArray,
+                          theta_lim,
                           cloudbox_limits,
                           za_grid,
                           ppath_step_agenda,
@@ -956,9 +958,7 @@ void NewDoitMonoCalc(Workspace& ws,
              surface_emission,
              cloudbox_limits,
              atmosphere_dim,
-             z_field,
              //Grids
-             p_grid,
              za_grid,
              aa_grid,
              scat_za_grid,
@@ -972,6 +972,7 @@ void NewDoitMonoCalc(Workspace& ws,
              GposArray,
              GposZenithArray,
              LstepArray,
+             theta_lim,
              //Precalculated quantities for scattering integral calulation
              idir_idx0,
              idir_idx1,
@@ -983,7 +984,6 @@ void NewDoitMonoCalc(Workspace& ws,
              //Additional input
              f_mono,
              iy_unit,
-             refellipsoid,
              epsilon,
              max_num_iterations,
              accelerated,
@@ -1525,9 +1525,7 @@ void RunNewDoit(  //Input and Output:
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
-    const Tensor3& z_field,
     //Grids
-    const Vector& p_grid,
     const Vector& za_grid,
     const Vector& aa_grid,
     const Vector& scat_za_grid,
@@ -1541,6 +1539,7 @@ void RunNewDoit(  //Input and Output:
     const ArrayOfArrayOfGridPos& GposArray,
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
+    const Numeric& theta_lim,
     //Precalculated quantities for scattering integral calulation
     ArrayOfIndex& idir_idx0,
     ArrayOfIndex& idir_idx1,
@@ -1552,7 +1551,6 @@ void RunNewDoit(  //Input and Output:
     //Additional input
     const Numeric& f_mono,
     const String& iy_unit,
-    const Vector& refellipsoid,
     const Vector& epsilon,
     const Index& max_num_iterations,
     const Index& accelerated,
@@ -1639,9 +1637,9 @@ void RunNewDoit(  //Input and Output:
                                 GposArray,
                                 GposZenithArray,
                                 LstepArray,
-                                p_grid,
-                                z_field,
-                                refellipsoid,
+                                theta_lim,
+//                                z_field,
+//                                refellipsoid,
                                 f_grid,
                                 verbosity);
 
@@ -1903,9 +1901,7 @@ void UpdateSpectralRadianceField(//Input and Output:
                                  const ArrayOfArrayOfGridPos& GposZenithArray,
                                  const ArrayOfVector& LstepArray,
 
-                                 const Vector& p_grid,
-                                 const Tensor3& z_field,
-                                 const Vector& refellipsoid,
+                                 const Numeric& theta_lim,
                                  const Vector& f_grid,
                                  const Verbosity& verbosity) {
   if (atmosphere_dim == 1) {
@@ -1926,9 +1922,7 @@ void UpdateSpectralRadianceField(//Input and Output:
                                   GposArray,
                                   GposZenithArray,
                                   LstepArray,
-                                  p_grid,
-                                  z_field,
-                                  refellipsoid,
+                                  theta_lim,
                                   f_grid,
                                   verbosity);
   } else if (atmosphere_dim == 3) {
@@ -1974,9 +1968,7 @@ void UpdateSpectralRadianceField1D(
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
     //additional quantities
-    const Vector& p_grid,
-    const Tensor3& z_field,
-    const Vector& refellipsoid,
+    const Numeric& theta_lim,
     const Vector& f_grid,
     const Verbosity& verbosity) {
   CREATE_OUT2;
@@ -1988,16 +1980,8 @@ void UpdateSpectralRadianceField1D(
 
   // Number of zenith angles.
   const Index N_za = za_grid.nelem();
-  const Index N_p = p_grid.nelem();
+  const Index N_p = cloudbox_field_mono.nvitrines();
   const Index stokes_dim = cloudbox_scat_field.ncols();
-
-
-  // If theta is between 90° and the limiting value, the intersection point
-  // is exactly at the same level as the starting point (cp. AUG)
-  Numeric theta_lim =
-      180. - asin((refellipsoid[0] + z_field(0, 0, 0)) /
-                  (refellipsoid[0] + z_field(N_p-1, 0, 0))) *
-                 RAD2DEG;
 
   // Epsilon for additional limb iterations
   Vector epsilon(4);
@@ -2719,6 +2703,7 @@ void EstimatePPathElements1D(
     ArrayOfArrayOfGridPos& GposArray,
     ArrayOfArrayOfGridPos& GposZenithArray,
     ArrayOfVector& LstepArray,
+    Numeric& theta_lim,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
     const Agenda& ppath_step_agenda,
@@ -2746,7 +2731,7 @@ void EstimatePPathElements1D(
 
   // If theta is between 90° and the limiting value, the intersection point
   // is exactly at the same level as the starting point (cp. AUG)
-  Numeric theta_lim =
+  theta_lim =
       180. - asin((refellipsoid[0] + z_field(0, 0, 0)) /
                   (refellipsoid[0] + z_field(N_p-1, 0, 0))) *
              RAD2DEG;
