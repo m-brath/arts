@@ -537,13 +537,13 @@ void CalcPropagationPathMaxLength(
  * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
  *              propagation step
  * @param[in] LstepArray Array with the length of each propagation step
- * @param[out] idir_idx0 index of flattened incidence zenith angle meshgrid
- * @param[out] idir_idx1 index of flattened incidence azimuth angle meshgrid
- * @param[out] pdir_idx0 index of flattened propagation zenith angle meshgrid
- * @param[out] pdir_idx1 index of flattened propagation azimuth angle meshgrid
- * @param[out] gp_za_i interpolation gridpoints zenith incidence angle
- * @param[out] gp_aa_i interpolation gridpoints azimuth incidence angle
- * @param[out] itw interpolation weight for incidence angles
+ * @param[in] idir_idx0 index of flattened incidence zenith angle meshgrid
+ * @param[in] idir_idx1 index of flattened incidence azimuth angle meshgrid
+ * @param[in] pdir_idx0 index of flattened propagation zenith angle meshgrid
+ * @param[in] pdir_idx1 index of flattened propagation azimuth angle meshgrid
+ * @param[in] gp_za_i interpolation gridpoints zenith incidence angle
+ * @param[in] gp_aa_i interpolation gridpoints azimuth incidence angle
+ * @param[in] itw interpolation weight for incidence angles
  * @param[in] f_mono Monochromatic frequency.
  * @param[in] iy_unit Unit in which the convergence is checked.
  * @param[in] refellipsoid Reference ellipsoid.
@@ -1032,7 +1032,21 @@ void RadiativeTransferStep(  //Output and Input:
     const Numeric& rtp_planck_value,
     const bool& trans_is_precalc = false);
 
-//TODO:Add doxygen doc
+/** Checks the convergence of the DOIT iteration
+ *
+ * @param[out] convergence_flag Flag for the convergence test.
+ * @param[out] iteration_counter  Counter for number of iterations.
+ * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
+ *              cloudbox of the current iteration step.
+ * @param[in] cloudbox_field_mono_old Monochromatic radiation field inside the
+ *              cloudbox of the previous iteration step.
+ * @param[in] f_mono Monochromatic frequency.
+ * @param[in] epsilon Limits for convergence. A vector with length matching
+ *              stokes_dim with unit of iy_unit.
+ * @param[in] max_iterations Maximum number of iterations.
+ * @param[in] iy_unit Unit in which the convergence is checked.
+ * @param[in] verbosity Verbosity setting.
+ */
 void CheckConvergence(  //WS Input and Output:
     Index& convergence_flag,
     Index& iteration_counter,
@@ -1044,7 +1058,39 @@ void CheckConvergence(  //WS Input and Output:
     const String& iy_unit,
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Precalculates the propagation path steps and quantities needed for interpolation
+ *
+ * @param ws[in,out] Current workspace.
+ * @param[out] PressureArray Array with the pressures of each propagation step
+ * @param[out] TemperatureArray Array with the temperature at each propagation step
+ * @param[out] VmrArray Array with the VMR at each propagation step
+ * @param[out] InterpWeightsArray Array with the pressure interpolation weights
+ *              at each propagation step
+ * @param[out] InterpWeightsZenithArray Array with the zenith angle interpolation
+ *              weights at each propagation step
+ * @param[out] GposArray Array with the pressure interpolation gridpoints at
+ *              each propagation step
+ * @param[out] GposZenithArray Array with the zenith angle interpolatrion
+ *              gridpoints at each propagation step
+ * @param[out] LstepArray Array with the length of each propagation step
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
+ * @param[in] ppath_lmax Maximum length between points describing propagation
+ *              paths.
+ * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
+ *              determining propagation paths.
+ * @param[in] p_path_maxlength maximum length of propagation path
+ * @param[in] p_grid Pressure grid.
+ * @param[in] z_field Field of geometrical altitudes.
+ * @param[in] t_field Temperature field.
+ * @param[in] vmr_field Field of volume mixing ratios.
+ * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] verbosity Verbosity setting.
+ */
 void EstimatePPathElements1D(
     Workspace& ws,
     ArrayOfVector& PressureArray,
@@ -1069,7 +1115,37 @@ void EstimatePPathElements1D(
     const Vector& f_grid,
     const Verbosity& verbosity);
 
-//TODO:Add doxygen doc
+/** Calculates a propagation path for 1D
+ *
+ * @param ws[in,out] Current workspace.
+ * @param[out] Pressures Pressure points along propagation path
+ * @param[out] Temperatures Temperature along propagation path
+ * @param[out] Vmrs Volume mixing ration along propagation path
+ * @param[out] cloud_gp_p Pressure interpolation gridpoints along propagation path
+ * @param[out] cloud_gp_za Zenith angle interpolation gridpoints along
+ *              propagation path
+ * @param[out] lstep Length of each propagation step along propagation path
+ * @param[out] itw Pressure interpolation weights along propagation path
+ * @param[out] itw_za Zenith angle interpolation weights along propagation path
+ * @param[in] p_index Index of pressure gridpoint
+ * @param[in] za_index index of zenith angle gridpoint
+ * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
+ *              cloudbox.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
+ * @param[in] ppath_lmax Maximum length between points describing propagation
+ *              paths.
+ * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
+ *              determining propagation paths.
+ * @param[in] p_grid Pressure grid.
+ * @param[in] z_field Field of geometrical altitudes.
+ * @param[in] t_field Temperature field.
+ * @param[in] vmr_field Field of volume mixing ratios.
+ * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] verbosity Verbosity setting.
+ */
 void CloudPropagationPath1D(Workspace& ws,
                             Vector& Pressures,
                             Vector& Temperatures,

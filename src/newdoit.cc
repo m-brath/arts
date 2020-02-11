@@ -2980,8 +2980,6 @@ void CloudPropagationPath1D(Workspace& ws,
   CREATE_OUT3;
 
   Ppath ppath_step;
-  // Input variables are checked in the WSMs i_fieldUpdateSeqXXX, from
-  // where this function is called.
 
   //Initialize ppath for 1D.
   ppath_init_structure(ppath_step, 1, 1);
