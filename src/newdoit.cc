@@ -148,7 +148,7 @@ void SetAngularGrids(Vector& za_grid,
     //#sort weights and theta in increasing direction of scat_za_grid
     za_grid = za_grid_temp[Range(x.nelem() - 1, x.nelem(), -1)];
 
-    //dirty hack to be asure that 90 deg is exactly 90 deg.
+    //dirty hack to be assure that 90 deg is exactly 90 deg.
     if (N_za_grid % 2){
       za_grid[int(N_za_grid/2)]=90.;
     }
@@ -893,7 +893,7 @@ void NewDoitMonoCalc(Workspace& ws,
   ArrayOfArrayOfGridPos GposArray;
   ArrayOfArrayOfGridPos GposZenithArray;
   ArrayOfVector LstepArray;
-  Numeric theta_lim;
+  Index MaxLimbIndex;
 
   EstimatePPathElements1D(ws,
                           PressureArray,
@@ -904,7 +904,7 @@ void NewDoitMonoCalc(Workspace& ws,
                           GposArray,
                           GposZenithArray,
                           LstepArray,
-                          theta_lim,
+                          MaxLimbIndex,
                           cloudbox_limits,
                           za_grid,
                           ppath_step_agenda,
@@ -959,8 +959,6 @@ void NewDoitMonoCalc(Workspace& ws,
              cloudbox_limits,
              atmosphere_dim,
              //Grids
-             za_grid,
-             aa_grid,
              scat_za_grid,
              scat_aa_grid,
              // Precalculated quantities on the propagation path
@@ -972,7 +970,7 @@ void NewDoitMonoCalc(Workspace& ws,
              GposArray,
              GposZenithArray,
              LstepArray,
-             theta_lim,
+             MaxLimbIndex,
              //Precalculated quantities for scattering integral calulation
              idir_idx0,
              idir_idx1,
@@ -1526,8 +1524,6 @@ void RunNewDoit(  //Input and Output:
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
     //Grids
-    const Vector& za_grid,
-    const Vector& aa_grid,
     const Vector& scat_za_grid,
     const Vector& scat_aa_grid,
     // Precalculated quantities on the propagation path
@@ -1539,7 +1535,7 @@ void RunNewDoit(  //Input and Output:
     const ArrayOfArrayOfGridPos& GposArray,
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
-    const Numeric& theta_lim,
+    const Index& MaxLimbIndex,
     //Precalculated quantities for scattering integral calulation
     ArrayOfIndex& idir_idx0,
     ArrayOfIndex& idir_idx1,
@@ -1626,8 +1622,6 @@ void RunNewDoit(  //Input and Output:
                                 surface_reflection_matrix,
                                 surface_emission,
                                 cloudbox_limits,
-                                za_grid,
-                                aa_grid,
                                 atmosphere_dim,
                                 PressureArray,
                                 TemperatureArray,
@@ -1637,9 +1631,7 @@ void RunNewDoit(  //Input and Output:
                                 GposArray,
                                 GposZenithArray,
                                 LstepArray,
-                                theta_lim,
-//                                z_field,
-//                                refellipsoid,
+                                MaxLimbIndex,
                                 f_grid,
                                 verbosity);
 
@@ -1888,8 +1880,6 @@ void UpdateSpectralRadianceField(//Input and Output:
                                  const ConstTensor6View& surface_reflection_matrix,
                                  const ConstTensor5View& surface_emission,
                                  const ArrayOfIndex& cloudbox_limits,
-                                 const Vector& za_grid,
-                                 const Vector& aa_grid,
                                  const Index& atmosphere_dim,
                             // Precalculated quantities on the propagation path
                                  const ArrayOfVector& PressureArray,
@@ -1901,7 +1891,7 @@ void UpdateSpectralRadianceField(//Input and Output:
                                  const ArrayOfArrayOfGridPos& GposZenithArray,
                                  const ArrayOfVector& LstepArray,
 
-                                 const Numeric& theta_lim,
+                                 const Index& MaxLimbIndex,
                                  const Vector& f_grid,
                                  const Verbosity& verbosity) {
   if (atmosphere_dim == 1) {
@@ -1913,7 +1903,6 @@ void UpdateSpectralRadianceField(//Input and Output:
                                   surface_reflection_matrix,
                                   surface_emission,
                                   cloudbox_limits,
-                                  za_grid,
                                   PressureArray,
                                   TemperatureArray,
                                   GasExtinctionArray,
@@ -1922,7 +1911,7 @@ void UpdateSpectralRadianceField(//Input and Output:
                                   GposArray,
                                   GposZenithArray,
                                   LstepArray,
-                                  theta_lim,
+                                  MaxLimbIndex,
                                   f_grid,
                                   verbosity);
   } else if (atmosphere_dim == 3) {
@@ -1957,7 +1946,6 @@ void UpdateSpectralRadianceField1D(
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
-    const Vector& za_grid,
     // Precalculated quantities on the propagation path
     const ArrayOfVector& PressureArray,
     const ArrayOfVector& TemperatureArray,
@@ -1968,7 +1956,7 @@ void UpdateSpectralRadianceField1D(
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
     //additional quantities
-    const Numeric& theta_lim,
+    const Index& MaxLimbIndex,
     const Vector& f_grid,
     const Verbosity& verbosity) {
   CREATE_OUT2;
@@ -1979,7 +1967,7 @@ void UpdateSpectralRadianceField1D(
   out2 << "  ------------------------------------------------------------- \n";
 
   // Number of zenith angles.
-  const Index N_za = za_grid.nelem();
+  const Index N_za = cloudbox_field_mono.npages();
   const Index N_p = cloudbox_field_mono.nvitrines();
   const Index stokes_dim = cloudbox_scat_field.ncols();
 
@@ -2015,6 +2003,7 @@ void UpdateSpectralRadianceField1D(
   //  }
 
 
+  Index MaxUpwardAngleIndex=int(Numeric(N_za)/2.-0.5);
 
   //Loop over all directions, defined by za_grid
   for (Index i_za = 0; i_za < N_za; i_za++) {
@@ -2026,7 +2015,7 @@ void UpdateSpectralRadianceField1D(
     //=====================================================================
 
     // Sequential update for uplooking angles
-    if (za_grid[i_za] <= 90.) {
+    if (i_za <= MaxUpwardAngleIndex ) {
       // Loop over all positions inside the cloud box defined by the
       // cloudbox_limits excluding the upper boundary. For uplooking
       // directions, we start from cloudbox_limits[1]-1 and go down
@@ -2065,7 +2054,7 @@ void UpdateSpectralRadianceField1D(
                                      surface_emission,
                                      verbosity);
       }
-    } else if (za_grid[i_za] >= theta_lim) {
+    } else if (i_za > MaxLimbIndex) {
       //
       // Sequential updating for downlooking angles
       //
@@ -2703,7 +2692,7 @@ void EstimatePPathElements1D(
     ArrayOfArrayOfGridPos& GposArray,
     ArrayOfArrayOfGridPos& GposZenithArray,
     ArrayOfVector& LstepArray,
-    Numeric& theta_lim,
+    Index& MaxLimbIndex,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
     const Agenda& ppath_step_agenda,
@@ -2731,10 +2720,22 @@ void EstimatePPathElements1D(
 
   // If theta is between 90° and the limiting value, the intersection point
   // is exactly at the same level as the starting point (cp. AUG)
-  theta_lim =
+  Numeric theta_lim =
       180. - asin((refellipsoid[0] + z_field(0, 0, 0)) /
                   (refellipsoid[0] + z_field(N_p-1, 0, 0))) *
              RAD2DEG;
+
+
+  //Get the highest zenith angle index , which is still a limb angle
+  MaxLimbIndex= N_za-1;
+  while (MaxLimbIndex>=0 && za_grid[MaxLimbIndex]>=theta_lim){
+    MaxLimbIndex--;
+  }
+
+  if (za_grid[MaxLimbIndex]<=90){
+    MaxLimbIndex=-1;
+  }
+
 
 
   PressureArray.resize(N_p*N_za);
@@ -2756,7 +2757,7 @@ void EstimatePPathElements1D(
 
 
 
-    // Sequential update for uplooking angles
+    // uplooking angles
     if (za_grid[i_za] <= 90.) {
       // Loop over all positions inside the cloud box defined by the
       // cloudbox_limits excluding the upper boundary. For uplooking
@@ -2814,7 +2815,7 @@ void EstimatePPathElements1D(
       }
     } else if (za_grid[i_za] >= theta_lim) {
       //
-      // Sequential updating for downlooking angles
+      // downlooking angles
       //
       for (Index i_p = 0 + 1; i_p <= N_p-1; i_p++) {
         if (adaptive) {
