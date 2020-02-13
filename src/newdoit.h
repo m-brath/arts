@@ -518,10 +518,6 @@ void CalcPropagationPathMaxLength(
  * @param[in] surface_emission The emission from the surface.
  * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
- * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
- *              cloudbox.
- * @param[in] aa_grid Azimuth angle grid of Spectral radiance field inside the
- *              cloudbox.
  * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
  * @param[in] scat_aa_grid Azimuth angle grid for the scattering calculation.
  * @param[in] PressureArray Array with the pressures of each propagation step
@@ -535,7 +531,8 @@ void CalcPropagationPathMaxLength(
  * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
  *              propagation step
  * @param[in] LstepArray Array with the length of each propagation step
- * @param[in] theta_lim Limiting angle for limb calculation.
+ * @param[in] MaxLimbIndex Index with index of the highest limb angle (-1 if no
+ *              limb angle)
  * @param[in] idir_idx0 index of flattened incidence zenith angle meshgrid
  * @param[in] idir_idx1 index of flattened incidence azimuth angle meshgrid
  * @param[in] pdir_idx0 index of flattened propagation zenith angle meshgrid
@@ -566,8 +563,6 @@ void RunNewDoit(//Input and Output:
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
     //Grids
-    const Vector& za_grid,
-    const Vector& aa_grid,
     const Vector& scat_za_grid,
     const Vector& scat_aa_grid,
     // Precalculated quantities on the propagation path
@@ -579,7 +574,7 @@ void RunNewDoit(//Input and Output:
     const ArrayOfArrayOfGridPos& GposArray,
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
-    const Numeric& theta_lim,
+    const Index& MaxLimbIndex,
     //Precalculated quantities for scattering integral calulation
     ArrayOfIndex& idir_idx0,
     ArrayOfIndex& idir_idx1,
@@ -711,10 +706,6 @@ void CalcScatteredField3D(
  *              given by surface_los to the direction of interest.
  * @param[in] surface_emission The emission from the surface.
  * @param[in] cloudbox_limits The limits of the cloud box.
- * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
- *              cloudbox.
- * @param[in] aa_grid Azimuth angle grid of Spectral radiance field inside the
- *              cloudbox.
  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
  * @param[in] PressureArray Array with the pressures of each propagation step
  * @param[in] TemperatureArray Array with the temperature at each propagation step
@@ -727,7 +718,8 @@ void CalcScatteredField3D(
  * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
  *              propagation step
  * @param[in] LstepArray Array with the length of each propagation step
- * @param[in] theta_lim Limiting angle for limb calculation.
+ * @param[in] MaxLimbIndex Index with index of the highest limb angle (-1 if no
+ *              limb angle)
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
  * @param[in] verbosity Verbosity setting.
@@ -741,8 +733,6 @@ void UpdateSpectralRadianceField(//Input and Output:
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
-    const Vector& za_grid,
-    const Vector& aa_grid,
     const Index& atmosphere_dim,
     // Precalculated quantities on the propagation path
     const ArrayOfVector& PressureArray,
@@ -754,7 +744,7 @@ void UpdateSpectralRadianceField(//Input and Output:
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
 
-    const Numeric& theta_lim,
+    const Index& MaxLimbIndex,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
@@ -771,8 +761,6 @@ void UpdateSpectralRadianceField(//Input and Output:
  *              given by surface_los to the direction of interest.
  * @param[in] surface_emission The emission from the surface.
  * @param[in] cloudbox_limits The limits of the cloud box.
- * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
- *              cloudbox.
  * @param[in] PressureArray Array with the pressures of each propagation step
  * @param[in] TemperatureArray Array with the temperature at each propagation step
  * @param[in] GasExtinctionArray Array with the gas extinction at each propagation step
@@ -784,7 +772,8 @@ void UpdateSpectralRadianceField(//Input and Output:
  * @param[in] GposZenithArray Array with the zenith angle gridpoints at each
  *              propagation step
  * @param[in] LstepArray Array with the length of each propagation step
- * @param[in] theta_lim Limiting angle for limb calculation.
+ * @param[in] MaxLimbIndex Index with index of the highest limb angle (-1 if no
+ *              limb angle)
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
  * @param[in] verbosity Verbosity setting.
@@ -798,7 +787,6 @@ void UpdateSpectralRadianceField1D(
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
-    const Vector& za_grid,
     // Precalculated quantities on the propagation path
     const ArrayOfVector& PressureArray,
     const ArrayOfVector& TemperatureArray,
@@ -809,7 +797,7 @@ void UpdateSpectralRadianceField1D(
     const ArrayOfArrayOfGridPos& GposZenithArray,
     const ArrayOfVector& LstepArray,
     //additional quantities
-    const Numeric& theta_lim,
+    const Index& MaxLimbIndex,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
@@ -1061,6 +1049,8 @@ void CheckConvergence(  //WS Input and Output:
  * @param[out] GposZenithArray Array with the zenith angle interpolatrion
  *              gridpoints at each propagation step
  * @param[out] LstepArray Array with the length of each propagation step
+ * @param[out] MaxLimbIndex Index with index of the highest limb angle (-1 if no
+ *              limb angle)
  * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
  *              cloudbox.
@@ -1089,7 +1079,7 @@ void EstimatePPathElements1D(
     ArrayOfArrayOfGridPos& GposArray,
     ArrayOfArrayOfGridPos& GposZenithArray,
     ArrayOfVector& LstepArray,
-    Numeric& theta_lim,
+    Index& MaxLimbIndex,
     const ArrayOfIndex& cloudbox_limits,
     const Vector& za_grid,
     const Agenda& ppath_step_agenda,
