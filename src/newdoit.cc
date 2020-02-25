@@ -767,6 +767,7 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Index& max_num_iterations,
                      const Numeric& tau_max,
                      const Index& accelerated,
+                     const Index& ForwardCorrectionFlag,
                      const Numeric& ppath_lmax,
                      const Numeric& ppath_lraytrace,
                      const Verbosity& verbosity)
@@ -825,6 +826,22 @@ void NewDoitMonoCalc(Workspace& ws,
   out0 << os2.str();
   os2.clear();
 
+
+  if (ForwardCorrectionFlag) {
+    ForwardScatteringCorrection(
+        scattering_matrix,
+        extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+        absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
+        idir_idx0,
+        idir_idx1,
+        pdir_idx0,
+        pdir_idx1,
+        atmosphere_dim,
+        za_grid,
+        aa_grid,
+        scat_za_grid,
+        scat_aa_grid);
+  }
 
   Matrix surface_skin_t;
   Tensor4 surface_los;
@@ -1344,6 +1361,112 @@ void CalcScatteringProperties(  //Output
       } else {
         scattering_matrix(joker, ilat, ilon, joker, joker, joker, joker) =
             scat_mat_bulk_ii(0, joker, joker, joker, joker, joker);
+      }
+    }
+  }
+}
+
+void ForwardScatteringCorrection(  //Output
+    Tensor7& scattering_matrix,    //(Np,Nlat,Nlon,npdir,nidir,nst,nst)
+    Tensor6& extinction_matrix,    //(Np,Nlat,Nlon,ndir,nst,nst)
+    Tensor5& absorption_vector,    //(Np,Nlat,Nlon,ndir,nst)
+    const ArrayOfIndex& idir_idx0,
+    const ArrayOfIndex& idir_idx1,
+    const ArrayOfIndex& pdir_idx0,
+    const ArrayOfIndex& pdir_idx1,
+    const Index& atmosphere_dim,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid) {
+  Numeric IntegralOfZ;
+  Index Np = scattering_matrix.nlibraries();
+  Index Nst = scattering_matrix.ncols();
+  Matrix ExtTest(Nst,Nst);
+
+  if (atmosphere_dim == 1) {
+    for (Index i_p = 0; i_p < Np; i_p++) {
+      for (Index i_pz = 0; i_pz <= za_grid.nelem() - 1; i_pz++) {
+
+
+        if (extinction_matrix(i_p, 0, 0, i_pz, 0, 0) > 0) {
+          // Find nearest incidence angle to forward propagation direction
+          Index i_sz = 0;
+          while (i_sz < idir_idx0.nelem() - 1 &&
+                 abs(scat_za_grid[i_sz] - za_grid[i_pz]) >
+                     abs(scat_za_grid[i_sz + 1] - za_grid[i_pz])) {
+            i_sz++;
+          }
+
+          for (Index i_sti = 0; i_sti < Nst; i_sti++) {
+            for (Index i_stj = 0; i_stj < Nst; i_stj++) {
+
+              ExtTest(i_sti,i_stj)=extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_stj);
+
+              //Remove forward scattering peak and replace it with mean of the neighbors
+              //For now we use mean, for later one can think of a polyfit.
+              if (i_sz == 0) {
+                scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj) =
+                    scattering_matrix(i_p, 0, 0, i_pz, i_sz + 1, i_sti, i_stj);
+
+              } else if (i_sz == scat_za_grid.nelem() - 1) {
+                scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj) =
+                    scattering_matrix(i_p, 0, 0, i_pz, i_sz - 1, i_sti, i_stj);
+
+              } else {
+                scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj) =
+                    (scattering_matrix(
+                         i_p, 0, 0, i_pz, i_sz + 1, i_sti, i_stj) +
+                     scattering_matrix(
+                         i_p, 0, 0, i_pz, i_sz - 1, i_sti, i_stj)) /
+                    2;
+              }
+
+              if (i_sti == i_stj) {
+                //Intergrate scattering matrix
+                IntegralOfZ =
+                    AngIntegrate_trapezoid(
+                        scattering_matrix(i_p, 0, 0, i_pz, joker, 0, 0),
+                        scat_za_grid) /
+                    2 / PI;
+
+                extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_sti) =
+                    IntegralOfZ + absorption_vector(i_p, 0, 0, 0, 0);
+
+              } else if (i_sti > 0 && i_stj == 0) {
+                //Intergrate scattering matrix
+                IntegralOfZ =
+                    AngIntegrate_trapezoid(
+                        scattering_matrix(i_p, 0, 0, i_pz, joker, i_sti, 0),
+                        scat_za_grid) /
+                    2 / PI;
+
+                extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_stj) =
+                    IntegralOfZ + absorption_vector(i_p, 0, 0, i_pz, i_sti);
+
+              } else if (i_sti == 0 && i_stj > 0) {
+                //Intergrate scattering matrix
+                IntegralOfZ =
+                    AngIntegrate_trapezoid(
+                        scattering_matrix(i_p, 0, 0, i_pz, joker, i_stj, 0),
+                        scat_za_grid) /
+                    2 / PI;
+
+                extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_stj) =
+                    IntegralOfZ + absorption_vector(i_p, 0, 0, i_pz, i_stj);
+              } else {
+                //Intergrate scattering matrix
+                IntegralOfZ =
+                    AngIntegrate_trapezoid(
+                        scattering_matrix(i_p, 0, 0, i_pz, joker, i_sti, i_stj),
+                        scat_za_grid) /
+                    2 / PI;
+
+//                extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_stj) = IntegralOfZ;
+              }
+            }
+          }
+        }
       }
     }
   }
