@@ -272,6 +272,8 @@ void LimitInputGridsAndFieldsToCloudbox(
  * @param[in] tau_max Maximum optical thickness per propagation step.
  * @param[in] accelerated Index wether to accelerate only the intensity (1) or
  *              the whole Stokes Vector(>1).
+ * @param[in] ForwardCorrectionFlag Index wether to use the forward scattering
+ *              corretion (1) or not (0).
  * @param[in] ppath_lmax Maximum length between points describing propagation
  *              paths.
  * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
@@ -315,6 +317,7 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Index& max_num_iterations,
                      const Numeric& tau_max,
                      const Index& accelerated,
+                     const Index& ForwardCorrectionFlag,
                      const Numeric& ppath_lmax,
                      const Numeric& ppath_lraytrace,
                      const Verbosity& verbosity);
@@ -431,6 +434,37 @@ void CalcScatteringProperties(  //Output
     const Vector& scat_aa_grid,
     const Index& t_interp_order,
     const Verbosity& verbosity);
+
+
+/** Applies forward scattering correction
+ *
+ * @param scattering_matrix
+ * @param extinction_matrix
+ * @param absorption_vector
+ * @param idir_idx0
+ * @param idir_idx1
+ * @param pdir_idx0
+ * @param pdir_idx1
+ * @param atmosphere_dim
+ * @param za_grid
+ * @param aa_grid
+ * @param scat_za_grid
+ * @param scat_aa_grid
+ */
+void ForwardScatteringCorrection(  //Output
+    Tensor7& scattering_matrix,
+    Tensor6& extinction_matrix,        //(Np,Nlat,Nlon,ndir,nst,nst)
+    Tensor5& absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
+    const ArrayOfIndex& idir_idx0,
+    const ArrayOfIndex& idir_idx1,
+    const ArrayOfIndex& pdir_idx0,
+    const ArrayOfIndex& pdir_idx1,
+    const Index& atmosphere_dim,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid);
+
 
 /**Calculates surface properties
  *
