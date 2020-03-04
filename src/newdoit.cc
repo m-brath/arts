@@ -59,6 +59,7 @@
 extern const Numeric PI;
 extern const Numeric RAD2DEG;
 extern const Numeric DEG2RAD;
+extern const Numeric SPEED_OF_LIGHT;
 
 void Initialize_doit_i_field(  //Output
     Tensor7& cloudbox_field,
@@ -1379,12 +1380,26 @@ void ForwardScatteringCorrection(  //Output
     const Vector& aa_grid,
     const Vector& scat_za_grid,
     const Vector& scat_aa_grid) {
-  Numeric IntegralOfZ;
+
   Index Np = scattering_matrix.nlibraries();
   Index Nst = scattering_matrix.ncols();
-  Matrix ExtTest(Nst,Nst);
 
   if (atmosphere_dim == 1) {
+
+
+    Vector Zij(1);
+    Vector EvalPoints_Za(1);
+    Vector scat_za_temp(scat_za_grid.nelem()-1);
+    Vector Z_temp(scat_za_grid.nelem()-1);
+    Numeric Ki1;
+
+
+    Index order=2;
+    ArrayOfGridPosPoly gp(1);
+    Matrix itw(gp.nelem(),order+1);
+    Index counter;
+
+
     for (Index i_p = 0; i_p < Np; i_p++) {
       for (Index i_pz = 0; i_pz <= za_grid.nelem() - 1; i_pz++) {
 
@@ -1398,72 +1413,66 @@ void ForwardScatteringCorrection(  //Output
             i_sz++;
           }
 
+          EvalPoints_Za[0]=scat_za_grid[i_sz]; //nearest to forward direction
+
+          //Take the scattering grid without the nearest one to the forward direction
+          counter=-1;
+          for (Index i_tz = 0; i_tz <= scat_za_grid.nelem()-1; i_tz++){
+            if (i_tz!=i_sz){
+              counter++;
+              scat_za_temp[counter]=scat_za_grid[i_tz];
+            }
+          }
+
+          //Prepare interpolation
+          gridpos_poly(gp,scat_za_temp,EvalPoints_Za,order,1.1);
+          interpweights(itw,gp);
+
           for (Index i_sti = 0; i_sti < Nst; i_sti++) {
             for (Index i_stj = 0; i_stj < Nst; i_stj++) {
 
-              ExtTest(i_sti,i_stj)=extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_stj);
-
-              //Remove forward scattering peak and replace it with mean of the neighbors
-              //For now we use mean, for later one can think of a polyfit.
-              if (i_sz == 0) {
-                scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj) =
-                    scattering_matrix(i_p, 0, 0, i_pz, i_sz + 1, i_sti, i_stj);
-
-              } else if (i_sz == scat_za_grid.nelem() - 1) {
-                scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj) =
-                    scattering_matrix(i_p, 0, 0, i_pz, i_sz - 1, i_sti, i_stj);
-
-              } else {
-                scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj) =
-                    (scattering_matrix(
-                         i_p, 0, 0, i_pz, i_sz + 1, i_sti, i_stj) +
-                     scattering_matrix(
-                         i_p, 0, 0, i_pz, i_sz - 1, i_sti, i_stj)) /
-                    2;
+              //Take the scattering data without the nearest one to the forward direction
+              counter=-1;
+              for (Index i_tz = 0; i_tz <= scat_za_grid.nelem()-1; i_tz++){
+                if (i_tz!=i_sz){
+                  counter++;
+                  Z_temp[counter]=scattering_matrix(i_p, 0, 0, i_pz, i_tz, i_sti, i_stj);
+                }
               }
 
-              if (i_sti == i_stj) {
-                //Intergrate scattering matrix
-                IntegralOfZ =
-                    AngIntegrate_trapezoid(
-                        scattering_matrix(i_p, 0, 0, i_pz, joker, 0, 0),
-                        scat_za_grid) /
-                    2 / PI;
+              //Remove forward scattering peak and replace it with interpolated
+              // value
 
-                extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_sti) =
-                    IntegralOfZ + absorption_vector(i_p, 0, 0, 0, 0);
+              //Interpolate the direction within the scattering grid nearest to
+              // the forward direction.
+              interp(Zij,
+                     itw,
+                     Z_temp,
+                     gp);
 
-              } else if (i_sti > 0 && i_stj == 0) {
-                //Intergrate scattering matrix
-                IntegralOfZ =
-                    AngIntegrate_trapezoid(
-                        scattering_matrix(i_p, 0, 0, i_pz, joker, i_sti, 0),
-                        scat_za_grid) /
-                    2 / PI;
+              //Interpolated value on scattering matrix
+              scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj)=Zij[0];
 
-                extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_stj) =
-                    IntegralOfZ + absorption_vector(i_p, 0, 0, i_pz, i_sti);
+            }
+          }
 
-              } else if (i_sti == 0 && i_stj > 0) {
-                //Intergrate scattering matrix
-                IntegralOfZ =
-                    AngIntegrate_trapezoid(
-                        scattering_matrix(i_p, 0, 0, i_pz, joker, i_stj, 0),
-                        scat_za_grid) /
-                    2 / PI;
 
-                extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_stj) =
-                    IntegralOfZ + absorption_vector(i_p, 0, 0, i_pz, i_stj);
-              } else {
-                //Intergrate scattering matrix
-                IntegralOfZ =
-                    AngIntegrate_trapezoid(
-                        scattering_matrix(i_p, 0, 0, i_pz, joker, i_sti, i_stj),
-                        scat_za_grid) /
-                    2 / PI;
+          // The four extinction matrix elements based on energy conservation
+          // The other elements are not changed.
 
-//                extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_stj) = IntegralOfZ;
-              }
+          for (Index i_sti = 0; i_sti < Nst; i_sti++) {
+            Ki1 = AngIntegrate_trapezoid(
+                      scattering_matrix(i_p, 0, 0, i_pz, joker, i_sti, 0),
+                      scat_za_grid) /
+                      2 / PI +
+                  absorption_vector(i_p, 0, 0, i_pz, i_sti);
+
+
+            extinction_matrix(i_p, 0, 0, i_pz, i_sti, 0)=Ki1;
+            if (i_sti>0) {
+              extinction_matrix(i_p, 0, 0, i_pz, 0, i_sti) = Ki1;
+
+              extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_sti) = extinction_matrix(i_p, 0, 0, i_pz, 0, 0);
             }
           }
         }
