@@ -61,7 +61,7 @@ extern const Numeric DEG2RAD;
 
 /** Initialises variables for DOIT scattering calculations.
  *
- * Note that doit_i_field is Nan-initialzed
+ * Note that cloudbox_field is Nan-initialzed
  *
  * @param[out] cloudbox_field Spectral radiance field inside the cloudbox
  * @param[in] stokes_dim The dimensionality of the Stokes vector (1-4).
@@ -72,7 +72,7 @@ extern const Numeric DEG2RAD;
  * @param[in] rt_aa_grid Azimuth angle grid.
  * @param[in] cloudbox_limits The limits of the cloud box.
  */
-void Initialize_doit_i_field(
+void Initialize_cloudbox_field(
     //Output
     Tensor7& cloudbox_field,
     //Input
@@ -141,7 +141,7 @@ void SetClearsky_cloudbox(
  * The method performs monochromatic pencil beam calculations for
  * all grid positions on the cloudbox boundary, and all directions
  * given by angle grids (*za/aa_grid*). Found radiances
- * are stored in doit_i_field which can be used as boundary
+ * are stored in cloudbox_field which can be used as boundary
  * conditions when scattering inside the cloud box is solved.
  *
  * @param[in,out] ws Current workspace.
@@ -171,7 +171,7 @@ void GetIncomingRadiation(Workspace& ws,
                           const Vector& lat_grid,
                           const Vector& lon_grid,
                           const Tensor3& z_field,
-                          const Tensor4& nlte_field,
+                          const EnergyLevelMap& nlte_field,
                           const ArrayOfIndex& cloudbox_limits,
                           const Vector& f_grid,
                           const Vector& za_grid,
