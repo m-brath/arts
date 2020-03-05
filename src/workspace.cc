@@ -5862,7 +5862,7 @@ void Workspace::define_wsv_data() {
 
   //TODO: Remove later or add documentation and move it to correct position
   wsv_data.push_back(WsvRecord(
-      NAME("doit_i_field_clearsky"),
+      NAME("cloudbox_field_clearsky"),
       DESCRIPTION(
             "Radiation field.\n"
             "\n"

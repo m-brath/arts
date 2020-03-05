@@ -66,12 +66,10 @@ extern const Numeric RAD2DEG;
 /* Workspace method: Doxygen documentation will be auto-generated */
 void NewDoitCalc(Workspace& ws,
                  // WS Output:
-                 Tensor7& doit_i_field,
-                 Tensor7& doit_i_field_clearsky,
+                 Tensor7& cloudbox_field,
+                 Tensor7& cloudbox_field_clearsky,
                  Vector& za_grid,
                  Vector& aa_grid,
-                 Vector& scat_za_grid,
-                 Vector& scat_aa_grid,
                  ArrayOfTensor3& gas_extinction_doit,
                  ArrayOfVector& p_grid_gas_extinction,
                  Tensor7& extinction_matrix_doit,
@@ -96,7 +94,7 @@ void NewDoitCalc(Workspace& ws,
                  const Index& atmosphere_dim,
                  const Tensor4& pnd_field,
                  const Tensor3& t_field,
-                 const Tensor4& nlte_field,
+                 const EnergyLevelMap& nlte_field,
                  const Tensor3& z_field,
                  const Tensor4& vmr_field,
                  const Matrix& z_surface,
@@ -122,7 +120,7 @@ void NewDoitCalc(Workspace& ws,
                  const Index& N_scat_za_grid,
                  const Index& N_scat_aa_grid,
                  const String& za_grid_type,
-                 const Tensor7& doit_i_field_apriori,
+                 const Tensor7& cloudbox_field_apriori,
                  const Verbosity& verbosity) {
   CREATE_OUT1;
   CREATE_OUT2;
@@ -160,6 +158,9 @@ void NewDoitCalc(Workspace& ws,
 
   //-------- end of checks ----------------------------------------
 
+  Vector scat_za_grid;
+  Vector scat_aa_grid;
+
   SetAngularGrids(za_grid,
                   aa_grid,
                   scat_za_grid,
@@ -170,10 +171,10 @@ void NewDoitCalc(Workspace& ws,
                   N_scat_aa_grid,
                   za_grid_type);
 
-  //Check doit_i_field_apriori
-  if (!is_size(doit_i_field_apriori, 0, 0, 0, 0, 0, 0, 0)) {
-    chk_size("doit_i_field_apriori",
-             doit_i_field_apriori,
+  //Check cloudbox_field_apriori
+  if (!is_size(cloudbox_field_apriori, 0, 0, 0, 0, 0, 0, 0)) {
+    chk_size("cloudbox_field_apriori",
+             cloudbox_field_apriori,
              f_grid.nelem(),
              (cloudbox_limits[1] - cloudbox_limits[0]) + 1,
              (cloudbox_limits[3] - cloudbox_limits[2]) + 1,
@@ -182,9 +183,9 @@ void NewDoitCalc(Workspace& ws,
              N_aa_grid,
              stokes_dim);
 
-    doit_i_field = doit_i_field_apriori;
+    cloudbox_field = cloudbox_field_apriori;
   } else {
-    Initialize_doit_i_field(doit_i_field,
+    Initialize_cloudbox_field(cloudbox_field,
                             stokes_dim,
                             atmosphere_dim,
                             f_grid,
@@ -194,7 +195,7 @@ void NewDoitCalc(Workspace& ws,
 
     GetIncomingRadiation(ws,
                          //output
-                         doit_i_field,
+                         cloudbox_field,
                          //input
                          iy_main_agenda,
                          atmosphere_dim,
@@ -208,7 +209,7 @@ void NewDoitCalc(Workspace& ws,
                          aa_grid,
                          verbosity);
 
-    SetClearsky_cloudbox(doit_i_field,
+    SetClearsky_cloudbox(cloudbox_field,
                          f_grid,
                          p_grid,
                          lat_grid,
@@ -230,7 +231,7 @@ void NewDoitCalc(Workspace& ws,
   Tensor3 z_field_cldbx;
   Tensor4 vmr_field_cldbx;
 
-  doit_i_field_clearsky=doit_i_field;
+  cloudbox_field_clearsky=cloudbox_field;
 
   LimitInputGridsAndFieldsToCloudbox(p_grid_cldbx,
                                      lat_grid_cldbx,
@@ -297,7 +298,7 @@ void NewDoitCalc(Workspace& ws,
 
     for (Index f_index = 0; f_index < nf; f_index++) {
       if (failed) {
-        doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
+        cloudbox_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
         gas_extinction_doit[f_index] = Tensor3();
         p_grid_gas_extinction[f_index] = Vector();
         extinction_matrix_doit(
@@ -315,8 +316,8 @@ void NewDoitCalc(Workspace& ws,
         out2 << os2.str();
         os2.clear();
 
-        Tensor6 doit_i_field_mono_local =
-            doit_i_field(f_index, joker, joker, joker, joker, joker, joker);
+        Tensor6 cloudbox_field_mono_local =
+            cloudbox_field(f_index, joker, joker, joker, joker, joker, joker);
 
         Tensor3 gas_extinction_doit_local;
         Vector p_grid_gas_extinction_local;
@@ -332,7 +333,7 @@ void NewDoitCalc(Workspace& ws,
         Index iteration_counter_local;
 
         NewDoitMonoCalc(ws,
-                        doit_i_field_mono_local,
+                        cloudbox_field_mono_local,
                         gas_extinction_doit_local,
                         extinction_matrix_doit_local,
                         absorption_vector_doit_local,
@@ -376,8 +377,8 @@ void NewDoitCalc(Workspace& ws,
         out2 << os3.str();
         os3.clear();
 
-        doit_i_field(f_index, joker, joker, joker, joker, joker, joker) =
-            doit_i_field_mono_local;
+        cloudbox_field(f_index, joker, joker, joker, joker, joker, joker) =
+            cloudbox_field_mono_local;
 
         gas_extinction_doit[f_index] = gas_extinction_doit_local;
 
@@ -397,7 +398,7 @@ void NewDoitCalc(Workspace& ws,
 
 
       } catch (const std::exception& e) {
-        doit_i_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
+        cloudbox_field(f_index, joker, joker, joker, joker, joker, joker) = NAN;
         gas_extinction_doit[f_index] = Tensor3();
         p_grid_gas_extinction[f_index] = Vector();
         extinction_matrix_doit(
