@@ -61,7 +61,7 @@ extern const Numeric RAD2DEG;
 extern const Numeric DEG2RAD;
 extern const Numeric SPEED_OF_LIGHT;
 
-void Initialize_doit_i_field(  //Output
+void Initialize_cloudbox_field(  //Output
     Tensor7& cloudbox_field,
     // WS Input
     const Index& stokes_dim,
@@ -254,7 +254,7 @@ void SetClearsky_cloudbox(Tensor7& cloudbox_field,
   } else if (atmosphere_dim == 3) {
     if (f_grid.nelem() == 0)
       throw runtime_error(
-          "Error in doit_i_fieldSetClearsky: For 3D "
+          "Error in cloudbox_fieldSetClearsky: For 3D "
           "all_frequencies option is not implemented \n");
 
     for (Index f_index = 0; f_index < cloudbox_field.nvitrines(); f_index++) {
@@ -415,7 +415,7 @@ void GetIncomingRadiation(Workspace& ws,
                           const Vector& lat_grid,
                           const Vector& lon_grid,
                           const Tensor3& z_field,
-                          const Tensor4& nlte_field,
+                          const EnergyLevelMap& nlte_field,
                           const ArrayOfIndex& cloudbox_limits,
                           const Vector& f_grid,
                           const Vector& za_grid,
@@ -439,7 +439,7 @@ void GetIncomingRadiation(Workspace& ws,
     //Define the variables for position and direction.
     Vector los(1), pos(1);
 
-    //--- Get doit_i_field at lower and upper boundary
+    //--- Get cloudbox_field at lower and upper boundary
     //    (boundary=0: lower, boundary=1: upper)
     for (Index boundary = 0; boundary <= 1; boundary++) {
       const Index boundary_index = boundary ? cloudbox_field.nvitrines() - 1 : 0;
@@ -523,7 +523,7 @@ void GetIncomingRadiation(Workspace& ws,
     // Define the variables for position and direction.
     Vector los(2), pos(3);
 
-    //--- Get doit_i_field at lower and upper boundary
+    //--- Get cloudbox_field at lower and upper boundary
     //    (boundary=0: lower, boundary=1: upper)
     for (Index boundary = 0; boundary <= 1; boundary++) {
       const Index boundary_index = boundary ? cloudbox_field.nvitrines() - 1 : 0;
@@ -1023,7 +1023,7 @@ void CalcGasExtinction(Workspace& ws,
 
   ArrayOfPropagationMatrix propmat_clearsky_local;
 
-  const Vector rtp_temperature_nlte_local_dummy(0);
+  const EnergyLevelMap rtp_temperature_nlte_local_dummy;
 
   // Calculate layer averaged gaseous extinction
   for (Index ip = 0; ip < Np; ip++) {
@@ -1693,10 +1693,10 @@ void RunNewDoit(  //Input and Output:
             for (Index c = 0; c < cloudbox_field_mono.ncols(); c++)
               if (std::isnan(cloudbox_field_mono(v, s, b, p, r, c)))
                 throw std::runtime_error(
-                    "*doit_i_field_mono* contains at least one NaN value.\n"
-                    "This indicates an improper initialization of *doit_i_field*.");
+                    "*cloudbox_field_mono* contains at least one NaN value.\n"
+                    "This indicates an improper initialization of *cloudbox_field*.");
 
-  //doit_i_field_mono can not be further checked here, because there is no way
+  //cloudbox_field_mono can not be further checked here, because there is no way
   //to find out the size without including a lot more interface
   //variables
   //-----------End of checks--------------------------------------
@@ -1704,7 +1704,7 @@ void RunNewDoit(  //Input and Output:
   Tensor6 cloudbox_field_mono_old;
 
   // Resize and initialize cloudbox_scat_field,
-  // which  has the same dimensions as doit_i_field
+  // which  has the same dimensions as cloudbox_field
   Tensor6 cloudbox_scat_field(cloudbox_field_mono.nvitrines(),
                           cloudbox_field_mono.nshelves(),
                           cloudbox_field_mono.nbooks(),
@@ -1721,7 +1721,7 @@ void RunNewDoit(  //Input and Output:
     acceleration_input.resize(4);
   }
   while (convergence_flag == 0) {
-    // 1. Copy doit_i_field to doit_i_field_old.
+    // 1. Copy cloudbox_field to cloudbox_field_old.
     cloudbox_field_mono_old = cloudbox_field_mono;
 
     // 2.Calculate scattered field vector for all points in the cloudbox.
@@ -1743,7 +1743,7 @@ void RunNewDoit(  //Input and Output:
                        itw,
                        verbosity);
 
-    // Update doit_i_field.
+    // Update cloudbox_field.
     out2 << "  Execute doit_rte_agenda. \n";
     Vector f_grid(1, f_mono);
     UpdateSpectralRadianceField(
@@ -1783,7 +1783,7 @@ void RunNewDoit(  //Input and Output:
       acceleration_input[(iteration_counter - 1) % 4] = cloudbox_field_mono;
       // NG - Acceleration
       if (iteration_counter % 4 == 0) {
-        doit_i_field_ngAcceleration(
+        cloudbox_field_ngAcceleration(
             cloudbox_field_mono, acceleration_input, accelerated, verbosity);
       }
     }
@@ -1860,7 +1860,7 @@ void CalcScatteredField1D(
   const Index Np = cloudbox_field_mono.nvitrines();
 
   //Prepare intensity field interpolated on equidistant grid.
-  Matrix doit_i_field_int(Niza, stokes_dim, 0);
+  Matrix cloudbox_field_int(Niza, stokes_dim, 0);
 
   //Prepare product field
   Matrix product_field(Niza, stokes_dim, 0);
@@ -1872,7 +1872,7 @@ void CalcScatteredField1D(
     // needed, because we evaluate the scattering matrix directly for the propagation/
     // outgoing direction, which is the direction of the actual radiation field.
     for (Index i = 0; i < stokes_dim; i++) {
-      interp(doit_i_field_int(joker, i),
+      interp(cloudbox_field_int(joker, i),
              itw(joker,0,joker),
              cloudbox_field_mono(i_p, 0, 0, joker, 0, i),
              gp_za_i);
@@ -1892,7 +1892,7 @@ void CalcScatteredField1D(
           for (Index j = 0; j < stokes_dim; j++) {
             product_field(i_iza, i) +=
                 scattering_matrix(i_p, 0, 0, i_pza, i_iza, i, j) *
-                doit_i_field_int(i_iza, j);
+                cloudbox_field_int(i_iza, j);
           }
         }
       }
@@ -2110,7 +2110,7 @@ void UpdateSpectralRadianceField1D(
   epsilon[2] = 0.01;
   epsilon[3] = 0.01;
 
-  Matrix doit_i_field_limb;
+  Matrix cloudbox_field_limb;
   Tensor5 ext_mat_field;
   Tensor4 abs_vec_field;
 
@@ -2238,7 +2238,7 @@ void UpdateSpectralRadianceField1D(
       Index limb_it = 0;
       while (!conv_flag && limb_it < 10) {
         limb_it++;
-        doit_i_field_limb = cloudbox_field_mono(joker, 0, 0, i_za, 0, joker);
+        cloudbox_field_limb = cloudbox_field_mono(joker, 0, 0, i_za, 0, joker);
         for (Index i_p = 0; i_p <= N_p-1; i_p++) {
           // For this case the cloudbox goes down to the surface and we
           // look downwards. These cases are outside the cloudbox and
@@ -2285,7 +2285,7 @@ void UpdateSpectralRadianceField1D(
           for (Index stokes_index = 0; conv_flag && stokes_index < stokes_dim;
                stokes_index++) {
             Numeric diff = cloudbox_field_mono(i_p, 0, 0, i_za, 0, stokes_index) -
-                           doit_i_field_limb(i_p, stokes_index);
+                           cloudbox_field_limb(i_p, stokes_index);
 
             // If the absolute difference of the components
             // is larger than the pre-defined values, continue with
@@ -2372,14 +2372,14 @@ void UpdateCloudPropagationPath1D(
     Tensor3 ext_mat_int(stokes_dim, stokes_dim, Npath, 0.);
     Matrix abs_vec_int(stokes_dim, Npath, 0.);
     Matrix sca_vec_int(stokes_dim, Npath, 0.);
-    Matrix doit_i_field_mono_int(stokes_dim, Npath, 0.);
+    Matrix cloudbox_field_mono_int(stokes_dim, Npath, 0.);
 
 
     InterpolateOnPropagation1D(
                          ext_mat_int,
                          abs_vec_int,
                          sca_vec_int,
-                         doit_i_field_mono_int,
+                         cloudbox_field_mono_int,
                          ext_mat_field,
                          abs_vec_field,
                          cloudbox_scat_field,
@@ -2407,7 +2407,7 @@ void UpdateCloudPropagationPath1D(
                               ext_mat_int,
                               abs_vec_int,
                               sca_vec_int,
-                              doit_i_field_mono_int,
+                              cloudbox_field_mono_int,
                               cloudbox_limits,
                               f_grid,
                               p_index,
@@ -2769,7 +2769,7 @@ void CheckConvergence(
         << "calculation is not correct. In case of limb \n"
         << "simulations please make sure that you use an \n"
         << "optimized zenith angle grid. \n"
-        << "*doit_i_field* might be wrong.\n";
+        << "*cloudbox_field* might be wrong.\n";
     out1 << "Warning in DOIT calculation (output set to NaN):\n" << out.str();
 //    cloudbox_field_mono = NAN;
     convergence_flag = 1;
@@ -2789,7 +2789,7 @@ void CheckConvergence(
 
                 // If the absolute difference of the components
                 // is larger than the pre-defined values, return
-                // to *doit_i_fieldIterate* and do next iteration
+                // to *cloudbox_fieldIterate* and do next iteration
                 if (Tb_unit) {
                   diff = invrayjean(diff, f_mono);
                   if (abs(diff) > epsilon[i_s]) {

@@ -10517,12 +10517,10 @@ void define_md_data_raw() {
                   "\n"
                   "TODO: INCLUDE TEXT\n"),
       AUTHORS("Manfred Brath"),
-      OUT("doit_i_field",
-          "doit_i_field_clearsky",
+      OUT("cloudbox_field",
+          "cloudbox_field_clearsky",
           "za_grid",
           "aa_grid",
-          "scat_za_grid",
-          "scat_aa_grid",
           "gas_extinction_doit",
           "p_grid_gas_extinction",
           "extinction_matrix_doit",
@@ -10571,7 +10569,7 @@ void define_md_data_raw() {
           "N_scat_za_grid",
           "N_scat_aa_grid",
           "za_grid_type",
-          "doit_i_field_apriori"),
+          "cloudbox_field_apriori"),
       GIN_TYPE("Vector",
                "Index",
                "Numeric",
@@ -10611,7 +10609,7 @@ void define_md_data_raw() {
           "Number of scattering azimuth angle grid points for the "
           "calculation of the scattering intergral",
           "Zenith angle grid type",
-          "apriori doit_i_field if empty initial field is set to clearsky")));
+          "apriori cloudbox_field if empty initial field is set to clearsky")));
 
   md_data_raw.push_back(MdRecord(
       NAME("nlte_fieldRescalePopulationLevels"),
