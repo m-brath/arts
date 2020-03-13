@@ -2532,18 +2532,76 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
 
   PropagationMatrix ext_mat_local;
   StokesVector abs_vec_local;
+
+  PropagationMatrix ext_mat_0;
+  PropagationMatrix ext_mat_1;
+  StokesVector abs_vec_0;
+  StokesVector abs_vec_1;
+  Vector sca_vec_0(stokes_dim, 0);
+  Vector sca_vec_1(stokes_dim, 0);
+  Vector source_0(stokes_dim, 0);
+  Vector source_1(stokes_dim, 0);
+  Matrix trans_mat_0(stokes_dim,stokes_dim, 0);
+  Matrix trans_mat_1(stokes_dim,stokes_dim, 0);
+  Numeric exponential_0=1.;
+  Numeric exponential_1=1.;
+
+
   Matrix matrix_tmp(stokes_dim, stokes_dim);
   Vector vector_tmp(stokes_dim);
 
   // Incoming stokes vector
   stokes_vec = cloudbox_field_mono_int(joker, Nppath - 1);
 
+  // Frequency
+  Numeric f = f_grid[0];
+
   for (Index k = Nppath - 1; k >= 0; k--) {
-    // Save propmat_clearsky from previous level
-    std::swap(cur_propmat_clearsky, prev_propmat_clearsky);
+
+    std::swap(source_1, source_0);
+    std::swap(trans_mat_1, trans_mat_0);
+    std::swap(exponential_1, exponential_0);
 
     //Set current propmat clearsky
     cur_propmat_clearsky[0].Kjj() = gas_extinction_ppath[k];
+
+    opt_prop_sum_propmat_clearsky(
+        ext_mat_1, abs_vec_1, cur_propmat_clearsky);
+
+    //Scattered intensity
+    for (Index i = 0; i < stokes_dim; i++) {
+      sca_vec_1[i] = sca_vec_int(i, k);
+    }
+
+    // Add particle absorption to abs_vec.
+    abs_vec_1 += (StokesVector) abs_vec_int(joker, k);
+
+    // Add particle extinction to ext_mat.
+    PropagationMatrix PM(ext_mat_int(joker, joker, k));
+    ext_mat_1 += PM;
+//    ext_mat_1 += (PropagationMatrix) ext_mat_int(joker, joker, k);
+
+    // Length of the half path between the two layers.
+    Numeric lstep;
+    if (k == Nppath - 1) {
+      lstep = lstep_ppath[k-1];
+    }
+    else{
+      lstep = lstep_ppath[k];
+    }
+
+    Numeric rte_planck_value_1 = planck(f, temperature_ppath[k]);
+
+    CalcTransmissionAndSourceForRTStep(
+        source_1,
+        trans_mat_1,
+        exponential_1,
+        ext_mat_1,
+        abs_vec_1,
+        sca_vec_1,
+        lstep,
+        rte_planck_value_1);
+
 
     // Skip any further calculations for the first point.
     // We need values at two ppath points before we can average.
@@ -2551,66 +2609,14 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
       continue;
     }
 
-    // Average prev_propmat_clearsky with cur_propmat_clearsky
-    prev_propmat_clearsky[0] += cur_propmat_clearsky[0];
-    prev_propmat_clearsky[0] *= 0.5;
-
-    opt_prop_sum_propmat_clearsky(
-        ext_mat_local, abs_vec_local, prev_propmat_clearsky);
-
-    for (Index i = 0; i < stokes_dim; i++) {
-      // Averaging of sca_vec:
-      sca_vec_av[i] = 0.5 * (sca_vec_int(i, k) + sca_vec_int(i, k + 1));
-    }
-
-    // Add average particle absorption to abs_vec.
-    abs_vec_local.AddAverageAtPosition(abs_vec_int(joker, k),
-                                       abs_vec_int(joker, k + 1));
-
-    // Add average particle extinction to ext_mat.
-    ext_mat_local.AddAverageAtPosition(ext_mat_int(joker, joker, k),
-                                       ext_mat_int(joker, joker, k + 1));
-
-    // Frequency
-    Numeric f = f_grid[0];
-
-    // Calculate Planck function
-    Numeric rte_planck_value =
-        planck(f, 0.5 * (temperature_ppath[k] + temperature_ppath[k + 1]));
-
-    // Length of the path between the two layers.
-    Numeric lstep = lstep_ppath[k];
-
-    // Some messages:
-    if (out3.sufficient_priority()) {
-      abs_vec_local.VectorAtPosition(vector_tmp);
-      ext_mat_local.MatrixAtPosition(matrix_tmp);
-      out3 << "-----------------------------------------\n";
-      out3 << "Input for radiative transfer step \n"
-           << "calculation inside"
-           << " the cloudbox:"
-           << "\n";
-      out3 << "Stokes vector at intersection point: \n" << stokes_vec << "\n";
-      out3 << "lstep: ..." << lstep << "\n";
-      out3 << "------------------------------------------\n";
-      out3 << "Averaged coefficients: \n";
-      out3 << "Planck function: " << rte_planck_value << "\n";
-      out3 << "Scattering vector: " << sca_vec_av << "\n";
-      out3 << "Absorption vector: " << vector_tmp << "\n";
-      out3 << "Extinction matrix: " << matrix_tmp << "\n";
-
-      assert(!is_singular(matrix_tmp));
-    }
-
-    // Radiative transfer step calculation. The Stokes vector
-    // is updated until the considered point is reached.
-    RadiativeTransferStep(stokes_vec,
-                          Matrix(stokes_dim, stokes_dim),
-                          ext_mat_local,
-                          abs_vec_local,
-                          sca_vec_av,
-                          lstep,
-                          rte_planck_value);
+    RadiativeTransferIntegrationStep(stokes_vec,
+                                     trans_mat_0,
+                                     trans_mat_1,
+                                     exponential_0,
+                                     exponential_1,
+                                     source_0,
+                                     source_1,
+                                     lstep);
 
   }  // End of loop over a ppath step.
 
@@ -2626,108 +2632,150 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
                       joker) = stokes_vec;
 }
 
-void RadiativeTransferStep(  //Output and Input:
-    //TODO: Remove trans_mat, it is not used within doit.
-    VectorView stokes_vec,
+void CalcTransmissionAndSourceForRTStep(  //Output:
+    VectorView source,
     MatrixView trans_mat,
+    Numeric& exponent,
     //Input
-    const PropagationMatrix& ext_mat_av,
-    const StokesVector& abs_vec_av,
-    const ConstVectorView& sca_vec_av,
+    const PropagationMatrix& ext_mat,
+    const StokesVector& abs_vec,
+    const ConstVectorView& sca_vec,
     const Numeric& lstep,
-    const Numeric& rtp_planck_value,
-    const bool& trans_is_precalc) {
+    const Numeric& rtp_planck_value) {
   //Stokes dimension:
-  Index stokes_dim = stokes_vec.nelem();
+  Index stokes_dim = sca_vec.nelem();
 
   //Test sizes
-  assert(ext_mat_av.NumberOfFrequencies() == 1 and
-         abs_vec_av.NumberOfFrequencies() == 1);
+  assert(ext_mat.NumberOfFrequencies() == 1 and
+         abs_vec.NumberOfFrequencies() == 1);
 
   //Check inputs:
-  assert(is_size(trans_mat, 1, stokes_dim, stokes_dim));
-  assert(stokes_dim == ext_mat_av.StokesDimensions() and
-         stokes_dim == abs_vec_av.StokesDimensions());
-  assert(is_size(sca_vec_av, stokes_dim));
+  assert(stokes_dim == ext_mat.StokesDimensions() and
+         stokes_dim == abs_vec.StokesDimensions());
   assert(rtp_planck_value >= 0);
   assert(lstep >= 0);
-  //assert (not ext_mat_av.AnySingular());  This is asserted at a later time in this version...
-
-  // Check, if only the first component of abs_vec is non-zero:
-  const bool unpol_abs_vec = abs_vec_av.IsUnpolarized(0);
 
   bool unpol_sca_vec = true;
 
-  for (Index i = 1; i < stokes_dim; i++)
-    if (sca_vec_av[i] != 0) unpol_sca_vec = false;
-
-  // Calculate transmission by general function, if not precalculated
-  Index extmat_case = 0;
-  if (!trans_is_precalc) {
-    compute_transmission_matrix_from_averaged_matrix_at_frequency(
-        trans_mat, lstep, ext_mat_av, 0);
-  }
-
-  //--- Scalar case: ---------------------------------------------------------
-  if (stokes_dim == 1) {
-    stokes_vec[0] = stokes_vec[0] * trans_mat(0, 0) +
-                    (abs_vec_av.Kjj()[0] * rtp_planck_value + sca_vec_av[0]) /
-                    ext_mat_av.Kjj()[0] * (1 - trans_mat(0, 0));
-  }
-
-    //--- Vector case: ---------------------------------------------------------
-
-    // We have here two cases, diagonal or non-diagonal ext_mat_gas
-    // For diagonal ext_mat_gas, we expect abs_vec_gas to only have a
-    // non-zero value in position 1.
-
-    //- Unpolarised
-  else if (extmat_case == 1 && unpol_abs_vec && unpol_sca_vec) {
-    const Numeric invK = 1.0 / ext_mat_av.Kjj()[0];
-    // Stokes dim 1
-    stokes_vec[0] = stokes_vec[0] * trans_mat(0, 0) +
-                    (abs_vec_av.Kjj()[0] * rtp_planck_value + sca_vec_av[0]) *
-                    invK * (1 - trans_mat(0, 0));
-
-    // Stokes dims > 1
-    for (Index i = 1; i < stokes_dim; i++) {
-      stokes_vec[i] = stokes_vec[i] * trans_mat(i, i) +
-                      sca_vec_av[i] * invK * (1 - trans_mat(i, i));
+  for (Index i = 1; i < stokes_dim; i++) {
+    if (sca_vec[i] != 0) {
+      unpol_sca_vec = false;
     }
   }
 
-    //- General case
+  // Calculate transmission by general function, if not precalculated
+  compute_transmission_matrix_from_averaged_matrix_at_frequency(
+      trans_mat, 1, ext_mat, 0);
+
+
+  exponent=ext_mat.Kjj(0,0)[0];
+  trans_mat*=exp(exponent);
+
+  //--- Scalar case: ---------------------------------------------------------
+  if (stokes_dim == 1) {
+    source[0] =
+        (abs_vec.Kjj()[0] * rtp_planck_value + sca_vec[0]) / ext_mat.Kjj()[0];
+  }
+  //- General case
   else {
     Matrix invK(stokes_dim, stokes_dim);
-    ext_mat_av.MatrixInverseAtPosition(invK);
+    ext_mat.MatrixInverseAtPosition(invK);
 
-    Vector source = abs_vec_av.VectorAtPosition();
-    source *= rtp_planck_value;
+    Vector source_temp = abs_vec.VectorAtPosition();
+    source_temp *= rtp_planck_value;
 
     for (Index i = 0; i < stokes_dim; i++)
-      source[i] += sca_vec_av[i];  // b = abs_vec * B + sca_vec
+      source_temp[i] += sca_vec[i];  // b = abs_vec * B + sca_vec
 
     // solve K^(-1)*b = x
-    Vector x(stokes_dim);
-    mult(x, invK, source);
 
-    Vector term1(stokes_dim);
-    Vector term2(stokes_dim);
-
-    Matrix ImT(stokes_dim, stokes_dim);
-    id_mat(ImT);
-    ImT -= trans_mat;
-    mult(term2, ImT, x);  // term2: second term of the solution of the RTE with
-    //fixed scattered field
-
-    // term1: first term of solution of the RTE with fixed scattered field
-    mult(term1, trans_mat, stokes_vec);
-
-    for (Index i = 0; i < stokes_dim; i++)
-      stokes_vec[i] = term1[i] + term2[i];  // Compute the new Stokes Vector
+    mult(source, invK, source_temp);
   }
 }
 
+void RadiativeTransferIntegrationStep(  //Output:
+    VectorView stokes_vec,
+    //Input
+    const MatrixView& trans_mat_0,
+    const MatrixView& trans_mat_1,
+    const Numeric exponent_0,
+    const Numeric exponent_1,
+    const VectorView& source_0,
+    const VectorView& source_1,
+    const Numeric& lstep) {
+  //Stokes dimension:
+  Index stokes_dim = source_1.nelem();
+
+  Matrix dT = trans_mat_1;
+  dT -= trans_mat_0;
+
+  Vector dS = source_1;
+  dS -= source_0;
+
+  Numeric dE = exponent_1 - exponent_0;
+
+  Index order = 2;
+  Vector sub_samples;
+
+  nlinspace(sub_samples, 0., 1., order + 1);
+  sub_samples *= lstep;
+
+  Numeric mean_sub;
+  Vector S;
+  Matrix T;
+  Numeric E;
+  Matrix ImT(stokes_dim, stokes_dim);
+
+  for (Index i = 0; i < order; i++) {
+    mean_sub = (sub_samples[i] + sub_samples[i + 1]) / 2;
+
+    //Evaluate source
+    S = dS;
+    S /= (lstep);
+    S *= mean_sub;
+    S += source_0;
+
+    //Evaluate transmission
+    T = dT;
+    T /= (lstep);
+    T *= mean_sub;
+    T += trans_mat_0;
+
+    //
+    E=dE/(lstep)*mean_sub+exponent_0;
+
+
+//    for (Index i_st = 0; i_st < order; i_st++){
+//      for (Index j_st = 0; j_st < order; j_st++){
+//        T(i_st,j_st)=T(i_st,j_st);
+//      }
+//    }
+
+    T *= exp(-E*lstep/order);
+
+    //--- Scalar case: ---------------------------------------------------------
+    if (stokes_dim == 1) {
+      stokes_vec[0] = stokes_vec[0] * T(0, 0) +(1 - T(0, 0))*S[0];
+    }
+
+    else {
+      Vector term1(stokes_dim);
+      Vector term2(stokes_dim);
+
+
+      id_mat(ImT);
+      ImT -= T;
+      mult(term2, ImT, S);  // term2: second term of the solution of the RTE with
+      //fixed scattered field
+
+      // term1: first term of solution of the RTE with fixed scattered field
+      mult(term1, T, stokes_vec);
+
+      for (Index j = 0; j < stokes_dim; j++)
+        stokes_vec[j] = term1[j] + term2[j];  // Compute the new Stokes Vector
+    }
+  }
+}
 
 
 void CheckConvergence(
