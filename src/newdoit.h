@@ -1043,6 +1043,55 @@ void RadiativeTransferStep(  //Output and Input:
     const Numeric& rtp_planck_value,
     const bool& trans_is_precalc = false);
 
+//TODO add doxygen doc
+void NewRTStepInCloudNoBackground(
+    Tensor6View cloudbox_field_mono,
+    const ConstVectorView& lstep_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& pressure_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstTensor3View& ext_mat_int,
+    const ConstMatrixView& abs_vec_int,
+    const ConstMatrixView& sca_vec_int,
+    const ConstMatrixView& cloudbox_field_mono_int,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& f_grid,
+    const Index& p_index,
+    const Index& lat_index,
+    const Index& lon_index,
+    const Index& za_index,
+    const Index& aa_index,
+    const Verbosity& verbosity);
+
+//TODO add doxygen doc
+void CalcSourceForRTStep(  //Output:
+    VectorView source,
+    //Input
+    const PropagationMatrix& ext_mat,
+    const StokesVector& abs_vec,
+    const ConstVectorView& sca_vec,
+    const Numeric& rtp_planck_value);
+
+//TODO add doxygen doc
+void RTSolver2ndOrder(  //in and out:
+    VectorView stokes_vec,
+    ConstVectorView& source_0,
+    ConstVectorView& source_1,
+    ConstMatrixView& trans_mat_01,
+    const Numeric& tau_01,
+    ConstVectorView& Qmax);
+
+//TODO add doxygen doc
+void RTSolver3rdOrder(//in and out:
+    VectorView stokes_vec,
+    ConstVectorView& source_0,
+    ConstVectorView& source_1,
+    ConstVectorView& source_2,
+    ConstMatrixView& trans_mat_01,
+    const Numeric& tau_01,
+    const Numeric& tau_12,
+    ConstVectorView& Qmax);
+
 /** Checks the convergence of the DOIT iteration
  *
  * @param[out] convergence_flag Flag for the convergence test.
