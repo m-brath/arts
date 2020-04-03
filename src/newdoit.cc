@@ -2417,23 +2417,46 @@ void UpdateCloudPropagationPath1D(
 //                              0,
 //                              verbosity);
 
-    NewRTStepInCloudNoBackground(cloudbox_field_mono,
-                              lstep_ppath,
-                              temperature_ppath,
-                              pressure_ppath,
-                              gas_extinction_ppath,
-                              ext_mat_int,
-                              abs_vec_int,
-                              sca_vec_int,
-                              cloudbox_field_mono_int,
-                              cloudbox_limits,
-                              f_grid,
-                              p_index,
-                              0,
-                              0,
-                              za_index,
-                              0,
-                              verbosity);
+      Index Nppath = pressure_ppath.nelem();
+
+      if (Nppath==2) {
+        NewRTStepInCloudNoBackground(cloudbox_field_mono,
+                                  lstep_ppath,
+                                  temperature_ppath,
+                                  pressure_ppath,
+                                  gas_extinction_ppath,
+                                  ext_mat_int,
+                                  abs_vec_int,
+                                  sca_vec_int,
+                                  cloudbox_field_mono_int,
+                                  cloudbox_limits,
+                                  f_grid,
+                                  p_index,
+                                  0,
+                                  0,
+                                  za_index,
+                                  0,
+                                  verbosity);
+      } else {
+        NewRTStepInCloudNoBackground2(cloudbox_field_mono,
+                                      lstep_ppath,
+                                      temperature_ppath,
+                                      pressure_ppath,
+                                      gas_extinction_ppath,
+                                      ext_mat_int,
+                                      abs_vec_int,
+                                      sca_vec_int,
+                                      cloudbox_field_mono_int,
+                                      cloudbox_limits,
+                                      f_grid,
+                                      p_index,
+                                      0,
+                                      0,
+                                      za_index,
+                                      0,
+                                      verbosity);
+      }
+
 
 
     // bkgr=2 indicates that the background is the surface
@@ -2881,6 +2904,180 @@ void NewRTStepInCloudNoBackground(
                         aa_index,
                         joker) = stokes_vec;
 }
+
+void NewRTStepInCloudNoBackground2(
+    Tensor6View cloudbox_field_mono,
+    const ConstVectorView& lstep_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& pressure_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstTensor3View& ext_mat_int,
+    const ConstMatrixView& abs_vec_int,
+    const ConstMatrixView& sca_vec_int,
+    const ConstMatrixView& cloudbox_field_mono_int,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& f_grid,
+    const Index& p_index,
+    const Index& lat_index,
+    const Index& lon_index,
+    const Index& za_index,
+    const Index& aa_index,
+    const Verbosity& verbosity) {
+  const Index stokes_dim = cloudbox_field_mono.ncols();
+  const Index atmosphere_dim = cloudbox_limits.nelem() / 2;
+  const Index Nppath = pressure_ppath.nelem();
+
+  Vector sca_vec_av(stokes_dim, 0);
+  Vector stokes_vec(stokes_dim, 0.);
+  Vector rtp_temperature_nlte_dummy(0);
+
+  // Two propmat_clearsky to average between
+  ArrayOfPropagationMatrix propmat_clearsky2(1,
+                                             PropagationMatrix(1, stokes_dim));
+
+  PropagationMatrix ext_mat_01;
+  PropagationMatrix ext_mat_12;
+  PropagationMatrix ext_mat_0;
+  PropagationMatrix ext_mat_1;
+  PropagationMatrix ext_mat_2;
+  StokesVector abs_vec_2;
+  Vector sca_vec_2(stokes_dim, 0);
+  Vector source_0(stokes_dim, 0);
+  Vector source_1(stokes_dim, 0);
+  Vector source_2(stokes_dim, 0);
+  Vector j_0(stokes_dim, 0);
+  Vector j_1(stokes_dim, 0);
+  Vector j_2(stokes_dim, 0);
+  Vector j_01(stokes_dim, 0);
+  Vector Qmax(stokes_dim, 0);
+  Matrix trans_mat_01(stokes_dim, stokes_dim, 0);
+  Matrix trans_mat_12(stokes_dim, stokes_dim, 0);
+  Numeric tau_01 = 0.;
+  Numeric tau_12 = 0.;
+  Numeric rte_planck_value_2 = 0.;
+  Numeric lstep = 0.;
+
+  Matrix matrix_tmp(stokes_dim, stokes_dim);
+  Vector vector_tmp(stokes_dim);
+
+  // Incoming stokes vector
+  stokes_vec = cloudbox_field_mono_int(joker, Nppath - 1);
+
+  // Frequency
+  Numeric f = f_grid[0];
+
+
+  for (Index k = Nppath - 1; k >= 0; k--) {
+    std::swap(source_1, source_0);
+    std::swap(source_2, source_1);
+    std::swap(j_1, j_0);
+    std::swap(j_2, j_1);
+
+    std::swap(ext_mat_1, ext_mat_0);
+    std::swap(ext_mat_2, ext_mat_1);
+
+
+    //Set current propmat clearsky
+    propmat_clearsky2[0].Kjj() = gas_extinction_ppath[k];
+
+    opt_prop_sum_propmat_clearsky(ext_mat_2, abs_vec_2, propmat_clearsky2);
+
+    //Scattered intensity
+    for (Index i = 0; i < stokes_dim; i++) {
+      sca_vec_2[i] = sca_vec_int(i, k);
+    }
+
+    // Add particle absorption to abs_vec.
+    abs_vec_2 += (StokesVector)abs_vec_int(joker, k);
+
+    // Add particle extinction to ext_mat.
+    PropagationMatrix PM(ext_mat_int(joker, joker, k));
+    ext_mat_2 += PM;
+
+    rte_planck_value_2 = planck(f, temperature_ppath[k]);
+    CalcSourceForRTStep(
+        source_2, j_2, ext_mat_2, abs_vec_2, sca_vec_2, rte_planck_value_2);
+
+    if (k >= Nppath - 2) {
+      continue;
+    }
+
+
+
+    //mean extinction between point 0 and  point 1
+    ext_mat_01 = ext_mat_0;
+    ext_mat_01 += ext_mat_1;
+    ext_mat_01 *= 0.5;
+
+    ext_mat_12 = ext_mat_1;
+    ext_mat_12 += ext_mat_2;
+    ext_mat_12 *= 0.5;
+
+    lstep = lstep_ppath[k];
+
+    //calc optical thickness and transmission
+    compute_transmission_matrix_from_averaged_matrix_at_frequency(
+        trans_mat_01, lstep, ext_mat_01, 0);
+
+
+
+    tau_01 = ext_mat_01.Kjj(0, 0)[0] * lstep;
+    tau_12 = ext_mat_12.Kjj(0, 0)[0] * lstep;
+
+    j_01 = j_0;
+    j_01 += j_1;
+    j_01 *= 0.5;
+
+    Qmax=j_01;
+    Qmax*=lstep;
+
+    RTSolver3rdOrder(stokes_vec,
+                     source_0,
+                     source_1,
+                     source_2,
+                     trans_mat_01,
+                     tau_01,
+                     tau_12,
+                     Qmax);
+
+    if (k==0){
+
+      compute_transmission_matrix_from_averaged_matrix_at_frequency(
+          trans_mat_12, lstep, ext_mat_12, 0);
+
+      j_01 = j_1;
+      j_01 += j_2;
+      j_01 *= 0.5;
+
+      Qmax=j_01;
+      Qmax*=lstep;
+
+      RTSolver2ndOrder(stokes_vec,
+                       source_1,
+                       source_2,
+                       trans_mat_12,
+                       tau_12,
+                       Qmax);
+
+    }
+
+
+  }
+
+  // Assign calculated Stokes Vector to cloudbox_field_mono.
+  if (atmosphere_dim == 1)
+    cloudbox_field_mono(p_index, 0, 0, za_index, 0, joker) = stokes_vec;
+  else if (atmosphere_dim == 3)
+    cloudbox_field_mono(p_index,
+                        lat_index - cloudbox_limits[2],
+                        lon_index - cloudbox_limits[4],
+                        za_index,
+                        aa_index,
+                        joker) = stokes_vec;
+}
+
+
+
 
 void CalcSourceForRTStep(  //Output:
     VectorView source,

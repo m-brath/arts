@@ -1064,6 +1064,26 @@ void NewRTStepInCloudNoBackground(
     const Verbosity& verbosity);
 
 //TODO add doxygen doc
+void NewRTStepInCloudNoBackground2(
+    Tensor6View cloudbox_field_mono,
+    const ConstVectorView& lstep_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& pressure_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstTensor3View& ext_mat_int,
+    const ConstMatrixView& abs_vec_int,
+    const ConstMatrixView& sca_vec_int,
+    const ConstMatrixView& cloudbox_field_mono_int,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& f_grid,
+    const Index& p_index,
+    const Index& lat_index,
+    const Index& lon_index,
+    const Index& za_index,
+    const Index& aa_index,
+    const Verbosity& verbosity);
+
+//TODO add doxygen doc
 void CalcSourceForRTStep(  //Output:
     VectorView source,
     VectorView j, //emission density
