@@ -1066,6 +1066,7 @@ void NewRTStepInCloudNoBackground(
 //TODO add doxygen doc
 void CalcSourceForRTStep(  //Output:
     VectorView source,
+    VectorView j, //emission density
     //Input
     const PropagationMatrix& ext_mat,
     const StokesVector& abs_vec,

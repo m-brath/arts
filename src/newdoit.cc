@@ -2784,7 +2784,9 @@ void NewRTStepInCloudNoBackground(
   Vector sca_vec_1(stokes_dim, 0);
   Vector source_0(stokes_dim, 0);
   Vector source_1(stokes_dim, 0);
-  Vector source_01(stokes_dim, 0);
+  Vector j_0(stokes_dim, 0);
+  Vector j_1(stokes_dim, 0);
+  Vector j_01(stokes_dim, 0);
   Vector Qmax(stokes_dim, 0);
   Matrix trans_mat_01(stokes_dim, stokes_dim, 0);
   Numeric tau_01 = 0.;
@@ -2803,6 +2805,7 @@ void NewRTStepInCloudNoBackground(
 
   for (Index k = Nppath - 1; k >= 0; k--) {
     std::swap(source_1, source_0);
+    std::swap(j_1, j_0);
     std::swap(ext_mat_1, ext_mat_0);
 
 
@@ -2825,7 +2828,7 @@ void NewRTStepInCloudNoBackground(
 
     rte_planck_value_1 = planck(f, temperature_ppath[k]);
     CalcSourceForRTStep(
-        source_1, ext_mat_1, abs_vec_1, sca_vec_1, rte_planck_value_1);
+        source_1, j_1, ext_mat_1, abs_vec_1, sca_vec_1, rte_planck_value_1);
 
     if (k == Nppath - 1) {
       continue;
@@ -2850,11 +2853,12 @@ void NewRTStepInCloudNoBackground(
     id_mat(T);
     T *= tau_01;
 
-    source_01 = source_0;
-    source_01 += source_1;
-    source_01 *= 0.5;
+    j_01 = j_0;
+    j_01 += j_1;
+    j_01 *= 0.5;
 
-    mult(Qmax, T, source_01);
+    Qmax=j_01;
+    Qmax*=lstep;
 
     RTSolver2ndOrder(stokes_vec,
                        source_0,
@@ -2880,6 +2884,7 @@ void NewRTStepInCloudNoBackground(
 
 void CalcSourceForRTStep(  //Output:
     VectorView source,
+    VectorView j, //emission density
     //Input
     const PropagationMatrix& ext_mat,
     const StokesVector& abs_vec,
@@ -2890,22 +2895,24 @@ void CalcSourceForRTStep(  //Output:
 
   //--- Scalar case: ---------------------------------------------------------
   if (stokes_dim == 1) {
-    source[0] =
-        (abs_vec.Kjj()[0] * rtp_planck_value + sca_vec[0]) / ext_mat.Kjj()[0];
+
+    j[0]= (abs_vec.Kjj()[0] * rtp_planck_value + sca_vec[0]);
+
+    source[0] = j[0] / ext_mat.Kjj()[0];
   }
   //- General case
   else {
     Matrix invK(stokes_dim, stokes_dim);
     ext_mat.MatrixInverseAtPosition(invK);
 
-    Vector source_temp = abs_vec.VectorAtPosition();
-    source_temp *= rtp_planck_value;
+    j = abs_vec.VectorAtPosition();
+    j *= rtp_planck_value;
 
     for (Index i = 0; i < stokes_dim; i++)
-      source_temp[i] += sca_vec[i];  // b = abs_vec * B + sca_vec
+      j[i] += sca_vec[i];  // b = abs_vec * B + sca_vec
 
     // solve K^(-1)*b = x
-    mult(source, invK, source_temp);
+    mult(source, invK, j);
   }
 }
 
