@@ -2154,37 +2154,79 @@ void UpdateSpectralRadianceField1D(
       // to cloudbox_limits[0] to do a sequential update of the
       // radiation field
       for (Index i_p = N_p - 2; i_p >= 0; i_p--) {
-
         const Index idx = subscript2index(i_za, i_p, N_za);
 
-        const Vector pressure_ppath=PressureArray[idx];
-        const Vector temperature_ppath=TemperatureArray[idx];
-        const Vector gas_extinction_ppath=GasExtinctionArray[idx];
-        const Vector lstep_ppath=LstepArray[idx];
-        const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
-        const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
+        const Vector pressure_ppath = PressureArray[idx];
+        const Vector temperature_ppath = TemperatureArray[idx];
+        const Vector gas_extinction_ppath = GasExtinctionArray[idx];
+        const Vector lstep_ppath = LstepArray[idx];
+        const ArrayOfGridPos cloud_gp_p_ppath = GposArray[idx];
+        const ArrayOfGridPos cloud_gp_za_ppath = GposZenithArray[idx];
         const Matrix itw_ppath = InterpWeightsArray[idx];
         const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
 
-        UpdateCloudPropagationPath1D(cloudbox_field_mono,
-                                     i_p,
-                                     i_za,
-                                     cloudbox_limits,
-                                     cloudbox_scat_field,
-                                     pressure_ppath,
-                                     temperature_ppath,
-                                     gas_extinction_ppath,
-                                     lstep_ppath,
-                                     cloud_gp_p_ppath,
-                                     cloud_gp_za_ppath,
-                                     itw_ppath,
-                                     itw_za_ppath,
-                                     f_grid,
-                                     ext_mat_field,
-                                     abs_vec_field,
-                                     surface_reflection_matrix,
-                                     surface_emission,
-                                     verbosity);
+        if (i_p > 0) {
+          const Index idx_ip1 = subscript2index(i_za, i_p-1, N_za);
+          const Vector pressure_ppath_ip1 = PressureArray[idx_ip1];
+          const Vector temperature_ppath_ip1 = TemperatureArray[idx_ip1];
+          const Vector gas_extinction_ppath_ip1 = GasExtinctionArray[idx_ip1];
+          const Vector lstep_ppath_ip1 = LstepArray[idx_ip1];
+          const ArrayOfGridPos cloud_gp_p_ppath_ip1 = GposArray[idx_ip1];
+          const ArrayOfGridPos cloud_gp_za_ppath_ip1 = GposZenithArray[idx_ip1];
+          const Matrix itw_ppath_ip1 = InterpWeightsArray[idx_ip1];
+          const Matrix itw_za_ppath_ip1 = InterpWeightsZenithArray[idx_ip1];
+
+          UpdateCloudPropagationPath1D_3rdOrderIntegration(cloudbox_field_mono,
+                                       i_p,
+                                       i_za,
+                                       cloudbox_limits,
+                                       cloudbox_scat_field,
+                                       pressure_ppath,
+                                       temperature_ppath,
+                                       gas_extinction_ppath,
+                                       lstep_ppath,
+                                       cloud_gp_p_ppath,
+                                       cloud_gp_za_ppath,
+                                       itw_ppath,
+                                       itw_za_ppath,
+                                       pressure_ppath_ip1,
+                                       temperature_ppath_ip1,
+                                       gas_extinction_ppath_ip1,
+                                       lstep_ppath_ip1,
+                                       cloud_gp_p_ppath_ip1,
+                                       cloud_gp_za_ppath_ip1,
+                                       itw_ppath_ip1,
+                                       itw_za_ppath_ip1,
+                                       f_grid,
+                                       ext_mat_field,
+                                       abs_vec_field,
+                                       surface_reflection_matrix,
+                                       surface_emission,
+                                       verbosity);
+
+
+
+        } else {
+          UpdateCloudPropagationPath1D(cloudbox_field_mono,
+                                       i_p,
+                                       i_za,
+                                       cloudbox_limits,
+                                       cloudbox_scat_field,
+                                       pressure_ppath,
+                                       temperature_ppath,
+                                       gas_extinction_ppath,
+                                       lstep_ppath,
+                                       cloud_gp_p_ppath,
+                                       cloud_gp_za_ppath,
+                                       itw_ppath,
+                                       itw_za_ppath,
+                                       f_grid,
+                                       ext_mat_field,
+                                       abs_vec_field,
+                                       surface_reflection_matrix,
+                                       surface_emission,
+                                       verbosity);
+        }
       }
     } else if (i_za > MaxLimbIndex) {
       //
@@ -2203,25 +2245,68 @@ void UpdateSpectralRadianceField1D(
         const Matrix itw_ppath = InterpWeightsArray[idx];
         const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
 
-        UpdateCloudPropagationPath1D(cloudbox_field_mono,
-                                     i_p,
-                                     i_za,
-                                     cloudbox_limits,
-                                     cloudbox_scat_field,
-                                     pressure_ppath,
-                                     temperature_ppath,
-                                     gas_extinction_ppath,
-                                     lstep_ppath,
-                                     cloud_gp_p_ppath,
-                                     cloud_gp_za_ppath,
-                                     itw_ppath,
-                                     itw_za_ppath,
-                                     f_grid,
-                                     ext_mat_field,
-                                     abs_vec_field,
-                                     surface_reflection_matrix,
-                                     surface_emission,
-                                     verbosity);
+        if (i_p < N_p-1) {
+          const Index idx_ip1 = subscript2index(i_za, i_p+1, N_za);
+          const Vector pressure_ppath_ip1 = PressureArray[idx_ip1];
+          const Vector temperature_ppath_ip1 = TemperatureArray[idx_ip1];
+          const Vector gas_extinction_ppath_ip1 = GasExtinctionArray[idx_ip1];
+          const Vector lstep_ppath_ip1 = LstepArray[idx_ip1];
+          const ArrayOfGridPos cloud_gp_p_ppath_ip1 = GposArray[idx_ip1];
+          const ArrayOfGridPos cloud_gp_za_ppath_ip1 = GposZenithArray[idx_ip1];
+          const Matrix itw_ppath_ip1 = InterpWeightsArray[idx_ip1];
+          const Matrix itw_za_ppath_ip1 = InterpWeightsZenithArray[idx_ip1];
+
+          UpdateCloudPropagationPath1D_3rdOrderIntegration(cloudbox_field_mono,
+                                                           i_p,
+                                                           i_za,
+                                                           cloudbox_limits,
+                                                           cloudbox_scat_field,
+                                                           pressure_ppath,
+                                                           temperature_ppath,
+                                                           gas_extinction_ppath,
+                                                           lstep_ppath,
+                                                           cloud_gp_p_ppath,
+                                                           cloud_gp_za_ppath,
+                                                           itw_ppath,
+                                                           itw_za_ppath,
+                                                           pressure_ppath_ip1,
+                                                           temperature_ppath_ip1,
+                                                           gas_extinction_ppath_ip1,
+                                                           lstep_ppath_ip1,
+                                                           cloud_gp_p_ppath_ip1,
+                                                           cloud_gp_za_ppath_ip1,
+                                                           itw_ppath_ip1,
+                                                           itw_za_ppath_ip1,
+                                                           f_grid,
+                                                           ext_mat_field,
+                                                           abs_vec_field,
+                                                           surface_reflection_matrix,
+                                                           surface_emission,
+                                                           verbosity);
+
+
+
+        } else {
+          UpdateCloudPropagationPath1D(cloudbox_field_mono,
+                                       i_p,
+                                       i_za,
+                                       cloudbox_limits,
+                                       cloudbox_scat_field,
+                                       pressure_ppath,
+                                       temperature_ppath,
+                                       gas_extinction_ppath,
+                                       lstep_ppath,
+                                       cloud_gp_p_ppath,
+                                       cloud_gp_za_ppath,
+                                       itw_ppath,
+                                       itw_za_ppath,
+                                       f_grid,
+                                       ext_mat_field,
+                                       abs_vec_field,
+                                       surface_reflection_matrix,
+                                       surface_emission,
+                                       verbosity);
+        }
       }  // Close loop over p_grid (inside cloudbox).
     }    // end if downlooking.
 
@@ -2257,25 +2342,68 @@ void UpdateSpectralRadianceField1D(
             const Matrix itw_ppath = InterpWeightsArray[idx];
             const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
 
-            UpdateCloudPropagationPath1D(cloudbox_field_mono,
-                                         i_p,
-                                         i_za,
-                                         cloudbox_limits,
-                                         cloudbox_scat_field,
-                                         pressure_ppath,
-                                         temperature_ppath,
-                                         gas_extinction_ppath,
-                                         lstep_ppath,
-                                         cloud_gp_p_ppath,
-                                         cloud_gp_za_ppath,
-                                         itw_ppath,
-                                         itw_za_ppath,
-                                         f_grid,
-                                         ext_mat_field,
-                                         abs_vec_field,
-                                         surface_reflection_matrix,
-                                         surface_emission,
-                                         verbosity);
+            if (i_p < N_p-1) {
+              const Index idx_ip1 = subscript2index(i_za, i_p+1, N_za);
+              const Vector pressure_ppath_ip1 = PressureArray[idx_ip1];
+              const Vector temperature_ppath_ip1 = TemperatureArray[idx_ip1];
+              const Vector gas_extinction_ppath_ip1 = GasExtinctionArray[idx_ip1];
+              const Vector lstep_ppath_ip1 = LstepArray[idx_ip1];
+              const ArrayOfGridPos cloud_gp_p_ppath_ip1 = GposArray[idx_ip1];
+              const ArrayOfGridPos cloud_gp_za_ppath_ip1 = GposZenithArray[idx_ip1];
+              const Matrix itw_ppath_ip1 = InterpWeightsArray[idx_ip1];
+              const Matrix itw_za_ppath_ip1 = InterpWeightsZenithArray[idx_ip1];
+
+              UpdateCloudPropagationPath1D_3rdOrderIntegration(cloudbox_field_mono,
+                                                               i_p,
+                                                               i_za,
+                                                               cloudbox_limits,
+                                                               cloudbox_scat_field,
+                                                               pressure_ppath,
+                                                               temperature_ppath,
+                                                               gas_extinction_ppath,
+                                                               lstep_ppath,
+                                                               cloud_gp_p_ppath,
+                                                               cloud_gp_za_ppath,
+                                                               itw_ppath,
+                                                               itw_za_ppath,
+                                                               pressure_ppath_ip1,
+                                                               temperature_ppath_ip1,
+                                                               gas_extinction_ppath_ip1,
+                                                               lstep_ppath_ip1,
+                                                               cloud_gp_p_ppath_ip1,
+                                                               cloud_gp_za_ppath_ip1,
+                                                               itw_ppath_ip1,
+                                                               itw_za_ppath_ip1,
+                                                               f_grid,
+                                                               ext_mat_field,
+                                                               abs_vec_field,
+                                                               surface_reflection_matrix,
+                                                               surface_emission,
+                                                               verbosity);
+
+
+
+            } else {
+              UpdateCloudPropagationPath1D(cloudbox_field_mono,
+                                           i_p,
+                                           i_za,
+                                           cloudbox_limits,
+                                           cloudbox_scat_field,
+                                           pressure_ppath,
+                                           temperature_ppath,
+                                           gas_extinction_ppath,
+                                           lstep_ppath,
+                                           cloud_gp_p_ppath,
+                                           cloud_gp_za_ppath,
+                                           itw_ppath,
+                                           itw_za_ppath,
+                                           f_grid,
+                                           ext_mat_field,
+                                           abs_vec_field,
+                                           surface_reflection_matrix,
+                                           surface_emission,
+                                           verbosity);
+            }
           }
         }
 
@@ -2458,6 +2586,164 @@ void UpdateCloudPropagationPath1D(
       }
 
 
+
+    // bkgr=2 indicates that the background is the surface
+//    if (bkgr == 2) {
+//       cout << "hit surface "<< ppath_step.gp_p << endl;
+//      cloud_RT_surface(ws,
+//                       cloudbox_field_mono,
+//                       surface_rtprop_agenda,
+//                       f_grid,
+//                       stokes_dim,
+//                       ppath_step,
+//                       cloudbox_limits,
+//                       za_grid,
+//                       za_index);
+//    }
+
+  }  //end if inside cloudbox
+}
+
+void UpdateCloudPropagationPath1D_3rdOrderIntegration(
+    Tensor6View& cloudbox_field_mono,
+    const Index& p_index,
+    const Index& za_index,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstTensor6View& cloudbox_scat_field,
+    const ConstVectorView& pressure_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstVectorView& lstep_ppath,
+    const ArrayOfGridPos& cloud_gp_p_ppath,
+    const ArrayOfGridPos& cloud_gp_za_ppath,
+    const MatrixView& itw_ppath,
+    const MatrixView& itw_za_ppath,
+    const ConstVectorView& pressure_ppath_ip1,
+    const ConstVectorView& temperature_ppath_ip1,
+    const ConstVectorView& gas_extinction_ppath_ip1,
+    const ConstVectorView& lstep_ppath_ip1,
+    const ArrayOfGridPos& cloud_gp_p_ppath_ip1,
+    const ArrayOfGridPos& cloud_gp_za_ppath_ip1,
+    const MatrixView& itw_ppath_ip1,
+    const MatrixView& itw_za_ppath_ip1,
+    const ConstVectorView& f_grid,
+    const ConstTensor5View& ext_mat_field,
+    const ConstTensor4View& abs_vec_field,
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const Verbosity& verbosity) {
+
+  Index Npath = pressure_ppath.nelem();
+  Index Npath_ip1 = pressure_ppath_ip1.nelem();
+  Index Ncloud = cloudbox_scat_field.nvitrines();
+
+  // Check whether the next point is inside or outside the
+  // cloudbox. Only if the next point lies inside the
+  // cloudbox a radiative transfer step caclulation has to
+  // be performed.
+  // FIXME: It may be that I have to adjust NCloud by minus 1 ??
+  if ((0 <= cloud_gp_p_ppath[1].idx &&
+       Ncloud > cloud_gp_p_ppath[1].idx) ||
+      (Ncloud == cloud_gp_p_ppath[1].idx &&
+       abs(cloud_gp_p_ppath[1].fd[0]) < 1e-6)) {
+    // Stokes dimension
+    const Index stokes_dim = cloudbox_field_mono.ncols();
+
+
+    // Initialize variables for interpolated values
+    Tensor3 ext_mat_int(stokes_dim, stokes_dim, Npath, 0.);
+    Matrix abs_vec_int(stokes_dim, Npath, 0.);
+    Matrix sca_vec_int(stokes_dim, Npath, 0.);
+    Matrix cloudbox_field_mono_int(stokes_dim, Npath, 0.);
+
+
+    InterpolateOnPropagation1D(
+        ext_mat_int,
+        abs_vec_int,
+        sca_vec_int,
+        cloudbox_field_mono_int,
+        ext_mat_field,
+        abs_vec_field,
+        cloudbox_scat_field,
+        cloudbox_field_mono,
+        cloud_gp_p_ppath,
+        cloud_gp_za_ppath,
+        itw_ppath,
+        itw_za_ppath,
+        verbosity);
+
+
+    Tensor3 ext_mat_int_ip1(stokes_dim, stokes_dim, Npath_ip1, 0.);
+    Matrix abs_vec_int_ip1(stokes_dim, Npath_ip1, 0.);
+    Matrix sca_vec_int_ip1(stokes_dim, Npath_ip1, 0.);
+    Matrix cloudbox_field_mono_int_ip1(stokes_dim, Npath_ip1, 0.);
+
+
+    InterpolateOnPropagation1D(
+        ext_mat_int_ip1,
+        abs_vec_int_ip1,
+        sca_vec_int_ip1,
+        cloudbox_field_mono_int_ip1,
+        ext_mat_field,
+        abs_vec_field,
+        cloudbox_scat_field,
+        cloudbox_field_mono,
+        cloud_gp_p_ppath_ip1,
+        cloud_gp_za_ppath_ip1,
+        itw_ppath_ip1,
+        itw_za_ppath_ip1,
+        verbosity);
+
+
+    // ppath_what_background(ppath_step) tells the
+    // radiative background.  More information in the
+    // function get_iy_of_background.
+    // if there is no background we proceed the RT
+//    Index bkgr = ppath_what_background(ppath_step);
+
+    // Radiative transfer from one layer to the next, starting
+    // at the intersection with the next layer and propagating
+    // to the considered point.
+//    RTStepInCloudNoBackground(cloudbox_field_mono,
+//                              lstep_ppath,
+//                              temperature_ppath,
+//                              pressure_ppath,
+//                              gas_extinction_ppath,
+//                              ext_mat_int,
+//                              abs_vec_int,
+//                              sca_vec_int,
+//                              cloudbox_field_mono_int,
+//                              cloudbox_limits,
+//                              f_grid,
+//                              p_index,
+//                              0,
+//                              0,
+//                              za_index,
+//                              0,
+//                              verbosity);
+
+    ShortCharacteristicsRT_step3rdOrder(cloudbox_field_mono,
+                                        lstep_ppath,
+                                        temperature_ppath,
+                                        gas_extinction_ppath,
+                                        ext_mat_int,
+                                        abs_vec_int,
+                                        sca_vec_int,
+                                        cloudbox_field_mono_int,
+                                        lstep_ppath_ip1,
+                                        temperature_ppath_ip1,
+                                        gas_extinction_ppath_ip1,
+                                        ext_mat_int_ip1,
+                                        abs_vec_int_ip1,
+                                        sca_vec_int_ip1,
+                                        cloudbox_limits,
+                                        f_grid,
+                                        p_index,
+                                        0,
+                                        0,
+                                        za_index,
+                                        0,
+                                        verbosity);
 
     // bkgr=2 indicates that the background is the surface
 //    if (bkgr == 2) {
@@ -3076,7 +3362,171 @@ void NewRTStepInCloudNoBackground2(
                         joker) = stokes_vec;
 }
 
+void ShortCharacteristicsRT_step3rdOrder(
+    Tensor6View cloudbox_field_mono,
+    const ConstVectorView& lstep_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstTensor3View& ext_mat_int,
+    const ConstMatrixView& abs_vec_int,
+    const ConstMatrixView& sca_vec_int,
+    const ConstMatrixView& cloudbox_field_mono_int,
+    const ConstVectorView& lstep_ppath_ip1,
+    const ConstVectorView& temperature_ppath_ip1,
+    const ConstVectorView& gas_extinction_ppath_ip1,
+    const ConstTensor3View& ext_mat_int_ip1,
+    const ConstMatrixView& abs_vec_int_ip1,
+    const ConstMatrixView& sca_vec_int_ip1,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& f_grid,
+    const Index& p_index,
+    const Index& lat_index,
+    const Index& lon_index,
+    const Index& za_index,
+    const Index& aa_index,
+    const Verbosity& verbosity) {
+  const Index stokes_dim = cloudbox_field_mono.ncols();
+  const Index atmosphere_dim = cloudbox_limits.nelem() / 2;
+  const Index Nppath = temperature_ppath.nelem();
 
+  Vector sca_vec_av(stokes_dim, 0);
+  Vector stokes_vec(stokes_dim, 0.);
+  Vector rtp_temperature_nlte_dummy(0);
+
+  // Two propmat_clearsky to average between
+  ArrayOfPropagationMatrix propmat_clearsky(1,
+                                             PropagationMatrix(1, stokes_dim));
+
+  PropagationMatrix ext_mat_01;
+  PropagationMatrix ext_mat_12;
+  PropagationMatrix ext_mat_0;
+  PropagationMatrix ext_mat_1;
+  PropagationMatrix ext_mat_2;
+  StokesVector abs_vec_0;
+  StokesVector abs_vec_1;
+  StokesVector abs_vec_2;
+  Vector sca_vec_0(stokes_dim, 0);
+  Vector sca_vec_1(stokes_dim, 0);
+  Vector sca_vec_2(stokes_dim, 0);
+  Vector source_0(stokes_dim, 0);
+  Vector source_1(stokes_dim, 0);
+  Vector source_2(stokes_dim, 0);
+  Vector j_0(stokes_dim, 0);
+  Vector j_1(stokes_dim, 0);
+  Vector j_2(stokes_dim, 0);
+  Vector j_01(stokes_dim, 0);
+  Vector Qmax(stokes_dim, 0);
+  Matrix trans_mat_01(stokes_dim, stokes_dim, 0);
+  Matrix trans_mat_12(stokes_dim, stokes_dim, 0);
+  Numeric tau_01 = 0.;
+  Numeric tau_12 = 0.;
+  Numeric rte_planck_value_0 = 0.;
+  Numeric rte_planck_value_1 = 0.;
+  Numeric rte_planck_value_2 = 0.;
+  Numeric lstep01 = 0.;
+  Numeric lstep12 = 0.;
+
+  Matrix matrix_tmp(stokes_dim, stokes_dim);
+  Vector vector_tmp(stokes_dim);
+
+  // Incoming stokes vector
+  stokes_vec = cloudbox_field_mono_int(joker, Nppath - 1);
+
+  // Frequency
+  Numeric f = f_grid[0];
+
+    //Set current propmat clearsky
+    propmat_clearsky[0].Kjj() = gas_extinction_ppath[Nppath - 1];
+    opt_prop_sum_propmat_clearsky(ext_mat_0, abs_vec_0, propmat_clearsky);
+
+    propmat_clearsky[0].Kjj() = gas_extinction_ppath[0];
+    opt_prop_sum_propmat_clearsky(ext_mat_1, abs_vec_1, propmat_clearsky);
+
+    propmat_clearsky[0].Kjj() = gas_extinction_ppath_ip1[0];
+    opt_prop_sum_propmat_clearsky(ext_mat_2, abs_vec_2, propmat_clearsky);
+
+    //Scattered intensity
+    for (Index i = 0; i < stokes_dim; i++) {
+      sca_vec_0[i] = sca_vec_int(i, Nppath-1);
+      sca_vec_1[i] = sca_vec_int(i, 0);
+      sca_vec_2[i] = sca_vec_int_ip1(i, 0);
+    }
+
+    // Add particle absorption to abs_vec.
+    abs_vec_0 += (StokesVector)abs_vec_int(joker, Nppath-1);
+    abs_vec_1 += (StokesVector)abs_vec_int(joker, 0);
+    abs_vec_2 += (StokesVector)abs_vec_int_ip1(joker, 0);
+
+    // Add particle extinction to ext_mat.
+    PropagationMatrix PM0(ext_mat_int(joker, joker, Nppath-1));
+    ext_mat_0 += PM0;
+
+    PropagationMatrix PM1(ext_mat_int(joker, joker, 0));
+    ext_mat_1 += PM1;
+
+    PropagationMatrix PM2(ext_mat_int_ip1(joker, joker, 0));
+    ext_mat_2 += PM2;
+
+    rte_planck_value_0 = planck(f, temperature_ppath[Nppath-1]);
+    rte_planck_value_1 = planck(f, temperature_ppath[0]);
+    rte_planck_value_2 = planck(f, temperature_ppath_ip1[0]);
+
+    CalcSourceForRTStep(
+        source_0, j_0, ext_mat_0, abs_vec_0, sca_vec_0, rte_planck_value_0);
+
+    CalcSourceForRTStep(
+        source_1, j_1, ext_mat_1, abs_vec_1, sca_vec_1, rte_planck_value_1);
+
+    CalcSourceForRTStep(
+        source_2, j_2, ext_mat_2, abs_vec_2, sca_vec_2, rte_planck_value_2);
+
+    //mean extinction between point 0 and  point 1
+    ext_mat_01 = ext_mat_0;
+    ext_mat_01 += ext_mat_1;
+    ext_mat_01 *= 0.5;
+
+    ext_mat_12 = ext_mat_1;
+    ext_mat_12 += ext_mat_2;
+    ext_mat_12 *= 0.5;
+
+    lstep01 = lstep_ppath[0];
+    lstep12 = lstep_ppath_ip1[0];
+
+    //calc optical thickness and transmission
+    compute_transmission_matrix_from_averaged_matrix_at_frequency(
+        trans_mat_01, lstep01, ext_mat_01, 0);
+
+    tau_01 = ext_mat_01.Kjj(0, 0)[0] * lstep01;
+    tau_12 = ext_mat_12.Kjj(0, 0)[0] * lstep12;
+
+    j_01 = j_0;
+    j_01 += j_1;
+    j_01 *= 0.5;
+
+    Qmax=j_01;
+    Qmax*=lstep01;
+
+    RTSolver3rdOrder(stokes_vec,
+                     source_0,
+                     source_1,
+                     source_2,
+                     trans_mat_01,
+                     tau_01,
+                     tau_12,
+                     Qmax);
+
+
+  // Assign calculated Stokes Vector to cloudbox_field_mono.
+  if (atmosphere_dim == 1)
+    cloudbox_field_mono(p_index, 0, 0, za_index, 0, joker) = stokes_vec;
+  else if (atmosphere_dim == 3)
+    cloudbox_field_mono(p_index,
+                        lat_index - cloudbox_limits[2],
+                        lon_index - cloudbox_limits[4],
+                        za_index,
+                        aa_index,
+                        joker) = stokes_vec;
+}
 
 
 void CalcSourceForRTStep(  //Output:

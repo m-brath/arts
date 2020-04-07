@@ -837,6 +837,36 @@ void UpdateSpectralRadianceField1D(
     const Verbosity& verbosity);
 
 //TODO:Add doxygen doc
+void UpdateCloudPropagationPath1D_3rdOrderIntegration(
+    Tensor6View& cloudbox_field_mono,
+    const Index& p_index,
+    const Index& za_index,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstTensor6View& cloudbox_scat_field,
+    const ConstVectorView& pressure_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstVectorView& lstep_ppath,
+    const ArrayOfGridPos& cloud_gp_p_ppath,
+    const ArrayOfGridPos& cloud_gp_za_ppath,
+    const MatrixView& itw_ppath,
+    const MatrixView& itw_za_ppath,
+    const ConstVectorView& pressure_ppath_ip1,
+    const ConstVectorView& temperature_ppath_ip1,
+    const ConstVectorView& gas_extinction_ppath_ip1,
+    const ConstVectorView& lstep_ppath_ip1,
+    const ArrayOfGridPos& cloud_gp_p_ppath_ip1,
+    const ArrayOfGridPos& cloud_gp_za_ppath_ip1,
+    const MatrixView& itw_ppath_ip1,
+    const MatrixView& itw_za_ppath_ip1,
+    const ConstVectorView& f_grid,
+    const ConstTensor5View& ext_mat_field,
+    const ConstTensor4View& abs_vec_field,
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const Verbosity& verbosity);
+
+//TODO:Add doxygen doc
 void UpdateSpectralRadianceField3D(
     Workspace& ws,
     // WS Input and Output:
@@ -1074,6 +1104,31 @@ void NewRTStepInCloudNoBackground2(
     const ConstMatrixView& abs_vec_int,
     const ConstMatrixView& sca_vec_int,
     const ConstMatrixView& cloudbox_field_mono_int,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& f_grid,
+    const Index& p_index,
+    const Index& lat_index,
+    const Index& lon_index,
+    const Index& za_index,
+    const Index& aa_index,
+    const Verbosity& verbosity);
+
+//TODO add doxygen doc
+void ShortCharacteristicsRT_step3rdOrder(
+    Tensor6View cloudbox_field_mono,
+    const ConstVectorView& lstep_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstTensor3View& ext_mat_int,
+    const ConstMatrixView& abs_vec_int,
+    const ConstMatrixView& sca_vec_int,
+    const ConstMatrixView& cloudbox_field_mono_int,
+    const ConstVectorView& lstep_ppath_ip1,
+    const ConstVectorView& temperature_ppath_ip1,
+    const ConstVectorView& gas_extinction_ppath_ip1,
+    const ConstTensor3View& ext_mat_int_ip1,
+    const ConstMatrixView& abs_vec_int_ip1,
+    const ConstMatrixView& sca_vec_int_ip1,
     const ArrayOfIndex& cloudbox_limits,
     const ConstVectorView& f_grid,
     const Index& p_index,
