@@ -519,6 +519,7 @@ void CalcSurfaceProperties(Workspace& ws,
  * @param[in] lat_grid Latitude grid.
  * @param[in] lon_grid Longitude grid.
  * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
+ * @param[in] z_field altitude
  * @param[in] ppath_lmax Maximum length between points describing propagation
  *              paths outside of cloudbox
  * @param[in] ppath_lraytrace Maximum length of ray tracing steps when determining
@@ -533,6 +534,7 @@ void CalcPropagationPathMaxLength(
     const ConstVectorView& lat_grid,
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
+    const ConstTensor3View& z_field,
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
     const Numeric& tau_max);
