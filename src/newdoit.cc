@@ -871,7 +871,7 @@ void NewDoitMonoCalc(Workspace& ws,
 
 
 
-
+  //TODO: Remove this! For the adaptive this is not needed anymore.
   Tensor3 p_path_maxlength;
   if (tau_max > 0) {
     //To estimate the maximum ppath length, we need gas and particle extinction,
@@ -903,6 +903,10 @@ void NewDoitMonoCalc(Workspace& ws,
         tau_max);
   }
 
+  //TODO: Include refinement here. This includes the check where to refine and
+  // the prepration of the subdomains.
+
+
   ArrayOfVector PressureArray;
   ArrayOfVector TemperatureArray;
   ArrayOfMatrix VmrArray;
@@ -913,32 +917,68 @@ void NewDoitMonoCalc(Workspace& ws,
   ArrayOfVector LstepArray;
   Index MaxLimbIndex;
 
-  EstimatePPathElements1D(ws,
-                          PressureArray,
-                          TemperatureArray,
-                          VmrArray,
-                          InterpWeightsArray,
-                          InterpWeightsZenithArray,
-                          GposArray,
-                          GposZenithArray,
-                          LstepArray,
-                          MaxLimbIndex,
-                          cloudbox_limits,
-                          za_grid,
-                          ppath_step_agenda,
-                          ppath_lmax,
-                          ppath_lraytrace,
-                          p_path_maxlength,
-                          p_grid,
-                          z_field,
-                          t_field,
-                          vmr_field,
-                          refellipsoid,
-                          Vector(1, f_mono),
-                          verbosity);
+  if (atmosphere_dim ==1) {
+
+      //Estimate the ppath for main domain
+      EstimatePPathElements1D(ws,
+                              PressureArray,
+                              TemperatureArray,
+                              VmrArray,
+                              InterpWeightsArray,
+                              InterpWeightsZenithArray,
+                              GposArray,
+                              GposZenithArray,
+                              LstepArray,
+                              MaxLimbIndex,
+                              cloudbox_limits,
+                              za_grid,
+                              ppath_step_agenda,
+                              ppath_lmax,
+                              ppath_lraytrace,
+                              p_path_maxlength,
+                              p_grid,
+                              z_field,
+                              t_field,
+                              vmr_field,
+                              refellipsoid,
+                              Vector(1, f_mono),
+                              verbosity);
+
+      //TODO: Add here the ppath estimation for the subdomains
+
+      //Estimate the ppath for the subdomains and save them ArrayOf...
+      //Each array element is one subdomain.
+      //Ask Olli for the best strategy
 
 
+  } else {
+    throw runtime_error("3d is not implemented yet! Sorry");
+//    EstimatePPathElements3D(ws,
+//                            PressureArray,
+//                            TemperatureArray,
+//                            VmrArray,
+//                            InterpWeightsArray,
+//                            InterpWeightsZenithArray,
+//                            GposArray,
+//                            GposZenithArray,
+//                            LstepArray,
+//                            MaxLimbIndex,
+//                            cloudbox_limits,
+//                            za_grid,
+//                            ppath_step_agenda,
+//                            ppath_lmax,
+//                            ppath_lraytrace,
+//                            p_path_maxlength,
+//                            p_grid,
+//                            z_field,
+//                            t_field,
+//                            vmr_field,
+//                            refellipsoid,
+//                            Vector(1, f_mono),
+//                            verbosity);
+  }
 
+  //TODO: Add here the Gasextinction of the subdomains
 
   //calculate gas extinction
   ArrayOfVector GasExtinctionArray(PressureArray.nelem());
@@ -961,7 +1001,8 @@ void NewDoitMonoCalc(Workspace& ws,
   out0 << os.str();
   os.clear();
 
-
+  //TODO:add subdomain variables. Ask Olli if there is a better way to include
+  // the subdomain.
 
   //run new doit
   RunNewDoit(
@@ -1478,6 +1519,8 @@ void ForwardScatteringCorrection(  //Output
         }
       }
     }
+  } else {
+    throw runtime_error("3d is not implemented yet! Sorry");
   }
 }
 
@@ -2114,26 +2157,6 @@ void UpdateSpectralRadianceField1D(
   Tensor5 ext_mat_field;
   Tensor4 abs_vec_field;
 
-  //TODO: CHeck if normalization is needed. If yes, add it!
-  //Only dummy variables:
-  //Index scat_aa_index_local = 0;
-  //  if (normalize) {
-  //    Tensor4 si, sei, si_corr;
-  //    doit_scat_fieldNormalize(ws,
-  //                             cloudbox_scat_field,
-  //                             cloudbox_field_mono,
-  //                             cloudbox_limits,
-  //                             spt_calc_agenda,
-  //                             1,
-  //                             za_grid,
-  //                             aa_grid,
-  //                             pnd_field,
-  //                             t_field,
-  //                             norm_error_threshold,
-  //                             norm_debug,
-  //                             verbosity);
-  //  }
-
 
   Index MaxUpwardAngleIndex=int(Numeric(N_za)/2.-0.5);
 
@@ -2359,7 +2382,7 @@ void UpdateCloudPropagationPath1D(
   // cloudbox. Only if the next point lies inside the
   // cloudbox a radiative transfer step caclulation has to
   // be performed.
-  // FIXME: It may be that I have to adjust NCloud by minus 1 ??
+  // FIXME: It may be that I have to adjust NCloud by minus 1 ?? Nope
   if ((0 <= cloud_gp_p_ppath[1].idx &&
        Ncloud > cloud_gp_p_ppath[1].idx) ||
       (Ncloud == cloud_gp_p_ppath[1].idx &&
