@@ -59,6 +59,132 @@ extern const Numeric PI;
 extern const Numeric RAD2DEG;
 extern const Numeric DEG2RAD;
 
+class Grids {
+ public:
+  /**
+   * I hope this initializes my grid class
+   */
+  Grids() = default;
+
+  Grids(const Vector& p_grid,
+        const Vector& lat_grid,
+        const Vector& lon_grid,
+        const Vector& za_grid,
+        const Vector& aa_grid)
+      : mp_grid(p_grid),
+        mlat_grid(lat_grid),
+        mlon_grid(lon_grid),
+        mza_grid(za_grid),
+        maa_grid(aa_grid) {}
+
+  void set_p_grid(const Vector& p_grid) { mp_grid = p_grid; }
+//  Vector get_p_grid() const { return mp_grid; } //nicht veränderbar
+  const Vector& get_p_grid() const { return mp_grid; }
+
+  void set_lat_grid(const Vector& lat_grid) { mlat_grid = lat_grid; }
+  Vector get_lat_grid() const { return mlat_grid; }
+
+  void set_lon_grid(const Vector& lon_grid) { mlon_grid = lon_grid; }
+  Vector get_lon_grid() const { return mlon_grid; }
+
+  void set_za_grid(const Vector& za_grid) { mza_grid = za_grid; }
+  Vector get_za_grid() const { return mza_grid; }
+
+  void set_aa_grid(const Vector& aa_grid) { maa_grid = aa_grid; }
+  Vector get_aa_grid() const { return maa_grid; }
+
+ protected:
+  Vector mp_grid;
+  Vector mlat_grid;
+  Vector mlon_grid;
+  Vector mza_grid;
+  Vector maa_grid;
+};
+
+class Domain : public Grids {
+ public:
+  Domain() = default;
+
+  Domain(const Vector& p_grid,
+        const Vector& lat_grid,
+        const Vector& lon_grid,
+        const Vector& za_grid,
+        const Vector& aa_grid,
+        const Index& AtmosphereDim)
+      : Grids(p_grid, lat_grid,lon_grid,za_grid,aa_grid),
+        mAtmosphereDim(AtmosphereDim) {}
+
+  // Set variable methods
+  void set_PressureArray(ArrayOfVector PressureArray){
+    mPressureArray = PressureArray;
+  }
+
+  void set_TemperatureArray(ArrayOfVector TemperatureArray){
+    mTemperatureArray = TemperatureArray;
+  }
+
+  void set_GasExtinctionArray(ArrayOfVector GasExtinctionArray){
+    mGasExtinctionArray = GasExtinctionArray;
+  }
+
+  void set_InterpWeightsArray(ArrayOfMatrix InterpWeightsArray){
+    mInterpWeightsArray = InterpWeightsArray;
+  }
+
+  void set_InterpWeightsAngleArray(ArrayOfMatrix InterpWeightsAngleArray){
+    mInterpWeightsAngleArray = InterpWeightsAngleArray;
+  }
+
+  void set_GposPArray(ArrayOfArrayOfGridPos GposPArray){
+    mGposPArray = GposPArray;
+  }
+
+  void set_GposLatArray(ArrayOfArrayOfGridPos GposLatArray){
+    mGposLatArray = GposLatArray;
+  }
+
+  void set_GposLonArray(ArrayOfArrayOfGridPos GposLonArray){
+    mGposLonArray = GposLonArray;
+  }
+
+  void set_GposZenithArray(ArrayOfArrayOfGridPos GposZenithArray){
+    mGposZenithArray = GposZenithArray;
+  }
+
+  void set_GposAzimuthArray(ArrayOfArrayOfGridPos GposAzimuthArray){
+    mGposAzimuthArray = GposAzimuthArray;
+  }
+
+  void set_MaxLimbIndex(Index MaxLimbIndex){
+    mMaxLimbIndex = MaxLimbIndex;
+  }
+
+  void set_AtmosphereDim(Index AtmosphereDim){
+    mAtmosphereDim = AtmosphereDim;
+  }
+
+  //Get variable methods
+
+
+  //Grid Arithmetric functions
+
+ private:
+  ArrayOfVector mPressureArray;
+  ArrayOfVector mTemperatureArray;
+  ArrayOfVector mGasExtinctionArray;
+  ArrayOfMatrix mInterpWeightsArray;
+  ArrayOfMatrix mInterpWeightsAngleArray;
+  ArrayOfArrayOfGridPos mGposPArray;
+  ArrayOfArrayOfGridPos mGposLatArray;
+  ArrayOfArrayOfGridPos mGposLonArray;
+  ArrayOfArrayOfGridPos mGposZenithArray;
+  ArrayOfArrayOfGridPos mGposAzimuthArray;
+  ArrayOfVector mLStepArray;
+  Index mMaxLimbIndex;
+  Index mAtmosphereDim;
+
+};
+
 /** Initialises variables for DOIT scattering calculations.
  *
  * Note that cloudbox_field is Nan-initialzed
