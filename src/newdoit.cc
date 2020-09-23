@@ -779,6 +779,7 @@ void NewDoitMonoCalc(Workspace& ws,
   ostringstream os, os1, os2;
 
 
+
   //calculate par_optpropCalc_doit
   //It assumens at least azimuthally randomly oriented particles
   CalcParticleOpticalProperties(extinction_matrix,
