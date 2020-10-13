@@ -59,39 +59,259 @@ extern const Numeric PI;
 extern const Numeric RAD2DEG;
 extern const Numeric DEG2RAD;
 
-class Grids {
+class DomainPPaths {
  public:
-  /**
-   * I hope this initializes my grid class
-   */
-  Grids() = default;
+  DomainPPaths() = default;
 
-  Grids(const Vector& p_grid,
-        const Vector& lat_grid,
-        const Vector& lon_grid,
-        const Vector& za_grid,
-        const Vector& aa_grid)
+  // constructor for 3d
+  DomainPPaths(const Vector& p_grid,
+             const Vector& lat_grid,
+             const Vector& lon_grid,
+             const Vector& za_grid,
+             const Vector& aa_grid,
+             const ArrayOfVector& PressureArray,
+             const ArrayOfVector& TemperatureArray,
+             const ArrayOfVector& GasExtinctionArray,
+             const ArrayOfMatrix& InterpWeightsArray,
+             const ArrayOfMatrix& InterpWeightsAngleArray,
+             const ArrayOfArrayOfGridPos& GposPArray,
+             const ArrayOfArrayOfGridPos& GposLatArray,
+             const ArrayOfArrayOfGridPos& GposLonArray,
+             const ArrayOfArrayOfGridPos& GposZenithArray,
+             const ArrayOfArrayOfGridPos& GposAzimuthArray,
+             const ArrayOfVector& LStepArray,
+             const Index MaxLimbIndex,
+             const Index AtmosphereDim)
       : mp_grid(p_grid),
         mlat_grid(lat_grid),
         mlon_grid(lon_grid),
         mza_grid(za_grid),
-        maa_grid(aa_grid) {}
+        maa_grid(aa_grid),
+        mPressureArray(PressureArray),
+        mTemperatureArray(TemperatureArray),
+        mGasExtinctionArray(GasExtinctionArray),
+        mInterpWeightsArray(InterpWeightsArray),
+        mInterpWeightsAngleArray(InterpWeightsAngleArray),
+        mGposPArray(GposPArray),
+        mGposLatArray(GposLatArray),
+        mGposLonArray(GposLonArray),
+        mGposZenithArray(GposZenithArray),
+        mGposAzimuthArray(GposAzimuthArray),
+        mLStepArray(LStepArray),
+        mMaxLimbIndex(MaxLimbIndex),
+        mAtmosphereDim(AtmosphereDim) {}
 
+  // constructor for 1d
+  DomainPPaths(const Vector& p_grid,
+             const Vector& lat_grid,
+             const Vector& lon_grid,
+             const Vector& za_grid,
+             const Vector& aa_grid,
+             const ArrayOfVector& PressureArray,
+             const ArrayOfVector& TemperatureArray,
+             const ArrayOfVector& GasExtinctionArray,
+             const ArrayOfMatrix& InterpWeightsArray,
+             const ArrayOfMatrix& InterpWeightsAngleArray,
+             const ArrayOfArrayOfGridPos& GposPArray,
+             const ArrayOfArrayOfGridPos& GposZenithArray,
+             const ArrayOfVector& LStepArray,
+             const Index MaxLimbIndex,
+             const Index AtmosphereDim)
+      : mp_grid(p_grid),
+        mlat_grid(lat_grid),
+        mlon_grid(lon_grid),
+        mza_grid(za_grid),
+        maa_grid(aa_grid),
+        mPressureArray(PressureArray),
+        mTemperatureArray(TemperatureArray),
+        mGasExtinctionArray(GasExtinctionArray),
+        mInterpWeightsArray(InterpWeightsArray),
+        mInterpWeightsAngleArray(InterpWeightsAngleArray),
+        mGposPArray(GposPArray),
+        mGposZenithArray(GposZenithArray),
+        mLStepArray(LStepArray),
+        mMaxLimbIndex(MaxLimbIndex),
+        mAtmosphereDim(AtmosphereDim) {}
+
+  // constructor (only) grids
+  DomainPPaths(const Vector& p_grid,
+             const Vector& lat_grid,
+             const Vector& lon_grid,
+             const Vector& za_grid,
+             const Vector& aa_grid,
+             const Index& AtmosphereDim)
+      : mp_grid(p_grid),
+        mlat_grid(lat_grid),
+        mlon_grid(lon_grid),
+        mza_grid(za_grid),
+        maa_grid(aa_grid),
+        mAtmosphereDim(AtmosphereDim) {}
+
+  // set and get methods of variables
   void set_p_grid(const Vector& p_grid) { mp_grid = p_grid; }
-//  Vector get_p_grid() const { return mp_grid; } //nicht veränderbar
-  const Vector& get_p_grid() const { return mp_grid; }
 
   void set_lat_grid(const Vector& lat_grid) { mlat_grid = lat_grid; }
-  Vector get_lat_grid() const { return mlat_grid; }
 
   void set_lon_grid(const Vector& lon_grid) { mlon_grid = lon_grid; }
-  Vector get_lon_grid() const { return mlon_grid; }
 
   void set_za_grid(const Vector& za_grid) { mza_grid = za_grid; }
-  Vector get_za_grid() const { return mza_grid; }
 
   void set_aa_grid(const Vector& aa_grid) { maa_grid = aa_grid; }
-  Vector get_aa_grid() const { return maa_grid; }
+
+  void set_PressureArray(const ArrayOfVector& PressureArray) {
+    mPressureArray = PressureArray;
+  }
+
+  void set_TemperatureArray(const ArrayOfVector& TemperatureArray) {
+    mTemperatureArray = TemperatureArray;
+  }
+
+  void set_GasExtinctionArray(const ArrayOfVector& GasExtinctionArray) {
+    mGasExtinctionArray = GasExtinctionArray;
+  }
+
+  void set_InterpWeightsArray(const ArrayOfMatrix& InterpWeightsArray) {
+    mInterpWeightsArray = InterpWeightsArray;
+  }
+
+  void set_InterpWeightsAngleArray(
+      const ArrayOfMatrix& InterpWeightsAngleArray) {
+    mInterpWeightsAngleArray = InterpWeightsAngleArray;
+  }
+
+  void set_GposPArray(const ArrayOfArrayOfGridPos& GposPArray) {
+    mGposPArray = GposPArray;
+  }
+
+  void set_GposLatArray(const ArrayOfArrayOfGridPos& GposLatArray) {
+    mGposLatArray = GposLatArray;
+  }
+
+  void set_GposLonArray(const ArrayOfArrayOfGridPos& GposLonArray) {
+    mGposLonArray = GposLonArray;
+  }
+
+  void set_GposZenithArray(const ArrayOfArrayOfGridPos& GposZenithArray) {
+    mGposZenithArray = GposZenithArray;
+  }
+
+  void set_GposAzimuthArray(const ArrayOfArrayOfGridPos& GposAzimuthArray) {
+    mGposAzimuthArray = GposAzimuthArray;
+  }
+
+  void set_LStepArray(const ArrayOfVector& LStepArray) {
+    mLStepArray = LStepArray;
+  }
+
+  void set_MaxLimbIndex(const Index& MaxLimbIndex) {
+    mMaxLimbIndex = MaxLimbIndex;
+  }
+
+  void set_AtmosphereDim(const Index& AtmosphereDim) {
+    mAtmosphereDim = AtmosphereDim;
+  }
+
+
+  //get-methods of variables----------------------------------------------------
+  const Vector& get_p_grid() const { return mp_grid; }
+
+  const Vector& get_lat_grid() const { return mlat_grid; }
+
+  const Vector& get_lon_grid() const { return mlon_grid; }
+
+  const Vector& get_za_grid() const { return mza_grid; }
+
+  const Vector& get_aa_grid() const { return maa_grid; }
+
+  const ArrayOfVector& get_PressureArray() const { return mPressureArray; }
+
+  const ArrayOfVector& get_TemperatureArray() const {
+    return mTemperatureArray;
+  }
+
+  const ArrayOfVector& get_GasExtinctionArray() const {
+    return mGasExtinctionArray;
+  }
+
+  const ArrayOfMatrix& get_InterpWeightsArray() const {
+    return mInterpWeightsArray;
+  }
+
+  const ArrayOfMatrix& get_InterpWeightsAngleArray() const {
+    return mInterpWeightsAngleArray;
+  }
+
+  const ArrayOfArrayOfGridPos& get_GposPArray() const { return mGposPArray; }
+
+  const ArrayOfArrayOfGridPos& get_GposLatArray() const {
+    return mGposLatArray;
+  }
+
+  const ArrayOfArrayOfGridPos& get_GposLonArray() const {
+    return mGposLonArray;
+  }
+
+  const ArrayOfArrayOfGridPos& get_GposZenithArray() const {
+    return mGposZenithArray;
+  }
+
+  const ArrayOfArrayOfGridPos& get_GposAzimuthArray() const {
+    return mGposAzimuthArray;
+  }
+
+  const ArrayOfVector& get_LStepArray() const { return mLStepArray; }
+
+  const Index& get_MaxLimbIndex() const { return mMaxLimbIndex; }
+
+  const Index& get_AtmosphereDim() const { return mAtmosphereDim; }
+
+
+  // get-methods for a specific p_path------------------------------------------
+  const Vector& get_Pressure(const Index& idx) const {
+    return mPressureArray[idx];
+  }
+
+  const Vector& get_Temperature(const Index& idx) const {
+    return mTemperatureArray[idx];
+  }
+
+  const Vector& get_GasExtinction(const Index& idx) const {
+    return mGasExtinctionArray[idx];
+  }
+
+  const Matrix& get_InterpWeights(const Index& idx) const {
+    return mInterpWeightsArray[idx];
+  }
+
+  const Matrix& get_InterpWeightsAngle(const Index& idx) const {
+    return mInterpWeightsAngleArray[idx];
+  }
+
+  const ArrayOfGridPos& get_GposP(const Index& idx) const {
+    return mGposPArray[idx];
+  }
+
+  const ArrayOfGridPos& get_GposLat(const Index& idx) const {
+    return mGposLatArray[idx];
+  }
+
+  const ArrayOfGridPos& get_GposLon(const Index& idx) const {
+    return mGposLonArray[idx];
+  }
+
+  const ArrayOfGridPos& get_GposZenith(const Index& idx) const {
+    return mGposZenithArray[idx];
+  }
+
+  const ArrayOfGridPos& get_GposAzimuth(const Index& idx) const {
+    return mGposAzimuthArray[idx];
+  }
+
+  const Vector& get_LStep(const Index& idx) const { return mLStepArray[idx]; }
+
+  // additional methods---------------------------------------------------------
+  const Index& get_ArrayLength() const { return mPressureArray.nelem(); }
+
 
  protected:
   Vector mp_grid;
@@ -99,76 +319,6 @@ class Grids {
   Vector mlon_grid;
   Vector mza_grid;
   Vector maa_grid;
-};
-
-class Domain : public Grids {
- public:
-  Domain() = default;
-
-  Domain(const Vector& p_grid,
-        const Vector& lat_grid,
-        const Vector& lon_grid,
-        const Vector& za_grid,
-        const Vector& aa_grid,
-        const Index& AtmosphereDim)
-      : Grids(p_grid, lat_grid,lon_grid,za_grid,aa_grid),
-        mAtmosphereDim(AtmosphereDim) {}
-
-  // Set variable methods
-  void set_PressureArray(ArrayOfVector PressureArray){
-    mPressureArray = PressureArray;
-  }
-
-  void set_TemperatureArray(ArrayOfVector TemperatureArray){
-    mTemperatureArray = TemperatureArray;
-  }
-
-  void set_GasExtinctionArray(ArrayOfVector GasExtinctionArray){
-    mGasExtinctionArray = GasExtinctionArray;
-  }
-
-  void set_InterpWeightsArray(ArrayOfMatrix InterpWeightsArray){
-    mInterpWeightsArray = InterpWeightsArray;
-  }
-
-  void set_InterpWeightsAngleArray(ArrayOfMatrix InterpWeightsAngleArray){
-    mInterpWeightsAngleArray = InterpWeightsAngleArray;
-  }
-
-  void set_GposPArray(ArrayOfArrayOfGridPos GposPArray){
-    mGposPArray = GposPArray;
-  }
-
-  void set_GposLatArray(ArrayOfArrayOfGridPos GposLatArray){
-    mGposLatArray = GposLatArray;
-  }
-
-  void set_GposLonArray(ArrayOfArrayOfGridPos GposLonArray){
-    mGposLonArray = GposLonArray;
-  }
-
-  void set_GposZenithArray(ArrayOfArrayOfGridPos GposZenithArray){
-    mGposZenithArray = GposZenithArray;
-  }
-
-  void set_GposAzimuthArray(ArrayOfArrayOfGridPos GposAzimuthArray){
-    mGposAzimuthArray = GposAzimuthArray;
-  }
-
-  void set_MaxLimbIndex(Index MaxLimbIndex){
-    mMaxLimbIndex = MaxLimbIndex;
-  }
-
-  void set_AtmosphereDim(Index AtmosphereDim){
-    mAtmosphereDim = AtmosphereDim;
-  }
-
-  //Get variable methods
-
-
-  //Grid Arithmetric functions
-
- private:
   ArrayOfVector mPressureArray;
   ArrayOfVector mTemperatureArray;
   ArrayOfVector mGasExtinctionArray;
@@ -182,7 +332,6 @@ class Domain : public Grids {
   ArrayOfVector mLStepArray;
   Index mMaxLimbIndex;
   Index mAtmosphereDim;
-
 };
 
 /** Initialises variables for DOIT scattering calculations.
@@ -727,15 +876,16 @@ void RunNewDoit(//Input and Output:
     const Vector& scat_za_grid,
     const Vector& scat_aa_grid,
     // Precalculated quantities on the propagation path
-    const ArrayOfVector& PressureArray,
-    const ArrayOfVector& TemperatureArray,
-    const ArrayOfVector& GasExtinctionArray,
-    const ArrayOfMatrix& InterpWeightsArray,
-    const ArrayOfMatrix& InterpWeightsZenithArray,
-    const ArrayOfArrayOfGridPos& GposArray,
-    const ArrayOfArrayOfGridPos& GposZenithArray,
-    const ArrayOfVector& LstepArray,
-    const Index& MaxLimbIndex,
+//    const ArrayOfVector& PressureArray,
+//    const ArrayOfVector& TemperatureArray,
+//    const ArrayOfVector& GasExtinctionArray,
+//    const ArrayOfMatrix& InterpWeightsArray,
+//    const ArrayOfMatrix& InterpWeightsZenithArray,
+//    const ArrayOfArrayOfGridPos& GposArray,
+//    const ArrayOfArrayOfGridPos& GposZenithArray,
+//    const ArrayOfVector& LstepArray,
+//    const Index& MaxLimbIndex,
+    const DomainPPaths& MainDomainPPaths,
     //Precalculated quantities for scattering integral calulation
     ArrayOfIndex& idir_idx0,
     ArrayOfIndex& idir_idx1,
@@ -896,16 +1046,17 @@ void UpdateSpectralRadianceField(//Input and Output:
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
     // Precalculated quantities on the propagation path
-    const ArrayOfVector& PressureArray,
-    const ArrayOfVector& TemperatureArray,
-    const ArrayOfVector& GasExtinctionArray,
-    const ArrayOfMatrix& InterpWeightsArray,
-    const ArrayOfMatrix& InterpWeightsZenithArray,
-    const ArrayOfArrayOfGridPos& GposArray,
-    const ArrayOfArrayOfGridPos& GposZenithArray,
-    const ArrayOfVector& LstepArray,
-
-    const Index& MaxLimbIndex,
+//    const ArrayOfVector& PressureArray,
+//    const ArrayOfVector& TemperatureArray,
+//    const ArrayOfVector& GasExtinctionArray,
+//    const ArrayOfMatrix& InterpWeightsArray,
+//    const ArrayOfMatrix& InterpWeightsZenithArray,
+//    const ArrayOfArrayOfGridPos& GposArray,
+//    const ArrayOfArrayOfGridPos& GposZenithArray,
+//    const ArrayOfVector& LstepArray,
+//
+//    const Index& MaxLimbIndex,
+    const DomainPPaths& MainDomainPPaths,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
@@ -949,16 +1100,17 @@ void UpdateSpectralRadianceField1D(
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     // Precalculated quantities on the propagation path
-    const ArrayOfVector& PressureArray,
-    const ArrayOfVector& TemperatureArray,
-    const ArrayOfVector& GasExtinctionArray,
-    const ArrayOfMatrix& InterpWeightsArray,
-    const ArrayOfMatrix& InterpWeightsZenithArray,
-    const ArrayOfArrayOfGridPos& GposArray,
-    const ArrayOfArrayOfGridPos& GposZenithArray,
-    const ArrayOfVector& LstepArray,
-    //additional quantities
-    const Index& MaxLimbIndex,
+//    const ArrayOfVector& PressureArray,
+//    const ArrayOfVector& TemperatureArray,
+//    const ArrayOfVector& GasExtinctionArray,
+//    const ArrayOfMatrix& InterpWeightsArray,
+//    const ArrayOfMatrix& InterpWeightsZenithArray,
+//    const ArrayOfArrayOfGridPos& GposArray,
+//    const ArrayOfArrayOfGridPos& GposZenithArray,
+//    const ArrayOfVector& LstepArray,
+//    //additional quantities
+//    const Index& MaxLimbIndex,
+    const DomainPPaths& MainDomainPPaths,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
