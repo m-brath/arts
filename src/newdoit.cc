@@ -908,6 +908,15 @@ void NewDoitMonoCalc(Workspace& ws,
   // the prepration of the subdomains.
 
 
+
+
+  DomainPPaths MainDomainPPaths(p_grid,
+                        lat_grid,
+                        lon_grid,
+                        za_grid,
+                        aa_grid,
+                        atmosphere_dim);
+
   ArrayOfVector PressureArray;
   ArrayOfVector TemperatureArray;
   ArrayOfMatrix VmrArray;
@@ -919,6 +928,8 @@ void NewDoitMonoCalc(Workspace& ws,
   Index MaxLimbIndex;
 
   if (atmosphere_dim ==1) {
+
+
 
       //Estimate the ppath for main domain
       EstimatePPathElements1D(ws,
@@ -944,6 +955,16 @@ void NewDoitMonoCalc(Workspace& ws,
                               refellipsoid,
                               Vector(1, f_mono),
                               verbosity);
+
+    MainDomainPPaths.set_PressureArray(PressureArray);
+    MainDomainPPaths.set_TemperatureArray(TemperatureArray);
+    MainDomainPPaths.set_InterpWeightsArray(InterpWeightsArray);
+    MainDomainPPaths.set_InterpWeightsAngleArray(InterpWeightsZenithArray);
+    MainDomainPPaths.set_GposPArray(GposArray);
+    MainDomainPPaths.set_GposZenithArray(GposZenithArray);
+    MainDomainPPaths.set_LStepArray(LstepArray);
+    MainDomainPPaths.set_MaxLimbIndex(MaxLimbIndex);
+
 
       //TODO: Add here the ppath estimation for the subdomains
 
@@ -982,9 +1003,9 @@ void NewDoitMonoCalc(Workspace& ws,
   //TODO: Add here the Gasextinction of the subdomains
 
   //calculate gas extinction
-  ArrayOfVector GasExtinctionArray(PressureArray.nelem());
+  ArrayOfVector GasExtinctionArray(MainDomainPPaths.get_ArrayLength());
 
-  for (Index i = 0; i < PressureArray.nelem(); i++) {
+  for (Index i = 0; i < MainDomainPPaths.get_ArrayLength(); i++) {
     Vector gas_extinction_temp;
     CalcGasExtinction(ws,
                       gas_extinction_temp,
@@ -997,6 +1018,9 @@ void NewDoitMonoCalc(Workspace& ws,
     GasExtinctionArray[i] = gas_extinction_temp;
 
   }
+  MainDomainPPaths.set_GasExtinctionArray(GasExtinctionArray);
+
+  Vector test=MainDomainPPaths.get_GasExtinction(1);
 
   os << "gas absorption calculated \n";
   out0 << os.str();
@@ -1022,16 +1046,17 @@ void NewDoitMonoCalc(Workspace& ws,
              scat_za_grid,
              scat_aa_grid,
              // Precalculated quantities on the propagation path
-             PressureArray,
-             TemperatureArray,
-             GasExtinctionArray,
-             InterpWeightsArray,
-             InterpWeightsZenithArray,
-             GposArray,
-             GposZenithArray,
-             LstepArray,
-             MaxLimbIndex,
+//             PressureArray,
+//             TemperatureArray,
+//             GasExtinctionArray,
+//             InterpWeightsArray,
+//             InterpWeightsZenithArray,
+//             GposArray,
+//             GposZenithArray,
+//             LstepArray,
+//             MaxLimbIndex,
              //Precalculated quantities for scattering integral calulation
+             MainDomainPPaths,
              idir_idx0,
              idir_idx1,
              pdir_idx0,
@@ -1703,15 +1728,16 @@ void RunNewDoit(  //Input and Output:
     const Vector& scat_za_grid,
     const Vector& scat_aa_grid,
     // Precalculated quantities on the propagation path
-    const ArrayOfVector& PressureArray,
-    const ArrayOfVector& TemperatureArray,
-    const ArrayOfVector& GasExtinctionArray,
-    const ArrayOfMatrix& InterpWeightsArray,
-    const ArrayOfMatrix& InterpWeightsZenithArray,
-    const ArrayOfArrayOfGridPos& GposArray,
-    const ArrayOfArrayOfGridPos& GposZenithArray,
-    const ArrayOfVector& LstepArray,
-    const Index& MaxLimbIndex,
+//    const ArrayOfVector& PressureArray,
+//    const ArrayOfVector& TemperatureArray,
+//    const ArrayOfVector& GasExtinctionArray,
+//    const ArrayOfMatrix& InterpWeightsArray,
+//    const ArrayOfMatrix& InterpWeightsZenithArray,
+//    const ArrayOfArrayOfGridPos& GposArray,
+//    const ArrayOfArrayOfGridPos& GposZenithArray,
+//    const ArrayOfVector& LstepArray,
+//    const Index& MaxLimbIndex,
+    const DomainPPaths& MainDomainPPaths,
     //Precalculated quantities for scattering integral calulation
     ArrayOfIndex& idir_idx0,
     ArrayOfIndex& idir_idx1,
@@ -1799,15 +1825,16 @@ void RunNewDoit(  //Input and Output:
                                 surface_emission,
                                 cloudbox_limits,
                                 atmosphere_dim,
-                                PressureArray,
-                                TemperatureArray,
-                                GasExtinctionArray,
-                                InterpWeightsArray,
-                                InterpWeightsZenithArray,
-                                GposArray,
-                                GposZenithArray,
-                                LstepArray,
-                                MaxLimbIndex,
+//                                PressureArray,
+//                                TemperatureArray,
+//                                GasExtinctionArray,
+//                                InterpWeightsArray,
+//                                InterpWeightsZenithArray,
+//                                GposArray,
+//                                GposZenithArray,
+//                                LstepArray,
+//                                MaxLimbIndex,
+                                MainDomainPPaths,
                                 f_grid,
                                 verbosity);
 
@@ -2058,16 +2085,19 @@ void UpdateSpectralRadianceField(//Input and Output:
                                  const ArrayOfIndex& cloudbox_limits,
                                  const Index& atmosphere_dim,
                             // Precalculated quantities on the propagation path
-                                 const ArrayOfVector& PressureArray,
-                                 const ArrayOfVector& TemperatureArray,
-                                 const ArrayOfVector& GasExtinctionArray,
-                                 const ArrayOfMatrix& InterpWeightsArray,
-                                 const ArrayOfMatrix& InterpWeightsZenithArray,
-                                 const ArrayOfArrayOfGridPos& GposArray,
-                                 const ArrayOfArrayOfGridPos& GposZenithArray,
-                                 const ArrayOfVector& LstepArray,
+//                                 const ArrayOfVector& PressureArray,
+//                                 const ArrayOfVector& TemperatureArray,
+//                                 const ArrayOfVector& GasExtinctionArray,
+//                                 const ArrayOfMatrix& InterpWeightsArray,
+//                                 const ArrayOfMatrix& InterpWeightsZenithArray,
+//                                 const ArrayOfArrayOfGridPos& GposArray,
+//                                 const ArrayOfArrayOfGridPos& GposZenithArray,
+//                                 const ArrayOfVector& LstepArray,
+//
+//                                 const Index& MaxLimbIndex,
+                                 const DomainPPaths& MainDomainPPaths,
 
-                                 const Index& MaxLimbIndex,
+
                                  const Vector& f_grid,
                                  const Verbosity& verbosity) {
   if (atmosphere_dim == 1) {
@@ -2079,15 +2109,16 @@ void UpdateSpectralRadianceField(//Input and Output:
                                   surface_reflection_matrix,
                                   surface_emission,
                                   cloudbox_limits,
-                                  PressureArray,
-                                  TemperatureArray,
-                                  GasExtinctionArray,
-                                  InterpWeightsArray,
-                                  InterpWeightsZenithArray,
-                                  GposArray,
-                                  GposZenithArray,
-                                  LstepArray,
-                                  MaxLimbIndex,
+//                                  PressureArray,
+//                                  TemperatureArray,
+//                                  GasExtinctionArray,
+//                                  InterpWeightsArray,
+//                                  InterpWeightsZenithArray,
+//                                  GposArray,
+//                                  GposZenithArray,
+//                                  LstepArray,
+//                                  MaxLimbIndex,
+                                  MainDomainPPaths,
                                   f_grid,
                                   verbosity);
   } else if (atmosphere_dim == 3) {
@@ -2123,16 +2154,17 @@ void UpdateSpectralRadianceField1D(
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     // Precalculated quantities on the propagation path
-    const ArrayOfVector& PressureArray,
-    const ArrayOfVector& TemperatureArray,
-    const ArrayOfVector& GasExtinctionArray,
-    const ArrayOfMatrix& InterpWeightsArray,
-    const ArrayOfMatrix& InterpWeightsZenithArray,
-    const ArrayOfArrayOfGridPos& GposArray,
-    const ArrayOfArrayOfGridPos& GposZenithArray,
-    const ArrayOfVector& LstepArray,
-    //additional quantities
-    const Index& MaxLimbIndex,
+//    const ArrayOfVector& PressureArray,
+//    const ArrayOfVector& TemperatureArray,
+//    const ArrayOfVector& GasExtinctionArray,
+//    const ArrayOfMatrix& InterpWeightsArray,
+//    const ArrayOfMatrix& InterpWeightsZenithArray,
+//    const ArrayOfArrayOfGridPos& GposArray,
+//    const ArrayOfArrayOfGridPos& GposZenithArray,
+//    const ArrayOfVector& LstepArray,
+//    //additional quantities
+//    const Index& MaxLimbIndex,
+    const DomainPPaths& MainDomainPPaths,
     const Vector& f_grid,
     const Verbosity& verbosity) {
   CREATE_OUT2;
@@ -2181,14 +2213,23 @@ void UpdateSpectralRadianceField1D(
 
         const Index idx = subscript2index(i_za, i_p, N_za);
 
-        const Vector pressure_ppath=PressureArray[idx];
-        const Vector temperature_ppath=TemperatureArray[idx];
-        const Vector gas_extinction_ppath=GasExtinctionArray[idx];
-        const Vector lstep_ppath=LstepArray[idx];
-        const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
-        const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
-        const Matrix itw_ppath = InterpWeightsArray[idx];
-        const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
+//        const Vector pressure_ppath=PressureArray[idx];
+//        const Vector temperature_ppath=TemperatureArray[idx];
+//        const Vector gas_extinction_ppath=GasExtinctionArray[idx];
+//        const Vector lstep_ppath=LstepArray[idx];
+//        const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
+//        const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
+//        const Matrix itw_ppath = InterpWeightsArray[idx];
+//        const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
+        const Vector& pressure_ppath=MainDomainPPaths.get_Pressure(idx);
+        const Vector& temperature_ppath=MainDomainPPaths.get_Temperature(idx);
+        const Vector& gas_extinction_ppath=MainDomainPPaths.get_GasExtinction(idx);
+        const Vector& lstep_ppath=MainDomainPPaths.get_LStep(idx);
+        const ArrayOfGridPos& cloud_gp_p_ppath=MainDomainPPaths.get_GposP(idx);
+        const ArrayOfGridPos& cloud_gp_za_ppath=MainDomainPPaths.get_GposZenith(idx);
+        const Matrix& itw_ppath = MainDomainPPaths.get_InterpWeights(idx);
+        const Matrix& itw_za_ppath = MainDomainPPaths.get_InterpWeightsAngle(idx);
+
 
         UpdateCloudPropagationPath1D(cloudbox_field_mono,
                                      i_p,
@@ -2210,7 +2251,7 @@ void UpdateSpectralRadianceField1D(
                                      surface_emission,
                                      verbosity);
       }
-    } else if (i_za > MaxLimbIndex) {
+    } else if (i_za > MainDomainPPaths.get_MaxLimbIndex()) {
       //
       // Sequential updating for downlooking angles
       //
@@ -2218,14 +2259,22 @@ void UpdateSpectralRadianceField1D(
 
         const Index idx = subscript2index(i_za, i_p, N_za);
 
-        const Vector pressure_ppath=PressureArray[idx];
-        const Vector temperature_ppath=TemperatureArray[idx];
-        const Vector gas_extinction_ppath=GasExtinctionArray[idx];
-        const Vector lstep_ppath=LstepArray[idx];
-        const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
-        const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
-        const Matrix itw_ppath = InterpWeightsArray[idx];
-        const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
+//        const Vector pressure_ppath=PressureArray[idx];
+//        const Vector temperature_ppath=TemperatureArray[idx];
+//        const Vector gas_extinction_ppath=GasExtinctionArray[idx];
+//        const Vector lstep_ppath=LstepArray[idx];
+//        const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
+//        const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
+//        const Matrix itw_ppath = InterpWeightsArray[idx];
+//        const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
+        const Vector& pressure_ppath=MainDomainPPaths.get_Pressure(idx);
+        const Vector& temperature_ppath=MainDomainPPaths.get_Temperature(idx);
+        const Vector& gas_extinction_ppath=MainDomainPPaths.get_GasExtinction(idx);
+        const Vector& lstep_ppath=MainDomainPPaths.get_LStep(idx);
+        const ArrayOfGridPos& cloud_gp_p_ppath=MainDomainPPaths.get_GposP(idx);
+        const ArrayOfGridPos& cloud_gp_za_ppath=MainDomainPPaths.get_GposZenith(idx);
+        const Matrix& itw_ppath = MainDomainPPaths.get_InterpWeights(idx);
+        const Matrix& itw_za_ppath = MainDomainPPaths.get_InterpWeightsAngle(idx);
 
         UpdateCloudPropagationPath1D(cloudbox_field_mono,
                                      i_p,
@@ -2272,14 +2321,22 @@ void UpdateSpectralRadianceField1D(
           if (i_p != 0) {
             const Index idx = subscript2index(i_za, i_p, N_za);
 
-            const Vector pressure_ppath=PressureArray[idx];
-            const Vector temperature_ppath=TemperatureArray[idx];
-            const Vector gas_extinction_ppath=GasExtinctionArray[idx];
-            const Vector lstep_ppath=LstepArray[idx];
-            const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
-            const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
-            const Matrix itw_ppath = InterpWeightsArray[idx];
-            const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
+//            const Vector pressure_ppath=PressureArray[idx];
+//            const Vector temperature_ppath=TemperatureArray[idx];
+//            const Vector gas_extinction_ppath=GasExtinctionArray[idx];
+//            const Vector lstep_ppath=LstepArray[idx];
+//            const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
+//            const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
+//            const Matrix itw_ppath = InterpWeightsArray[idx];
+//            const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
+            const Vector& pressure_ppath=MainDomainPPaths.get_Pressure(idx);
+            const Vector& temperature_ppath=MainDomainPPaths.get_Temperature(idx);
+            const Vector& gas_extinction_ppath=MainDomainPPaths.get_GasExtinction(idx);
+            const Vector& lstep_ppath=MainDomainPPaths.get_LStep(idx);
+            const ArrayOfGridPos& cloud_gp_p_ppath=MainDomainPPaths.get_GposP(idx);
+            const ArrayOfGridPos& cloud_gp_za_ppath=MainDomainPPaths.get_GposZenith(idx);
+            const Matrix& itw_ppath = MainDomainPPaths.get_InterpWeights(idx);
+            const Matrix& itw_za_ppath = MainDomainPPaths.get_InterpWeightsAngle(idx);
 
             UpdateCloudPropagationPath1D(cloudbox_field_mono,
                                          i_p,
