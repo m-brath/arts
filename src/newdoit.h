@@ -266,52 +266,6 @@ class DomainPPaths {
   const Index& get_AtmosphereDim() const { return mAtmosphereDim; }
 
 
-  // get-methods for a specific p_path------------------------------------------
-  const Vector& get_Pressure(const Index& idx) const {
-    return mPressureArray[idx];
-  }
-
-  const Vector& get_Temperature(const Index& idx) const {
-    return mTemperatureArray[idx];
-  }
-
-  const Vector& get_GasExtinction(const Index& idx) const {
-    return mGasExtinctionArray[idx];
-  }
-
-  const Matrix& get_InterpWeights(const Index& idx) const {
-    return mInterpWeightsArray[idx];
-  }
-
-  const Matrix& get_InterpWeightsAngle(const Index& idx) const {
-    return mInterpWeightsAngleArray[idx];
-  }
-
-  const ArrayOfGridPos& get_GposP(const Index& idx) const {
-    return mGposPArray[idx];
-  }
-
-  const ArrayOfGridPos& get_GposLat(const Index& idx) const {
-    return mGposLatArray[idx];
-  }
-
-  const ArrayOfGridPos& get_GposLon(const Index& idx) const {
-    return mGposLonArray[idx];
-  }
-
-  const ArrayOfGridPos& get_GposZenith(const Index& idx) const {
-    return mGposZenithArray[idx];
-  }
-
-  const ArrayOfGridPos& get_GposAzimuth(const Index& idx) const {
-    return mGposAzimuthArray[idx];
-  }
-
-  const Vector& get_LStep(const Index& idx) const { return mLStepArray[idx]; }
-
-  // additional methods---------------------------------------------------------
-  const Index& get_ArrayLength() const { return mPressureArray.nelem(); }
-
 
  protected:
   Vector mp_grid;
@@ -332,6 +286,29 @@ class DomainPPaths {
   ArrayOfVector mLStepArray;
   Index mMaxLimbIndex;
   Index mAtmosphereDim;
+};
+
+class DomainRadiationProperties {
+ public:
+  DomainRadiationProperties() = default;
+
+  DomainRadiationProperties(const Tensor6& ExtinctionMatrix,
+                            const Tensor5& AbsorptionVector,
+                            const Tensor7& ScatteringMatrix,
+                            const Tensor6& SurfaceReflectionMatrix,
+                            const Tensor5& SurfaceEmission)
+      : mExtinctionMatrix(ExtinctionMatrix),
+        mAbsorptionVector(AbsorptionVector),
+        mScatteringMatrix(ScatteringMatrix),
+        mSurfaceReflectionMatrix(SurfaceReflectionMatrix),
+        mSurfaceEmission(SurfaceEmission) {}
+
+ protected:
+  Tensor6 mExtinctionMatrix;
+  Tensor5 mAbsorptionVector;
+  Tensor7 mScatteringMatrix;
+  Tensor6 mSurfaceReflectionMatrix;
+  Tensor5 mSurfaceEmission;
 };
 
 /** Initialises variables for DOIT scattering calculations.
@@ -876,15 +853,6 @@ void RunNewDoit(//Input and Output:
     const Vector& scat_za_grid,
     const Vector& scat_aa_grid,
     // Precalculated quantities on the propagation path
-//    const ArrayOfVector& PressureArray,
-//    const ArrayOfVector& TemperatureArray,
-//    const ArrayOfVector& GasExtinctionArray,
-//    const ArrayOfMatrix& InterpWeightsArray,
-//    const ArrayOfMatrix& InterpWeightsZenithArray,
-//    const ArrayOfArrayOfGridPos& GposArray,
-//    const ArrayOfArrayOfGridPos& GposZenithArray,
-//    const ArrayOfVector& LstepArray,
-//    const Index& MaxLimbIndex,
     const DomainPPaths& MainDomainPPaths,
     //Precalculated quantities for scattering integral calulation
     ArrayOfIndex& idir_idx0,
@@ -1046,16 +1014,6 @@ void UpdateSpectralRadianceField(//Input and Output:
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
     // Precalculated quantities on the propagation path
-//    const ArrayOfVector& PressureArray,
-//    const ArrayOfVector& TemperatureArray,
-//    const ArrayOfVector& GasExtinctionArray,
-//    const ArrayOfMatrix& InterpWeightsArray,
-//    const ArrayOfMatrix& InterpWeightsZenithArray,
-//    const ArrayOfArrayOfGridPos& GposArray,
-//    const ArrayOfArrayOfGridPos& GposZenithArray,
-//    const ArrayOfVector& LstepArray,
-//
-//    const Index& MaxLimbIndex,
     const DomainPPaths& MainDomainPPaths,
     const Vector& f_grid,
     const Verbosity& verbosity);
@@ -1100,16 +1058,6 @@ void UpdateSpectralRadianceField1D(
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     // Precalculated quantities on the propagation path
-//    const ArrayOfVector& PressureArray,
-//    const ArrayOfVector& TemperatureArray,
-//    const ArrayOfVector& GasExtinctionArray,
-//    const ArrayOfMatrix& InterpWeightsArray,
-//    const ArrayOfMatrix& InterpWeightsZenithArray,
-//    const ArrayOfArrayOfGridPos& GposArray,
-//    const ArrayOfArrayOfGridPos& GposZenithArray,
-//    const ArrayOfVector& LstepArray,
-//    //additional quantities
-//    const Index& MaxLimbIndex,
     const DomainPPaths& MainDomainPPaths,
     const Vector& f_grid,
     const Verbosity& verbosity);
