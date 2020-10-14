@@ -1003,9 +1003,10 @@ void NewDoitMonoCalc(Workspace& ws,
   //TODO: Add here the Gasextinction of the subdomains
 
   //calculate gas extinction
-  ArrayOfVector GasExtinctionArray(MainDomainPPaths.get_ArrayLength());
+  ArrayOfVector GasExtinctionArray(MainDomainPPaths.get_PressureArray().nelem());
 
-  for (Index i = 0; i < MainDomainPPaths.get_ArrayLength(); i++) {
+
+  for (Index i = 0; i < MainDomainPPaths.get_PressureArray().nelem(); i++) {
     Vector gas_extinction_temp;
     CalcGasExtinction(ws,
                       gas_extinction_temp,
@@ -1019,8 +1020,6 @@ void NewDoitMonoCalc(Workspace& ws,
 
   }
   MainDomainPPaths.set_GasExtinctionArray(GasExtinctionArray);
-
-  Vector test=MainDomainPPaths.get_GasExtinction(1);
 
   os << "gas absorption calculated \n";
   out0 << os.str();
@@ -1046,17 +1045,8 @@ void NewDoitMonoCalc(Workspace& ws,
              scat_za_grid,
              scat_aa_grid,
              // Precalculated quantities on the propagation path
-//             PressureArray,
-//             TemperatureArray,
-//             GasExtinctionArray,
-//             InterpWeightsArray,
-//             InterpWeightsZenithArray,
-//             GposArray,
-//             GposZenithArray,
-//             LstepArray,
-//             MaxLimbIndex,
-             //Precalculated quantities for scattering integral calulation
              MainDomainPPaths,
+             //Precalculated quantities for scattering integral calulation
              idir_idx0,
              idir_idx1,
              pdir_idx0,
@@ -2085,16 +2075,6 @@ void UpdateSpectralRadianceField(//Input and Output:
                                  const ArrayOfIndex& cloudbox_limits,
                                  const Index& atmosphere_dim,
                             // Precalculated quantities on the propagation path
-//                                 const ArrayOfVector& PressureArray,
-//                                 const ArrayOfVector& TemperatureArray,
-//                                 const ArrayOfVector& GasExtinctionArray,
-//                                 const ArrayOfMatrix& InterpWeightsArray,
-//                                 const ArrayOfMatrix& InterpWeightsZenithArray,
-//                                 const ArrayOfArrayOfGridPos& GposArray,
-//                                 const ArrayOfArrayOfGridPos& GposZenithArray,
-//                                 const ArrayOfVector& LstepArray,
-//
-//                                 const Index& MaxLimbIndex,
                                  const DomainPPaths& MainDomainPPaths,
 
 
@@ -2154,16 +2134,6 @@ void UpdateSpectralRadianceField1D(
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     // Precalculated quantities on the propagation path
-//    const ArrayOfVector& PressureArray,
-//    const ArrayOfVector& TemperatureArray,
-//    const ArrayOfVector& GasExtinctionArray,
-//    const ArrayOfMatrix& InterpWeightsArray,
-//    const ArrayOfMatrix& InterpWeightsZenithArray,
-//    const ArrayOfArrayOfGridPos& GposArray,
-//    const ArrayOfArrayOfGridPos& GposZenithArray,
-//    const ArrayOfVector& LstepArray,
-//    //additional quantities
-//    const Index& MaxLimbIndex,
     const DomainPPaths& MainDomainPPaths,
     const Vector& f_grid,
     const Verbosity& verbosity) {
@@ -2213,37 +2183,19 @@ void UpdateSpectralRadianceField1D(
 
         const Index idx = subscript2index(i_za, i_p, N_za);
 
-//        const Vector pressure_ppath=PressureArray[idx];
-//        const Vector temperature_ppath=TemperatureArray[idx];
-//        const Vector gas_extinction_ppath=GasExtinctionArray[idx];
-//        const Vector lstep_ppath=LstepArray[idx];
-//        const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
-//        const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
-//        const Matrix itw_ppath = InterpWeightsArray[idx];
-//        const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
-        const Vector& pressure_ppath=MainDomainPPaths.get_Pressure(idx);
-        const Vector& temperature_ppath=MainDomainPPaths.get_Temperature(idx);
-        const Vector& gas_extinction_ppath=MainDomainPPaths.get_GasExtinction(idx);
-        const Vector& lstep_ppath=MainDomainPPaths.get_LStep(idx);
-        const ArrayOfGridPos& cloud_gp_p_ppath=MainDomainPPaths.get_GposP(idx);
-        const ArrayOfGridPos& cloud_gp_za_ppath=MainDomainPPaths.get_GposZenith(idx);
-        const Matrix& itw_ppath = MainDomainPPaths.get_InterpWeights(idx);
-        const Matrix& itw_za_ppath = MainDomainPPaths.get_InterpWeightsAngle(idx);
-
-
         UpdateCloudPropagationPath1D(cloudbox_field_mono,
                                      i_p,
                                      i_za,
                                      cloudbox_limits,
                                      cloudbox_scat_field,
-                                     pressure_ppath,
-                                     temperature_ppath,
-                                     gas_extinction_ppath,
-                                     lstep_ppath,
-                                     cloud_gp_p_ppath,
-                                     cloud_gp_za_ppath,
-                                     itw_ppath,
-                                     itw_za_ppath,
+                                     MainDomainPPaths.get_PressureArray()[idx],
+                                     MainDomainPPaths.get_TemperatureArray()[idx],
+                                     MainDomainPPaths.get_GasExtinctionArray()[idx],
+                                     MainDomainPPaths.get_LStepArray()[idx],
+                                     MainDomainPPaths.get_GposPArray()[idx],
+                                     MainDomainPPaths.get_GposZenithArray()[idx],
+                                     MainDomainPPaths.get_InterpWeightsArray()[idx],
+                                     MainDomainPPaths.get_InterpWeightsAngleArray()[idx],
                                      f_grid,
                                      ext_mat_field,
                                      abs_vec_field,
@@ -2259,36 +2211,19 @@ void UpdateSpectralRadianceField1D(
 
         const Index idx = subscript2index(i_za, i_p, N_za);
 
-//        const Vector pressure_ppath=PressureArray[idx];
-//        const Vector temperature_ppath=TemperatureArray[idx];
-//        const Vector gas_extinction_ppath=GasExtinctionArray[idx];
-//        const Vector lstep_ppath=LstepArray[idx];
-//        const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
-//        const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
-//        const Matrix itw_ppath = InterpWeightsArray[idx];
-//        const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
-        const Vector& pressure_ppath=MainDomainPPaths.get_Pressure(idx);
-        const Vector& temperature_ppath=MainDomainPPaths.get_Temperature(idx);
-        const Vector& gas_extinction_ppath=MainDomainPPaths.get_GasExtinction(idx);
-        const Vector& lstep_ppath=MainDomainPPaths.get_LStep(idx);
-        const ArrayOfGridPos& cloud_gp_p_ppath=MainDomainPPaths.get_GposP(idx);
-        const ArrayOfGridPos& cloud_gp_za_ppath=MainDomainPPaths.get_GposZenith(idx);
-        const Matrix& itw_ppath = MainDomainPPaths.get_InterpWeights(idx);
-        const Matrix& itw_za_ppath = MainDomainPPaths.get_InterpWeightsAngle(idx);
-
         UpdateCloudPropagationPath1D(cloudbox_field_mono,
                                      i_p,
                                      i_za,
                                      cloudbox_limits,
                                      cloudbox_scat_field,
-                                     pressure_ppath,
-                                     temperature_ppath,
-                                     gas_extinction_ppath,
-                                     lstep_ppath,
-                                     cloud_gp_p_ppath,
-                                     cloud_gp_za_ppath,
-                                     itw_ppath,
-                                     itw_za_ppath,
+                                     MainDomainPPaths.get_PressureArray()[idx],
+                                     MainDomainPPaths.get_TemperatureArray()[idx],
+                                     MainDomainPPaths.get_GasExtinctionArray()[idx],
+                                     MainDomainPPaths.get_LStepArray()[idx],
+                                     MainDomainPPaths.get_GposPArray()[idx],
+                                     MainDomainPPaths.get_GposZenithArray()[idx],
+                                     MainDomainPPaths.get_InterpWeightsArray()[idx],
+                                     MainDomainPPaths.get_InterpWeightsAngleArray()[idx],
                                      f_grid,
                                      ext_mat_field,
                                      abs_vec_field,
@@ -2321,36 +2256,19 @@ void UpdateSpectralRadianceField1D(
           if (i_p != 0) {
             const Index idx = subscript2index(i_za, i_p, N_za);
 
-//            const Vector pressure_ppath=PressureArray[idx];
-//            const Vector temperature_ppath=TemperatureArray[idx];
-//            const Vector gas_extinction_ppath=GasExtinctionArray[idx];
-//            const Vector lstep_ppath=LstepArray[idx];
-//            const ArrayOfGridPos cloud_gp_p_ppath=GposArray[idx];
-//            const ArrayOfGridPos cloud_gp_za_ppath=GposZenithArray[idx];
-//            const Matrix itw_ppath = InterpWeightsArray[idx];
-//            const Matrix itw_za_ppath = InterpWeightsZenithArray[idx];
-            const Vector& pressure_ppath=MainDomainPPaths.get_Pressure(idx);
-            const Vector& temperature_ppath=MainDomainPPaths.get_Temperature(idx);
-            const Vector& gas_extinction_ppath=MainDomainPPaths.get_GasExtinction(idx);
-            const Vector& lstep_ppath=MainDomainPPaths.get_LStep(idx);
-            const ArrayOfGridPos& cloud_gp_p_ppath=MainDomainPPaths.get_GposP(idx);
-            const ArrayOfGridPos& cloud_gp_za_ppath=MainDomainPPaths.get_GposZenith(idx);
-            const Matrix& itw_ppath = MainDomainPPaths.get_InterpWeights(idx);
-            const Matrix& itw_za_ppath = MainDomainPPaths.get_InterpWeightsAngle(idx);
-
             UpdateCloudPropagationPath1D(cloudbox_field_mono,
                                          i_p,
                                          i_za,
                                          cloudbox_limits,
                                          cloudbox_scat_field,
-                                         pressure_ppath,
-                                         temperature_ppath,
-                                         gas_extinction_ppath,
-                                         lstep_ppath,
-                                         cloud_gp_p_ppath,
-                                         cloud_gp_za_ppath,
-                                         itw_ppath,
-                                         itw_za_ppath,
+                                         MainDomainPPaths.get_PressureArray()[idx],
+                                         MainDomainPPaths.get_TemperatureArray()[idx],
+                                         MainDomainPPaths.get_GasExtinctionArray()[idx],
+                                         MainDomainPPaths.get_LStepArray()[idx],
+                                         MainDomainPPaths.get_GposPArray()[idx],
+                                         MainDomainPPaths.get_GposZenithArray()[idx],
+                                         MainDomainPPaths.get_InterpWeightsArray()[idx],
+                                         MainDomainPPaths.get_InterpWeightsAngleArray()[idx],
                                          f_grid,
                                          ext_mat_field,
                                          abs_vec_field,
