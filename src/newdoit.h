@@ -288,27 +288,89 @@ class DomainPPaths {
   Index mAtmosphereDim;
 };
 
-class DomainRadiationProperties {
+class DomainScatteringProperties {
  public:
-  DomainRadiationProperties() = default;
+  DomainScatteringProperties() = default;
 
-  DomainRadiationProperties(const Tensor6& ExtinctionMatrix,
+  /**Constructor for DomainScatteringProperties
+ *
+ * @param[in] ExtinctionMatrix Bulk extinction matrix (Np,Nlat,Nlon,ndir,nst,nst)
+ * @param[in] AbsorptionVector absorption vector (Np,Nlat,Nlon,ndir,nst)
+ * @param[in] ScatteringMatrix scattering matrix (Np,Nlat,Nlon,npdir,nidir,nst,nst)
+ * @param[in] IdirIdx0 index of flattened incidence zenith angle meshgrid
+ * @param[in] IdirIdx1 index of flattened incidence azimuth angle meshgrid
+ * @param[in] PdirIdx0 index of flattened propagation zenith angle meshgrid
+ * @param[in] PdirIdx1 index of flattened propagation azimuth angle meshgrid
+ * @param[in] GpZaI interpolation gridpoints zenith incidence angle
+ * @param[in] GpAaI interpolation gridpoints azimuth incidence angle
+ * @param[in] Itw interpolation weight for incidence angles
+ * @param[in] ScatZaGrid Zenith angle grid for the scattering calculation.
+ * @param[in] ScatAaGrid Azimuth angle grid for the scattering calculation.
+ */
+  DomainScatteringProperties(const Tensor6& ExtinctionMatrix,
                             const Tensor5& AbsorptionVector,
                             const Tensor7& ScatteringMatrix,
-                            const Tensor6& SurfaceReflectionMatrix,
-                            const Tensor5& SurfaceEmission)
+                            const ArrayOfIndex& IdirIdx0,
+                            const ArrayOfIndex& IdirIdx1,
+                            const ArrayOfIndex& PdirIdx0,
+                            const ArrayOfIndex& PdirIdx1,
+                            const ArrayOfGridPos& GpZaI,
+                            const ArrayOfGridPos& GpAaI,
+                            const Tensor3& Itw,
+                            const Vector& ScatZaGrid,
+                            const Vector& ScatAaGrid)
       : mExtinctionMatrix(ExtinctionMatrix),
         mAbsorptionVector(AbsorptionVector),
         mScatteringMatrix(ScatteringMatrix),
-        mSurfaceReflectionMatrix(SurfaceReflectionMatrix),
-        mSurfaceEmission(SurfaceEmission) {}
+        mIdirIdx0(IdirIdx0),
+        mIdirIdx1(IdirIdx1),
+        mPdirIdx0(PdirIdx0),
+        mPdirIdx1(PdirIdx1),
+        mGpZaI(GpZaI),
+        mGpAaI(GpAaI),
+        mItw(Itw) ,
+        mScatZaGrid(ScatZaGrid),
+        mScatAaGrid(ScatAaGrid) {}
+
+  //Get methods
+  const Tensor6& get_ExtinctionMatrix() const { return mExtinctionMatrix; }
+
+  const Tensor5& get_AbsorptionVector() const { return mAbsorptionVector; }
+
+  const Tensor7& get_ScatteringMatrix() const { return mScatteringMatrix; }
+
+  const ArrayOfIndex& get_IdirIdx0() const { return  mIdirIdx0;}
+
+  const ArrayOfIndex& get_IdirIdx1() const { return  mIdirIdx1;}
+
+  const ArrayOfIndex& get_PdirIdx0() const { return  mPdirIdx0;}
+
+  const ArrayOfIndex& get_PdirIdx1() const { return  mPdirIdx1;}
+
+  const ArrayOfGridPos& get_GpZaI() const { return  mGpZaI;}
+
+  const ArrayOfGridPos& get_GpAaI() const { return  mGpAaI;}
+
+  const Tensor3& get_Itw() const { return mItw;}
+
+  const Vector& get_ScatZaGrid() const {return mScatZaGrid;}
+
+  const Vector& get_ScatAaGrid() const {return mScatAaGrid;}
 
  protected:
   Tensor6 mExtinctionMatrix;
   Tensor5 mAbsorptionVector;
   Tensor7 mScatteringMatrix;
-  Tensor6 mSurfaceReflectionMatrix;
-  Tensor5 mSurfaceEmission;
+  ArrayOfIndex mIdirIdx0;
+  ArrayOfIndex mIdirIdx1;
+  ArrayOfIndex mPdirIdx0;
+  ArrayOfIndex mPdirIdx1;
+  ArrayOfGridPos mGpZaI;
+  ArrayOfGridPos mGpAaI;
+  Tensor3 mItw;
+  Vector mScatZaGrid;
+  Vector mScatAaGrid;
+
 };
 
 /** Initialises variables for DOIT scattering calculations.
@@ -842,26 +904,14 @@ void RunNewDoit(//Input and Output:
     Index& convergence_flag,
     Index& iteration_counter,
     //Input
-    const ConstTensor6View& extinction_matrix,
-    const ConstTensor5View& absorption_vector,
-    const ConstTensor7View& scattering_matrix,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
-    //Grids
-    const Vector& scat_za_grid,
-    const Vector& scat_aa_grid,
     // Precalculated quantities on the propagation path
     const DomainPPaths& MainDomainPPaths,
     //Precalculated quantities for scattering integral calulation
-    ArrayOfIndex& idir_idx0,
-    ArrayOfIndex& idir_idx1,
-    ArrayOfIndex& pdir_idx0,
-    ArrayOfIndex& pdir_idx1,
-    ArrayOfGridPos& gp_za_i,
-    ArrayOfGridPos& gp_aa_i,
-    Tensor3& itw,
+    const DomainScatteringProperties& MainDomainScatteringProperties,
     //Additional input
     const Numeric& f_mono,
     const String& iy_unit,
@@ -895,17 +945,8 @@ void CalcScatteredField(  // WS Output and Input
     Tensor6& cloudbox_scat_field,
     //WS Input:
     const Tensor6& cloudbox_field_mono,
-    const Tensor7& scattering_matrix,
+    const DomainScatteringProperties& ScatteringProperties,
     const Index& atmosphere_dim,
-    const Vector& scat_za_grid,
-    const Vector& scat_aa_grid,
-    ArrayOfIndex& idir_idx0,
-    ArrayOfIndex& idir_idx1,
-    ArrayOfIndex& pdir_idx0,
-    ArrayOfIndex& pdir_idx1,
-    ArrayOfGridPos& gp_za_i,
-    ArrayOfGridPos& gp_aa_i,
-    Tensor3& itw,
     const Verbosity& verbosity);
 
 /** Calculates the 1D scattered field during DOIT iteration step
@@ -927,11 +968,7 @@ void CalcScatteredField1D(
     Tensor6& cloudbox_scat_field,
     // Input:
     const ConstTensor6View& cloudbox_field_mono,
-    const ConstTensor7View& scattering_matrix,
-    const VectorView& iza_grid,  // incoming direction
-    const ArrayOfIndex& pdir_idx0,//index array of propagation direction
-    const ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
-    const Tensor3View& itw, //interpolation weights
+    const DomainScatteringProperties& ScatteringProperties,
     const Verbosity& verbosity);
 
 /** Calculates the 3D scattered field during DOIT iteration step
@@ -959,16 +996,7 @@ void CalcScatteredField3D(
     Tensor6& cloudbox_scat_field,
     //WS Input:
     const Tensor6& cloudbox_field_mono,
-    const Tensor7& scattering_matrix,
-    const Vector& iza_grid,  // incoming direction
-    const Vector& iaa_grid,  // incoming direction
-    const ArrayOfIndex& idir_idx0, //index array of flattened inc. direction
-    const ArrayOfIndex& idir_idx1, //index array of flattened inc. direction
-    const ArrayOfIndex& pdir_idx0, //index array of flattened propagation direction
-    const ArrayOfIndex& pdir_idx1, //index array of flattened propagation direction
-    const ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
-    const ArrayOfGridPos& gp_aa_i, // grid pos for azimuth angle interpolation
-    const Tensor3& itw, //interpolation weights
+    const DomainScatteringProperties& ScatteringProperties,
     const Verbosity& verbosity);
 
 

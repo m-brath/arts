@@ -779,7 +779,7 @@ void NewDoitMonoCalc(Workspace& ws,
   ostringstream os, os1, os2;
 
 
-
+  //-------Scattering related quantities----------------------------------------
   //calculate par_optpropCalc_doit
   //It assumens at least azimuthally randomly oriented particles
   CalcParticleOpticalProperties(extinction_matrix,
@@ -844,6 +844,21 @@ void NewDoitMonoCalc(Workspace& ws,
         scat_za_grid,
         scat_aa_grid);
   }
+
+  DomainScatteringProperties MainDomainScatteringProperties(extinction_matrix,
+                                                            absorption_vector,
+                                                            scattering_matrix,
+                                                            idir_idx0,
+                                                            idir_idx1,
+                                                            pdir_idx0,
+                                                            pdir_idx1,
+                                                            gp_za_i,
+                                                            gp_aa_i,
+                                                            itw,
+                                                            scat_za_grid,
+                                                            scat_aa_grid);
+
+  //-------End of Scattering related quantities---------------------------------
 
   Matrix surface_skin_t;
   Tensor4 surface_los;
@@ -1034,26 +1049,14 @@ void NewDoitMonoCalc(Workspace& ws,
              convergence_flag,
              iteration_counter,
              //Input
-             extinction_matrix,
-             absorption_vector,
-             scattering_matrix,
              surface_reflection_matrix,
              surface_emission,
              cloudbox_limits,
              atmosphere_dim,
-             //Grids
-             scat_za_grid,
-             scat_aa_grid,
              // Precalculated quantities on the propagation path
              MainDomainPPaths,
              //Precalculated quantities for scattering integral calulation
-             idir_idx0,
-             idir_idx1,
-             pdir_idx0,
-             pdir_idx1,
-             gp_za_i,
-             gp_aa_i,
-             itw,
+             MainDomainScatteringProperties,
              //Additional input
              f_mono,
              iy_unit,
@@ -1707,35 +1710,13 @@ void RunNewDoit(  //Input and Output:
     Index& convergence_flag,
     Index& iteration_counter,
     //Input
-    const ConstTensor6View& extinction_matrix,
-    const ConstTensor5View& absorption_vector,
-    const ConstTensor7View& scattering_matrix,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
-    //Grids
-    const Vector& scat_za_grid,
-    const Vector& scat_aa_grid,
-    // Precalculated quantities on the propagation path
-//    const ArrayOfVector& PressureArray,
-//    const ArrayOfVector& TemperatureArray,
-//    const ArrayOfVector& GasExtinctionArray,
-//    const ArrayOfMatrix& InterpWeightsArray,
-//    const ArrayOfMatrix& InterpWeightsZenithArray,
-//    const ArrayOfArrayOfGridPos& GposArray,
-//    const ArrayOfArrayOfGridPos& GposZenithArray,
-//    const ArrayOfVector& LstepArray,
-//    const Index& MaxLimbIndex,
     const DomainPPaths& MainDomainPPaths,
     //Precalculated quantities for scattering integral calulation
-    ArrayOfIndex& idir_idx0,
-    ArrayOfIndex& idir_idx1,
-    ArrayOfIndex& pdir_idx0,
-    ArrayOfIndex& pdir_idx1,
-    ArrayOfGridPos& gp_za_i,
-    ArrayOfGridPos& gp_aa_i,
-    Tensor3& itw,
+    const DomainScatteringProperties& MainDomainScatteringProperties,
     //Additional input
     const Numeric& f_mono,
     const String& iy_unit,
@@ -1790,17 +1771,8 @@ void RunNewDoit(  //Input and Output:
     out2 << "  Calculate scattering field. \n";
     CalcScatteredField(cloudbox_scat_field,
                        cloudbox_field_mono,
-                       scattering_matrix,
+                       MainDomainScatteringProperties,
                        atmosphere_dim,
-                       scat_za_grid,
-                       scat_aa_grid,
-                       idir_idx0,
-                       idir_idx1,
-                       pdir_idx0,
-                       pdir_idx1,
-                       gp_za_i,
-                       gp_aa_i,
-                       itw,
                        verbosity);
 
     // Update cloudbox_field.
@@ -1809,21 +1781,12 @@ void RunNewDoit(  //Input and Output:
     UpdateSpectralRadianceField(
                                 cloudbox_field_mono,
                                 cloudbox_scat_field,
-                                extinction_matrix,
-                                absorption_vector,
+                                MainDomainScatteringProperties.get_ExtinctionMatrix(),
+                                MainDomainScatteringProperties.get_AbsorptionVector(),
                                 surface_reflection_matrix,
                                 surface_emission,
                                 cloudbox_limits,
                                 atmosphere_dim,
-//                                PressureArray,
-//                                TemperatureArray,
-//                                GasExtinctionArray,
-//                                InterpWeightsArray,
-//                                InterpWeightsZenithArray,
-//                                GposArray,
-//                                GposZenithArray,
-//                                LstepArray,
-//                                MaxLimbIndex,
                                 MainDomainPPaths,
                                 f_grid,
                                 verbosity);
@@ -1855,42 +1818,20 @@ void CalcScatteredField(// WS Output and Input
                         Tensor6& cloudbox_scat_field,
                         //WS Input:
                         const Tensor6& cloudbox_field_mono,
-                        const Tensor7& scattering_matrix,
+                        const DomainScatteringProperties& ScatteringProperties,
                         const Index& atmosphere_dim,
-                        const Vector& scat_za_grid,
-                        const Vector& scat_aa_grid,
-                        ArrayOfIndex& idir_idx0, //index array of flattened inc. direction
-                        ArrayOfIndex& idir_idx1, //index array of flattened inc. direction
-                        ArrayOfIndex& pdir_idx0, //index array of flattened propagation direction
-                        ArrayOfIndex& pdir_idx1, //index array of flattened propagation direction
-                        ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
-                        ArrayOfGridPos& gp_aa_i, // grid pos for azimuth angle interpolation
-                        Tensor3& itw, //interpolation weights
                         const Verbosity& verbosity) {
 
   if (atmosphere_dim == 1) {
     CalcScatteredField1D(cloudbox_scat_field,
                          cloudbox_field_mono,
-                         scattering_matrix,
-                         scat_za_grid,
-                         pdir_idx0,
-                         gp_za_i,
-                         itw,
+                         ScatteringProperties,
                          verbosity);
 
   } else {
     CalcScatteredField3D(cloudbox_scat_field,
                          cloudbox_field_mono,
-                         scattering_matrix,
-                         scat_za_grid,
-                         scat_aa_grid,
-                         idir_idx0,
-                         idir_idx1,
-                         pdir_idx0,
-                         pdir_idx1,
-                         gp_za_i,
-                         gp_aa_i,
-                         itw,
+                         ScatteringProperties,
                          verbosity);
   }
 }
@@ -1900,19 +1841,13 @@ void CalcScatteredField1D(
     Tensor6& cloudbox_scat_field,
     // Input:
     const ConstTensor6View& cloudbox_field_mono,
-    const ConstTensor7View& scattering_matrix,
-    const VectorView& iza_grid,  // incoming direction
-    const ArrayOfIndex& pdir_idx0,//index array of propagation direction
-    const ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
-    const Tensor3View& itw, //interpolation weights
+    const DomainScatteringProperties& ScatteringProperties,
     const Verbosity& verbosity) {
-
   CREATE_OUT3;
 
-
   // Number of zenith angles.
-  const Index Npza = pdir_idx0.nelem();
-  const Index Niza = iza_grid.nelem();
+  const Index Npza = ScatteringProperties.get_PdirIdx0().nelem();
+  const Index Niza = ScatteringProperties.get_ScatZaGrid().nelem();
 
   // Get stokes dimension from *cloudbox_scat_field*:
   const Index stokes_dim = cloudbox_field_mono.ncols();
@@ -1934,9 +1869,9 @@ void CalcScatteredField1D(
     // outgoing direction, which is the direction of the actual radiation field.
     for (Index i = 0; i < stokes_dim; i++) {
       interp(cloudbox_field_int(joker, i),
-             itw(joker,0,joker),
+             ScatteringProperties.get_Itw()(joker, 0, joker),
              cloudbox_field_mono(i_p, 0, 0, joker, 0, i),
-             gp_za_i);
+             ScatteringProperties.get_GpZaI());
     }
 
     //There is only loop over zenith angle grid; no azimuth angle grid.
@@ -1952,7 +1887,8 @@ void CalcScatteredField1D(
         for (Index i = 0; i < stokes_dim; i++) {
           for (Index j = 0; j < stokes_dim; j++) {
             product_field(i_iza, i) +=
-                scattering_matrix(i_p, 0, 0, i_pza, i_iza, i, j) *
+                ScatteringProperties.get_ScatteringMatrix()(
+                    i_p, 0, 0, i_pza, i_iza, i, j) *
                 cloudbox_field_int(i_iza, j);
           }
         }
@@ -1961,7 +1897,9 @@ void CalcScatteredField1D(
       out3 << "Compute integral. \n";
       for (Index i = 0; i < stokes_dim; i++) {
         cloudbox_scat_field(i_p, 0, 0, i_pza, 0, i) =
-            AngIntegrate_trapezoid(product_field(joker, i), iza_grid) / 2 / PI;
+            AngIntegrate_trapezoid(product_field(joker, i),
+                                   ScatteringProperties.get_ScatZaGrid()) /
+            2 / PI;
       }
     }
   }
@@ -1974,26 +1912,17 @@ void CalcScatteredField3D(
     Tensor6& cloudbox_scat_field,
     // Input:
     const Tensor6& cloudbox_field_mono,
-    const Tensor7& scattering_matrix,
-    const Vector& iza_grid,  // incoming direction
-    const Vector& iaa_grid,  // incoming direction
-    const ArrayOfIndex& idir_idx0, //index array of flattened inc. direction
-    const ArrayOfIndex& idir_idx1, //index array of flattened inc. direction
-    const ArrayOfIndex& pdir_idx0, //index array of flattened propagation direction
-    const ArrayOfIndex& pdir_idx1, //index array of flattened propagation direction
-    const ArrayOfGridPos& gp_za_i, // grid pos for zenith angle interpolation
-    const ArrayOfGridPos& gp_aa_i, // grid pos for azimuth angle interpolation
-    const Tensor3& itw, //interpolation weights
+    const DomainScatteringProperties& ScatteringProperties,
     const Verbosity& verbosity) {
 
   CREATE_OUT2;
   CREATE_OUT3;
 
   // Number of incoming zenith angles.
-  const Index Niza = iza_grid.nelem();
+  const Index Niza = ScatteringProperties.get_ScatZaGrid().nelem();
 
   // Number of incoming azimuth angles.
-  const Index Niaa = iaa_grid.nelem();
+  const Index Niaa = ScatteringProperties.get_ScatAaGrid().nelem();
 
   // Get stokes dimension from *cloudbox_scat_field*:
   const Index stokes_dim = cloudbox_field_mono.ncols();
@@ -2025,25 +1954,25 @@ void CalcScatteredField3D(
         // outgoing direction, which is the direction of the actual radiation field.
         for (Index i = 0; i < stokes_dim; i++) {
           interp(cloudbox_field_int(joker, joker, i),
-                 itw,
+                 ScatteringProperties.get_Itw(),
                  cloudbox_field_mono(i_p, i_lat, i_lon, joker, joker, i),
-                 gp_za_i,
-                 gp_aa_i);
+                 ScatteringProperties.get_GpZaI(),
+                 ScatteringProperties.get_GpAaI());
         }
 
         //loop over outgoing directions
-        for (Index i_prop = 0; i_prop < pdir_idx0.nelem(); i_prop++) {
+        for (Index i_prop = 0; i_prop < ScatteringProperties.get_PdirIdx0().nelem(); i_prop++) {
 
           //loop over incoming directions
-          for (Index i_inc = 0; i_inc < idir_idx0.nelem(); i_inc++) {
+          for (Index i_inc = 0; i_inc < ScatteringProperties.get_IdirIdx0().nelem(); i_inc++) {
 
             //Calculate the product of scattering matrix and incoming radiation field
             for (Index i = 0; i < stokes_dim; i++) {
               for (Index j = 0; j < stokes_dim; j++) {
-                product_field(idir_idx0[i_inc], idir_idx1[i_inc], i) +=
-                    scattering_matrix(
-                        i_p, i_lon, i_lat, idir_idx0[i_inc], idir_idx1[i_inc], i, j) *
-                    cloudbox_field_int(idir_idx0[i_inc], idir_idx1[i_inc], j);
+                product_field(ScatteringProperties.get_IdirIdx0()[i_inc], ScatteringProperties.get_IdirIdx1()[i_inc], i) +=
+                    ScatteringProperties.get_ScatteringMatrix()(
+                        i_p, i_lon, i_lat, ScatteringProperties.get_IdirIdx0()[i_inc], ScatteringProperties.get_IdirIdx1()[i_inc], i, j) *
+                    cloudbox_field_int(ScatteringProperties.get_IdirIdx0()[i_inc], ScatteringProperties.get_IdirIdx1()[i_inc], j);
               }
             }
           }
@@ -2052,10 +1981,10 @@ void CalcScatteredField3D(
           out3 << "Compute integral. \n";
           for (Index i = 0; i < stokes_dim; i++) {
             cloudbox_scat_field(
-                i_p, i_lat, i_lon, pdir_idx0[i_prop], pdir_idx1[i_prop], i) =
+                i_p, i_lat, i_lon, ScatteringProperties.get_PdirIdx0()[i_prop], ScatteringProperties.get_PdirIdx1()[i_prop], i) =
                 AngIntegrate_trapezoid_opti(product_field(joker, joker, i),
-                                            iza_grid,
-                                            iaa_grid,
+                                            ScatteringProperties.get_ScatZaGrid(),
+                                            ScatteringProperties.get_ScatAaGrid(),
                                             grid_stepsize);
           }
         }
@@ -2074,7 +2003,7 @@ void UpdateSpectralRadianceField(//Input and Output:
                                  const ConstTensor5View& surface_emission,
                                  const ArrayOfIndex& cloudbox_limits,
                                  const Index& atmosphere_dim,
-                            // Precalculated quantities on the propagation path
+                                 // Precalculated quantities on the propagation path
                                  const DomainPPaths& MainDomainPPaths,
 
 
@@ -2089,15 +2018,6 @@ void UpdateSpectralRadianceField(//Input and Output:
                                   surface_reflection_matrix,
                                   surface_emission,
                                   cloudbox_limits,
-//                                  PressureArray,
-//                                  TemperatureArray,
-//                                  GasExtinctionArray,
-//                                  InterpWeightsArray,
-//                                  InterpWeightsZenithArray,
-//                                  GposArray,
-//                                  GposZenithArray,
-//                                  LstepArray,
-//                                  MaxLimbIndex,
                                   MainDomainPPaths,
                                   f_grid,
                                   verbosity);
