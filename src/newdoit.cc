@@ -1113,7 +1113,7 @@ void CalcGasExtinction(Workspace& ws,
     //TODO: Check if polarization is needed for absorption
     if (propmat_clearsky_local.nelem()) {
       for (Index j = 0; j < propmat_clearsky_local.nelem(); j++) {
-        gas_extinct[ip] += propmat_clearsky_local[j].GetData()(0, 0, 0, 0);
+        gas_extinct[ip] += propmat_clearsky_local[j].Kjj(0,0)[0];
       }
     }
   }
