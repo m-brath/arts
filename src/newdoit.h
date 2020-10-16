@@ -1242,29 +1242,155 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
                                const Index& aa_index,
                                const Verbosity& verbosity);
 
-//TODO: Add doxygen doc
-void CalcTransmissionAndSourceForRTStep(  //Output:
-    VectorView source,
+/** Calculates the radiation transport for one propagation path
+ *
+ * The function can be used for cloudbox calculations.
+ *
+ * The function is best explained by considering a homogenous layer. That is,
+ * the physical conditions inside the layer are constant. In reality they
+ * are not constant, so in practical all coefficients have to be averaged
+ * before calling this function.
+ * Total extinction and absorption inside the layer are described by
+ * *ext_mat_av* and *abs_vec_av* respectively,
+ * the blackbdody radiation of the layer is given by *rte_planck_value*
+ * and the propagation path length through the layer is *lstep*.
+ *
+ * There is an additional scattering source term in the
+ * VRTE, the scattering integral term. For this function a constant
+ * scattering term is assumed. The radiative transfer step is only a part
+ * the iterative solution of the scattering problem, for more
+ * information consider AUG. In the clearsky case this variable has to be
+ * set to 0.
+ *
+ * When calling the function, the vector *stokes_vec* shall contain the
+ * Stokes vector for the incoming radiation. The function returns this
+ * vector, then containing the outgoing radiation on the other side of the
+ * layer.
+ *
+ * The function performs the calculations differently depending on the
+ * conditions to improve the speed. There are three cases: <br>
+ *  1. Scalar absorption (stokes_dim = 1). <br>
+ *  2. The matrix ext_mat_gas is diagonal (unpolarised absorption). <br>
+ *  3. The total general case.
+ *
+ * @param[in,out] stokes_vec Stokes vector of propagation step.
+ * @param[in,out] trans_mat Transmission matrix of propagation step.
+ * @param[in] ext_mat_av Averaged extinction matrix of propagation step.
+ * @param[in] abs_vec_av Averaged absorption vector.
+ * @param[in] sca_vec_av averaged scattering vector.
+ * @param[in] lstep The length of propagation step.
+ * @param[in] rtp_planck_value Blackbody radiation.
+ * @param[in] trans_is_precalc FIXMEDOC
+ *
+ * \author Richard Larsson, Manfred Brath
+    \date   2017-08-14, 2020-02-10
+
+ */
+void RadiativeTransferStep(  //Output and Input:
+    VectorView stokes_vec,
     MatrixView trans_mat,
-    Numeric& exponent,
+    //Input
+    const PropagationMatrix& ext_mat_av,
+    const StokesVector& abs_vec_av,
+    const ConstVectorView& sca_vec_av,
+    const Numeric& lstep,
+    const Numeric& rtp_planck_value,
+    const bool& trans_is_precalc = false);
+
+//TODO add doxygen doc
+void NewRTStepInCloudNoBackground(
+    Tensor6View cloudbox_field_mono,
+    const ConstVectorView& lstep_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& pressure_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstTensor3View& ext_mat_int,
+    const ConstMatrixView& abs_vec_int,
+    const ConstMatrixView& sca_vec_int,
+    const ConstMatrixView& cloudbox_field_mono_int,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& f_grid,
+    const Index& p_index,
+    const Index& lat_index,
+    const Index& lon_index,
+    const Index& za_index,
+    const Index& aa_index,
+    const Verbosity& verbosity);
+
+//TODO add doxygen doc
+void NewRTStepInCloudNoBackground2(
+    Tensor6View cloudbox_field_mono,
+    const ConstVectorView& lstep_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& pressure_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstTensor3View& ext_mat_int,
+    const ConstMatrixView& abs_vec_int,
+    const ConstMatrixView& sca_vec_int,
+    const ConstMatrixView& cloudbox_field_mono_int,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& f_grid,
+    const Index& p_index,
+    const Index& lat_index,
+    const Index& lon_index,
+    const Index& za_index,
+    const Index& aa_index,
+    const Verbosity& verbosity);
+
+//TODO add doxygen doc
+void ShortCharacteristicsRT_step3rdOrder(
+    Tensor6View cloudbox_field_mono,
+    const ConstVectorView& lstep_ppath,
+    const ConstVectorView& temperature_ppath,
+    const ConstVectorView& gas_extinction_ppath,
+    const ConstTensor3View& ext_mat_int,
+    const ConstMatrixView& abs_vec_int,
+    const ConstMatrixView& sca_vec_int,
+    const ConstMatrixView& cloudbox_field_mono_int,
+    const ConstVectorView& lstep_ppath_ip1,
+    const ConstVectorView& temperature_ppath_ip1,
+    const ConstVectorView& gas_extinction_ppath_ip1,
+    const ConstTensor3View& ext_mat_int_ip1,
+    const ConstMatrixView& abs_vec_int_ip1,
+    const ConstMatrixView& sca_vec_int_ip1,
+    const ArrayOfIndex& cloudbox_limits,
+    const ConstVectorView& f_grid,
+    const Index& p_index,
+    const Index& lat_index,
+    const Index& lon_index,
+    const Index& za_index,
+    const Index& aa_index,
+    const Verbosity& verbosity);
+
+//TODO add doxygen doc
+void CalcSourceForRTStep(  //Output:
+    VectorView source,
+    VectorView j, //emission density
     //Input
     const PropagationMatrix& ext_mat,
     const StokesVector& abs_vec,
     const ConstVectorView& sca_vec,
-    const Numeric& lstep,
     const Numeric& rtp_planck_value);
 
-//TODO: Add doxygen doc
-void RadiativeTransferIntegrationStep(  //Output:
+//TODO add doxygen doc
+void RTSolver2ndOrder(  //in and out:
     VectorView stokes_vec,
-    //Input
-    const MatrixView& trans_mat_0,
-    const MatrixView& trans_mat_1,
-    const Numeric exponent_0,
-    const Numeric exponent_1,
-    const VectorView& source_0,
-    const VectorView& source_1,
-    const Numeric& lstep);
+    ConstVectorView& source_0,
+    ConstVectorView& source_1,
+    ConstMatrixView& trans_mat_01,
+    const Numeric& tau_01,
+    ConstVectorView& Qmax);
+
+//TODO add doxygen doc
+void RTSolver3rdOrder(//in and out:
+    VectorView stokes_vec,
+    ConstVectorView& source_0,
+    ConstVectorView& source_1,
+    ConstVectorView& source_2,
+    ConstMatrixView& trans_mat_01,
+    const Numeric& tau_01,
+    const Numeric& tau_12,
+    ConstVectorView& Qmax);
 
 /** Checks the convergence of the DOIT iteration
  *
