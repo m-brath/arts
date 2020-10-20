@@ -845,7 +845,7 @@ void NewDoitMonoCalc(Workspace& ws,
         scat_aa_grid);
   }
 
-  DomainScatteringProperties MainDomainScatteringProperties(extinction_matrix,
+  RTDomainScatteringProperties MainDomainScatteringProperties(extinction_matrix,
                                                             absorption_vector,
                                                             scattering_matrix,
                                                             idir_idx0,
@@ -925,7 +925,7 @@ void NewDoitMonoCalc(Workspace& ws,
 
 
 
-  DomainPPaths MainDomainPPaths(p_grid,
+  RTDomain MainRTDomain(p_grid,
                         lat_grid,
                         lon_grid,
                         za_grid,
@@ -971,18 +971,17 @@ void NewDoitMonoCalc(Workspace& ws,
                               Vector(1, f_mono),
                               verbosity);
 
-    MainDomainPPaths.set_PressureArray(PressureArray);
-    MainDomainPPaths.set_TemperatureArray(TemperatureArray);
-    MainDomainPPaths.set_InterpWeightsArray(InterpWeightsArray);
-    MainDomainPPaths.set_InterpWeightsAngleArray(InterpWeightsZenithArray);
-    MainDomainPPaths.set_GposPArray(GposArray);
-    MainDomainPPaths.set_GposZenithArray(GposZenithArray);
-    MainDomainPPaths.set_LStepArray(LstepArray);
-    MainDomainPPaths.set_MaxLimbIndex(MaxLimbIndex);
+    MainRTDomain.set_PressureArray(PressureArray);
+    MainRTDomain.set_TemperatureArray(TemperatureArray);
+    MainRTDomain.set_InterpWeightsArray(InterpWeightsArray);
+    MainRTDomain.set_InterpWeightsAngleArray(InterpWeightsZenithArray);
+    MainRTDomain.set_GposPArray(GposArray);
+    MainRTDomain.set_GposZenithArray(GposZenithArray);
+    MainRTDomain.set_LStepArray(LstepArray);
+    MainRTDomain.set_MaxLimbIndex(MaxLimbIndex);
 
 
       //TODO: Add here the ppath estimation for the subdomains
-
       //Estimate the ppath for the subdomains and save them ArrayOf...
       //Each array element is one subdomain.
       //Ask Olli for the best strategy
@@ -1018,10 +1017,10 @@ void NewDoitMonoCalc(Workspace& ws,
   //TODO: Add here the Gasextinction of the subdomains
 
   //calculate gas extinction
-  ArrayOfVector GasExtinctionArray(MainDomainPPaths.get_PressureArray().nelem());
+  ArrayOfVector GasExtinctionArray(MainRTDomain.get_PressureArray().nelem());
 
 
-  for (Index i = 0; i < MainDomainPPaths.get_PressureArray().nelem(); i++) {
+  for (Index i = 0; i < MainRTDomain.get_PressureArray().nelem(); i++) {
     Vector gas_extinction_temp;
     CalcGasExtinction(ws,
                       gas_extinction_temp,
@@ -1034,7 +1033,7 @@ void NewDoitMonoCalc(Workspace& ws,
     GasExtinctionArray[i] = gas_extinction_temp;
 
   }
-  MainDomainPPaths.set_GasExtinctionArray(GasExtinctionArray);
+  MainRTDomain.set_GasExtinctionArray(GasExtinctionArray);
 
   os << "gas absorption calculated \n";
   out0 << os.str();
@@ -1043,9 +1042,11 @@ void NewDoitMonoCalc(Workspace& ws,
   //TODO:add subdomain variables. Ask Olli if there is a better way to include
   // the subdomain.
 
+  MainRTDomain.set_CloudboxField(cloudbox_field_mono);
+
   //run new doit
   RunNewDoit(
-             cloudbox_field_mono,
+             MainRTDomain,
              convergence_flag,
              iteration_counter,
              //Input
@@ -1053,8 +1054,6 @@ void NewDoitMonoCalc(Workspace& ws,
              surface_emission,
              cloudbox_limits,
              atmosphere_dim,
-             // Precalculated quantities on the propagation path
-             MainDomainPPaths,
              //Precalculated quantities for scattering integral calulation
              MainDomainScatteringProperties,
              //Additional input
@@ -1064,6 +1063,9 @@ void NewDoitMonoCalc(Workspace& ws,
              max_num_iterations,
              accelerated,
              verbosity);
+
+  cloudbox_field_mono=MainRTDomain.get_CloudboxField();
+
 }
 
 void CalcGasExtinction(Workspace& ws,
@@ -1706,7 +1708,7 @@ void CalcPropagationPathMaxLength(
 }
 
 void RunNewDoit(  //Input and Output:
-    Tensor6& cloudbox_field_mono,
+    RTDomain& MainDomain,
     Index& convergence_flag,
     Index& iteration_counter,
     //Input
@@ -1714,9 +1716,8 @@ void RunNewDoit(  //Input and Output:
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
-    const DomainPPaths& MainDomainPPaths,
     //Precalculated quantities for scattering integral calulation
-    const DomainScatteringProperties& MainDomainScatteringProperties,
+    const RTDomainScatteringProperties& MainDomainScatteringProperties,
     //Additional input
     const Numeric& f_mono,
     const String& iy_unit,
@@ -1726,13 +1727,13 @@ void RunNewDoit(  //Input and Output:
     const Verbosity& verbosity) {
   CREATE_OUT2;
 
-  for (Index v = 0; v < cloudbox_field_mono.nvitrines(); v++)
-    for (Index s = 0; s < cloudbox_field_mono.nshelves(); s++)
-      for (Index b = 0; b < cloudbox_field_mono.nbooks(); b++)
-        for (Index p = 0; p < cloudbox_field_mono.npages(); p++)
-          for (Index r = 0; r < cloudbox_field_mono.nrows(); r++)
-            for (Index c = 0; c < cloudbox_field_mono.ncols(); c++)
-              if (std::isnan(cloudbox_field_mono(v, s, b, p, r, c)))
+  for (Index v = 0; v < MainDomain.get_CloudboxField().nvitrines(); v++)
+    for (Index s = 0; s < MainDomain.get_CloudboxField().nshelves(); s++)
+      for (Index b = 0; b < MainDomain.get_CloudboxField().nbooks(); b++)
+        for (Index p = 0; p < MainDomain.get_CloudboxField().npages(); p++)
+          for (Index r = 0; r < MainDomain.get_CloudboxField().nrows(); r++)
+            for (Index c = 0; c < MainDomain.get_CloudboxField().ncols(); c++)
+              if (std::isnan(MainDomain.get_CloudboxField() (v, s, b, p, r, c)))
                 throw std::runtime_error(
                     "*cloudbox_field_mono* contains at least one NaN value.\n"
                     "This indicates an improper initialization of *cloudbox_field*.");
@@ -1743,34 +1744,31 @@ void RunNewDoit(  //Input and Output:
   //-----------End of checks--------------------------------------
 
   Tensor6 cloudbox_field_mono_old;
-
-  // Resize and initialize cloudbox_scat_field,
-  // which  has the same dimensions as cloudbox_field
-  Tensor6 cloudbox_scat_field(cloudbox_field_mono.nvitrines(),
-                          cloudbox_field_mono.nshelves(),
-                          cloudbox_field_mono.nbooks(),
-                          cloudbox_field_mono.npages(),
-                          cloudbox_field_mono.nrows(),
-                          cloudbox_field_mono.ncols(),
-                          0.);
+  MainDomain.get_CloudboxScatteringField().resize(
+      MainDomain.get_CloudboxField().nvitrines(),
+      MainDomain.get_CloudboxField().nshelves(),
+      MainDomain.get_CloudboxField().nbooks(),
+      MainDomain.get_CloudboxField().npages(),
+      MainDomain.get_CloudboxField().nrows(),
+      MainDomain.get_CloudboxField().ncols());
 
   convergence_flag = 0;
   iteration_counter = 0;
+
   // Array to save the last iteration steps
   ArrayOfTensor6 acceleration_input;
   if (accelerated) {
     acceleration_input.resize(4);
   }
   while (convergence_flag == 0) {
-    // 1. Copy cloudbox_field to cloudbox_field_old.
-    cloudbox_field_mono_old = cloudbox_field_mono;
 
-    // 2.Calculate scattered field vector for all points in the cloudbox.
+    // store cloudbox field, because we need it for the convergence check
+    cloudbox_field_mono_old = MainDomain.get_CloudboxField();
 
     // Calculate the scattered field.
     out2 << "  Calculate scattering field. \n";
-    CalcScatteredField(cloudbox_scat_field,
-                       cloudbox_field_mono,
+    CalcScatteredField(MainDomain.get_CloudboxScatteringField(),
+                       MainDomain.get_CloudboxField(),
                        MainDomainScatteringProperties,
                        atmosphere_dim,
                        verbosity);
@@ -1779,22 +1777,22 @@ void RunNewDoit(  //Input and Output:
     out2 << "  Execute doit_rte_agenda. \n";
     Vector f_grid(1, f_mono);
     UpdateSpectralRadianceField(
-                                cloudbox_field_mono,
-                                cloudbox_scat_field,
+                                MainDomain.get_CloudboxField(),
+                                MainDomain.get_CloudboxScatteringField(),
                                 MainDomainScatteringProperties.get_ExtinctionMatrix(),
                                 MainDomainScatteringProperties.get_AbsorptionVector(),
                                 surface_reflection_matrix,
                                 surface_emission,
                                 cloudbox_limits,
                                 atmosphere_dim,
-                                MainDomainPPaths,
+                                MainDomain,
                                 f_grid,
                                 verbosity);
 
     //Convergence test.
     CheckConvergence(convergence_flag,
                      iteration_counter,
-                     cloudbox_field_mono,
+                     MainDomain.get_CloudboxField(),
                      cloudbox_field_mono_old,
                      f_mono,
                      epsilon,
@@ -1804,11 +1802,11 @@ void RunNewDoit(  //Input and Output:
 
     // Convergence Acceleration, if wished.
     if (accelerated > 0 && convergence_flag == 0) {
-      acceleration_input[(iteration_counter - 1) % 4] = cloudbox_field_mono;
+      acceleration_input[(iteration_counter - 1) % 4] = MainDomain.get_CloudboxField();
       // NG - Acceleration
       if (iteration_counter % 4 == 0) {
         cloudbox_field_ngAcceleration(
-            cloudbox_field_mono, acceleration_input, accelerated, verbosity);
+            MainDomain.get_CloudboxField(), acceleration_input, accelerated, verbosity);
       }
     }
   }  //end of while loop, convergence is reached.
@@ -1818,7 +1816,7 @@ void CalcScatteredField(// WS Output and Input
                         Tensor6& cloudbox_scat_field,
                         //WS Input:
                         const Tensor6& cloudbox_field_mono,
-                        const DomainScatteringProperties& ScatteringProperties,
+                        const RTDomainScatteringProperties& ScatteringProperties,
                         const Index& atmosphere_dim,
                         const Verbosity& verbosity) {
 
@@ -1841,7 +1839,7 @@ void CalcScatteredField1D(
     Tensor6& cloudbox_scat_field,
     // Input:
     const ConstTensor6View& cloudbox_field_mono,
-    const DomainScatteringProperties& ScatteringProperties,
+    const RTDomainScatteringProperties& ScatteringProperties,
     const Verbosity& verbosity) {
   CREATE_OUT3;
 
@@ -1860,6 +1858,8 @@ void CalcScatteredField1D(
 
   //Prepare product field
   Matrix product_field(Niza, stokes_dim, 0);
+
+
 
   for (Index i_p = 0; i_p < Np; i_p++) {
     // Interpolate intensity field:
@@ -1912,7 +1912,7 @@ void CalcScatteredField3D(
     Tensor6& cloudbox_scat_field,
     // Input:
     const Tensor6& cloudbox_field_mono,
-    const DomainScatteringProperties& ScatteringProperties,
+    const RTDomainScatteringProperties& ScatteringProperties,
     const Verbosity& verbosity) {
 
   CREATE_OUT2;
@@ -2004,7 +2004,7 @@ void UpdateSpectralRadianceField(//Input and Output:
                                  const ArrayOfIndex& cloudbox_limits,
                                  const Index& atmosphere_dim,
                                  // Precalculated quantities on the propagation path
-                                 const DomainPPaths& MainDomainPPaths,
+                                 const RTDomain& MainRTDomain,
 
 
                                  const Vector& f_grid,
@@ -2018,7 +2018,7 @@ void UpdateSpectralRadianceField(//Input and Output:
                                   surface_reflection_matrix,
                                   surface_emission,
                                   cloudbox_limits,
-                                  MainDomainPPaths,
+                                  MainRTDomain,
                                   f_grid,
                                   verbosity);
   } else if (atmosphere_dim == 3) {
@@ -2054,7 +2054,7 @@ void UpdateSpectralRadianceField1D(
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     // Precalculated quantities on the propagation path
-    const DomainPPaths& MainDomainPPaths,
+    const RTDomain& MainRTDomain,
     const Vector& f_grid,
     const Verbosity& verbosity) {
   CREATE_OUT2;
@@ -2108,14 +2108,14 @@ void UpdateSpectralRadianceField1D(
                                      i_za,
                                      cloudbox_limits,
                                      cloudbox_scat_field,
-                                     MainDomainPPaths.get_PressureArray()[idx],
-                                     MainDomainPPaths.get_TemperatureArray()[idx],
-                                     MainDomainPPaths.get_GasExtinctionArray()[idx],
-                                     MainDomainPPaths.get_LStepArray()[idx],
-                                     MainDomainPPaths.get_GposPArray()[idx],
-                                     MainDomainPPaths.get_GposZenithArray()[idx],
-                                     MainDomainPPaths.get_InterpWeightsArray()[idx],
-                                     MainDomainPPaths.get_InterpWeightsAngleArray()[idx],
+                                     MainRTDomain.get_PressureArray()[idx],
+                                     MainRTDomain.get_TemperatureArray()[idx],
+                                     MainRTDomain.get_GasExtinctionArray()[idx],
+                                     MainRTDomain.get_LStepArray()[idx],
+                                     MainRTDomain.get_GposPArray()[idx],
+                                     MainRTDomain.get_GposZenithArray()[idx],
+                                     MainRTDomain.get_InterpWeightsArray()[idx],
+                                     MainRTDomain.get_InterpWeightsAngleArray()[idx],
                                      f_grid,
                                      ext_mat_field,
                                      abs_vec_field,
@@ -2123,7 +2123,7 @@ void UpdateSpectralRadianceField1D(
                                      surface_emission,
                                      verbosity);
       }
-    } else if (i_za > MainDomainPPaths.get_MaxLimbIndex()) {
+    } else if (i_za > MainRTDomain.get_MaxLimbIndex()) {
       //
       // Sequential updating for downlooking angles
       //
@@ -2136,14 +2136,14 @@ void UpdateSpectralRadianceField1D(
                                      i_za,
                                      cloudbox_limits,
                                      cloudbox_scat_field,
-                                     MainDomainPPaths.get_PressureArray()[idx],
-                                     MainDomainPPaths.get_TemperatureArray()[idx],
-                                     MainDomainPPaths.get_GasExtinctionArray()[idx],
-                                     MainDomainPPaths.get_LStepArray()[idx],
-                                     MainDomainPPaths.get_GposPArray()[idx],
-                                     MainDomainPPaths.get_GposZenithArray()[idx],
-                                     MainDomainPPaths.get_InterpWeightsArray()[idx],
-                                     MainDomainPPaths.get_InterpWeightsAngleArray()[idx],
+                                     MainRTDomain.get_PressureArray()[idx],
+                                     MainRTDomain.get_TemperatureArray()[idx],
+                                     MainRTDomain.get_GasExtinctionArray()[idx],
+                                     MainRTDomain.get_LStepArray()[idx],
+                                     MainRTDomain.get_GposPArray()[idx],
+                                     MainRTDomain.get_GposZenithArray()[idx],
+                                     MainRTDomain.get_InterpWeightsArray()[idx],
+                                     MainRTDomain.get_InterpWeightsAngleArray()[idx],
                                      f_grid,
                                      ext_mat_field,
                                      abs_vec_field,
@@ -2181,14 +2181,14 @@ void UpdateSpectralRadianceField1D(
                                          i_za,
                                          cloudbox_limits,
                                          cloudbox_scat_field,
-                                         MainDomainPPaths.get_PressureArray()[idx],
-                                         MainDomainPPaths.get_TemperatureArray()[idx],
-                                         MainDomainPPaths.get_GasExtinctionArray()[idx],
-                                         MainDomainPPaths.get_LStepArray()[idx],
-                                         MainDomainPPaths.get_GposPArray()[idx],
-                                         MainDomainPPaths.get_GposZenithArray()[idx],
-                                         MainDomainPPaths.get_InterpWeightsArray()[idx],
-                                         MainDomainPPaths.get_InterpWeightsAngleArray()[idx],
+                                         MainRTDomain.get_PressureArray()[idx],
+                                         MainRTDomain.get_TemperatureArray()[idx],
+                                         MainRTDomain.get_GasExtinctionArray()[idx],
+                                         MainRTDomain.get_LStepArray()[idx],
+                                         MainRTDomain.get_GposPArray()[idx],
+                                         MainRTDomain.get_GposZenithArray()[idx],
+                                         MainRTDomain.get_InterpWeightsArray()[idx],
+                                         MainRTDomain.get_InterpWeightsAngleArray()[idx],
                                          f_grid,
                                          ext_mat_field,
                                          abs_vec_field,

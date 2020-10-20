@@ -59,12 +59,12 @@ extern const Numeric PI;
 extern const Numeric RAD2DEG;
 extern const Numeric DEG2RAD;
 
-class DomainPPaths {
+class RTDomain {
  public:
-  DomainPPaths() = default;
+  RTDomain() = default;
 
   // constructor for 3d
-  DomainPPaths(const Vector& p_grid,
+  RTDomain(const Vector& p_grid,
              const Vector& lat_grid,
              const Vector& lon_grid,
              const Vector& za_grid,
@@ -80,8 +80,8 @@ class DomainPPaths {
              const ArrayOfArrayOfGridPos& GposZenithArray,
              const ArrayOfArrayOfGridPos& GposAzimuthArray,
              const ArrayOfVector& LStepArray,
-             const Index MaxLimbIndex,
-             const Index AtmosphereDim)
+             const Index& MaxLimbIndex,
+             const Index& AtmosphereDim)
       : mp_grid(p_grid),
         mlat_grid(lat_grid),
         mlon_grid(lon_grid),
@@ -102,7 +102,7 @@ class DomainPPaths {
         mAtmosphereDim(AtmosphereDim) {}
 
   // constructor for 1d
-  DomainPPaths(const Vector& p_grid,
+  RTDomain(const Vector& p_grid,
              const Vector& lat_grid,
              const Vector& lon_grid,
              const Vector& za_grid,
@@ -115,8 +115,8 @@ class DomainPPaths {
              const ArrayOfArrayOfGridPos& GposPArray,
              const ArrayOfArrayOfGridPos& GposZenithArray,
              const ArrayOfVector& LStepArray,
-             const Index MaxLimbIndex,
-             const Index AtmosphereDim)
+             const Index& MaxLimbIndex,
+             const Index& AtmosphereDim)
       : mp_grid(p_grid),
         mlat_grid(lat_grid),
         mlon_grid(lon_grid),
@@ -134,7 +134,7 @@ class DomainPPaths {
         mAtmosphereDim(AtmosphereDim) {}
 
   // constructor (only) grids
-  DomainPPaths(const Vector& p_grid,
+  RTDomain(const Vector& p_grid,
              const Vector& lat_grid,
              const Vector& lon_grid,
              const Vector& za_grid,
@@ -211,6 +211,13 @@ class DomainPPaths {
     mAtmosphereDim = AtmosphereDim;
   }
 
+  void set_CloudboxField (const Tensor6& CloudboxField) {
+    mCloudboxField = CloudboxField;
+  }
+
+  void set_CloudboxScatteringField (const Tensor6& CloudboxScatteringField) {
+    mCloudboxScatteringField = CloudboxScatteringField;
+  }
 
   //get-methods of variables----------------------------------------------------
   const Vector& get_p_grid() const { return mp_grid; }
@@ -265,6 +272,13 @@ class DomainPPaths {
 
   const Index& get_AtmosphereDim() const { return mAtmosphereDim; }
 
+  const Tensor6& get_CloudboxField() const { return mCloudboxField;}
+
+  Tensor6& get_CloudboxField() { return mCloudboxField;}
+
+  const Tensor6& get_CloudboxScatteringField() const { return mCloudboxScatteringField;}
+
+  Tensor6& get_CloudboxScatteringField() { return mCloudboxScatteringField;}
 
 
  protected:
@@ -286,11 +300,14 @@ class DomainPPaths {
   ArrayOfVector mLStepArray;
   Index mMaxLimbIndex;
   Index mAtmosphereDim;
+  Tensor6 mCloudboxField;
+  Tensor6 mCloudboxScatteringField;
+
 };
 
-class DomainScatteringProperties {
+class RTDomainScatteringProperties {
  public:
-  DomainScatteringProperties() = default;
+  RTDomainScatteringProperties() = default;
 
   /**Constructor for DomainScatteringProperties
  *
@@ -307,7 +324,7 @@ class DomainScatteringProperties {
  * @param[in] ScatZaGrid Zenith angle grid for the scattering calculation.
  * @param[in] ScatAaGrid Azimuth angle grid for the scattering calculation.
  */
-  DomainScatteringProperties(const Tensor6& ExtinctionMatrix,
+  RTDomainScatteringProperties(const Tensor6& ExtinctionMatrix,
                             const Tensor5& AbsorptionVector,
                             const Tensor7& ScatteringMatrix,
                             const ArrayOfIndex& IdirIdx0,
@@ -900,7 +917,7 @@ void CalcPropagationPathMaxLength(
  * @param[in] verbosity Verbosity setting.
  */
 void RunNewDoit(//Input and Output:
-    Tensor6& cloudbox_field_mono,
+    RTDomain& MainDomain,
     Index& convergence_flag,
     Index& iteration_counter,
     //Input
@@ -908,10 +925,8 @@ void RunNewDoit(//Input and Output:
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
-    // Precalculated quantities on the propagation path
-    const DomainPPaths& MainDomainPPaths,
     //Precalculated quantities for scattering integral calulation
-    const DomainScatteringProperties& MainDomainScatteringProperties,
+    const RTDomainScatteringProperties& MainDomainScatteringProperties,
     //Additional input
     const Numeric& f_mono,
     const String& iy_unit,
@@ -945,7 +960,7 @@ void CalcScatteredField(  // WS Output and Input
     Tensor6& cloudbox_scat_field,
     //WS Input:
     const Tensor6& cloudbox_field_mono,
-    const DomainScatteringProperties& ScatteringProperties,
+    const RTDomainScatteringProperties& ScatteringProperties,
     const Index& atmosphere_dim,
     const Verbosity& verbosity);
 
@@ -968,7 +983,7 @@ void CalcScatteredField1D(
     Tensor6& cloudbox_scat_field,
     // Input:
     const ConstTensor6View& cloudbox_field_mono,
-    const DomainScatteringProperties& ScatteringProperties,
+    const RTDomainScatteringProperties& ScatteringProperties,
     const Verbosity& verbosity);
 
 /** Calculates the 3D scattered field during DOIT iteration step
@@ -996,7 +1011,7 @@ void CalcScatteredField3D(
     Tensor6& cloudbox_scat_field,
     //WS Input:
     const Tensor6& cloudbox_field_mono,
-    const DomainScatteringProperties& ScatteringProperties,
+    const RTDomainScatteringProperties& ScatteringProperties,
     const Verbosity& verbosity);
 
 
@@ -1042,7 +1057,7 @@ void UpdateSpectralRadianceField(//Input and Output:
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
     // Precalculated quantities on the propagation path
-    const DomainPPaths& MainDomainPPaths,
+    const RTDomain& MainRTDomain,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
@@ -1086,7 +1101,7 @@ void UpdateSpectralRadianceField1D(
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     // Precalculated quantities on the propagation path
-    const DomainPPaths& MainDomainPPaths,
+    const RTDomain& MainRTDomain,
     const Vector& f_grid,
     const Verbosity& verbosity);
 
