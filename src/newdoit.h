@@ -61,6 +61,9 @@ extern const Numeric DEG2RAD;
 
 class RTDomain {
  public:
+
+  //TODO: Add doxygen doc and remove unneeded methods and constructors.
+
   RTDomain() = default;
 
   // constructor for 3d
@@ -221,63 +224,81 @@ class RTDomain {
 
   //get-methods of variables----------------------------------------------------
   const Vector& get_p_grid() const { return mp_grid; }
+  Vector& get_p_grid() { return mp_grid; }
 
   const Vector& get_lat_grid() const { return mlat_grid; }
+  Vector& get_lat_grid() { return mlat_grid; }
 
   const Vector& get_lon_grid() const { return mlon_grid; }
+  Vector& get_lon_grid() { return mlon_grid; }
 
   const Vector& get_za_grid() const { return mza_grid; }
+  Vector& get_za_grid() { return mza_grid; }
 
   const Vector& get_aa_grid() const { return maa_grid; }
+  Vector& get_aa_grid() { return maa_grid; }
 
   const ArrayOfVector& get_PressureArray() const { return mPressureArray; }
+  ArrayOfVector& get_PressureArray() { return mPressureArray; }
 
   const ArrayOfVector& get_TemperatureArray() const {
     return mTemperatureArray;
   }
+  ArrayOfVector& get_TemperatureArray() { return mTemperatureArray; }
 
   const ArrayOfVector& get_GasExtinctionArray() const {
     return mGasExtinctionArray;
   }
+  ArrayOfVector& get_GasExtinctionArray() { return mGasExtinctionArray; }
 
   const ArrayOfMatrix& get_InterpWeightsArray() const {
     return mInterpWeightsArray;
   }
+  ArrayOfMatrix& get_InterpWeightsArray() { return mInterpWeightsArray; }
 
   const ArrayOfMatrix& get_InterpWeightsAngleArray() const {
     return mInterpWeightsAngleArray;
   }
+  ArrayOfMatrix& get_InterpWeightsAngleArray() {
+    return mInterpWeightsAngleArray;
+  }
 
   const ArrayOfArrayOfGridPos& get_GposPArray() const { return mGposPArray; }
+  ArrayOfArrayOfGridPos& get_GposPArray() { return mGposPArray; }
 
   const ArrayOfArrayOfGridPos& get_GposLatArray() const {
     return mGposLatArray;
   }
+  ArrayOfArrayOfGridPos& get_GposLatArray() { return mGposLatArray; }
 
   const ArrayOfArrayOfGridPos& get_GposLonArray() const {
     return mGposLonArray;
   }
+  ArrayOfArrayOfGridPos& get_GposLonArray() { return mGposLonArray; }
 
   const ArrayOfArrayOfGridPos& get_GposZenithArray() const {
     return mGposZenithArray;
   }
+  ArrayOfArrayOfGridPos& get_GposZenithArray() { return mGposZenithArray; }
 
   const ArrayOfArrayOfGridPos& get_GposAzimuthArray() const {
     return mGposAzimuthArray;
   }
+  ArrayOfArrayOfGridPos& get_GposAzimuthArray() { return mGposAzimuthArray; }
 
   const ArrayOfVector& get_LStepArray() const { return mLStepArray; }
+  ArrayOfVector& get_LStepArray() { return mLStepArray; }
 
   const Index& get_MaxLimbIndex() const { return mMaxLimbIndex; }
+  Index& get_MaxLimbIndex() { return mMaxLimbIndex; }
 
   const Index& get_AtmosphereDim() const { return mAtmosphereDim; }
+  Index& get_AtmosphereDim() { return mAtmosphereDim; }
 
   const Tensor6& get_CloudboxField() const { return mCloudboxField;}
-
   Tensor6& get_CloudboxField() { return mCloudboxField;}
 
   const Tensor6& get_CloudboxScatteringField() const { return mCloudboxScatteringField;}
-
   Tensor6& get_CloudboxScatteringField() { return mCloudboxScatteringField;}
 
 
@@ -307,6 +328,9 @@ class RTDomain {
 
 class RTDomainScatteringProperties {
  public:
+
+  //TODO: Add doxygen doc and remove unneeded methods and constructors.
+
   RTDomainScatteringProperties() = default;
 
   /**Constructor for DomainScatteringProperties
@@ -349,30 +373,49 @@ class RTDomainScatteringProperties {
         mScatZaGrid(ScatZaGrid),
         mScatAaGrid(ScatAaGrid) {}
 
+  //Set methods
+  void set_ScatZaGrid (const Vector& ScatZaGrid) {mScatZaGrid = ScatZaGrid; }
+
+  void set_ScatAaGrid (const Vector& ScatAaGrid) {mScatAaGrid = ScatAaGrid; }
+
+
   //Get methods
   const Tensor6& get_ExtinctionMatrix() const { return mExtinctionMatrix; }
+  Tensor6& get_ExtinctionMatrix() { return mExtinctionMatrix; }
 
   const Tensor5& get_AbsorptionVector() const { return mAbsorptionVector; }
+  Tensor5& get_AbsorptionVector() { return mAbsorptionVector; }
 
   const Tensor7& get_ScatteringMatrix() const { return mScatteringMatrix; }
+  Tensor7& get_ScatteringMatrix() { return mScatteringMatrix; }
 
   const ArrayOfIndex& get_IdirIdx0() const { return  mIdirIdx0;}
+  ArrayOfIndex& get_IdirIdx0() { return  mIdirIdx0;}
 
   const ArrayOfIndex& get_IdirIdx1() const { return  mIdirIdx1;}
+  ArrayOfIndex& get_IdirIdx1() { return  mIdirIdx1;}
 
   const ArrayOfIndex& get_PdirIdx0() const { return  mPdirIdx0;}
+  ArrayOfIndex& get_PdirIdx0() { return  mPdirIdx0;}
 
   const ArrayOfIndex& get_PdirIdx1() const { return  mPdirIdx1;}
+  ArrayOfIndex& get_PdirIdx1() { return  mPdirIdx1;}
 
   const ArrayOfGridPos& get_GpZaI() const { return  mGpZaI;}
+  ArrayOfGridPos& get_GpZaI() { return  mGpZaI;}
 
   const ArrayOfGridPos& get_GpAaI() const { return  mGpAaI;}
+  ArrayOfGridPos& get_GpAaI() { return  mGpAaI;}
 
   const Tensor3& get_Itw() const { return mItw;}
+  Tensor3& get_Itw() { return mItw;}
 
   const Vector& get_ScatZaGrid() const {return mScatZaGrid;}
+  Vector& get_ScatZaGrid() {return mScatZaGrid;}
 
   const Vector& get_ScatAaGrid() const {return mScatAaGrid;}
+  Vector& get_ScatAaGrid() {return mScatAaGrid;}
+
 
  protected:
   Tensor6 mExtinctionMatrix;
@@ -697,6 +740,37 @@ void CalcGasExtinctionField(Workspace& ws,
                             const ConstTensor4View& vmr_field,
                             const Agenda& propmat_clearsky_agenda,
                             const ConstVectorView& f_mono);
+
+//TODO: Add doxygen doc
+/**
+ * @param DomainScatteringProperties
+ * @param t_field
+ * @param scat_data
+ * @param pnd_field
+ * @param stokes_dim
+ * @param atmosphere_dim
+ * @param za_grid
+ * @param aa_grid
+ * @param scat_za_grid
+ * @param scat_aa_grid
+ * @param t_interp_order
+ * @param ForwardCorrectionFlag
+ * @param verbosity
+ */
+void CalcDomainScatteringProperties(
+    RTDomainScatteringProperties& DomainScatteringProperties,
+    const Tensor3& t_field,
+    const ArrayOfArrayOfSingleScatteringData& scat_data,
+    const ConstTensor4View& pnd_field,
+    const Index& stokes_dim,
+    const Index& atmosphere_dim,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid,
+    const Index& t_interp_order,
+    const Index& ForwardCorrectionFlag,
+    const Verbosity& verbosity);
 
 /** Calculates bulk optical properties from per-scat-species bulk properties.
  *
