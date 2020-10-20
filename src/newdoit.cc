@@ -780,85 +780,23 @@ void NewDoitMonoCalc(Workspace& ws,
 
 
   //-------Scattering related quantities----------------------------------------
-  //calculate par_optpropCalc_doit
-  //It assumens at least azimuthally randomly oriented particles
-  CalcParticleOpticalProperties(extinction_matrix,
-                                absorption_vector,
-                                scat_data,
-                                za_grid,
-                                pnd_field,
-                                t_field,
-                                stokes_dim);
 
-  os1 << "particle optical properties calculated \n";
-  out0 << os1.str();
-  os1.clear();
+  RTDomainScatteringProperties MainDomainScatteringProperties;
+  CalcDomainScatteringProperties(MainDomainScatteringProperties,
+                                 t_field,
+                                 scat_data,
+                                 pnd_field,
+                                 stokes_dim,
+                                 atmosphere_dim,
+                                 za_grid,
+                                 aa_grid,
+                                 scat_za_grid,
+                                 scat_aa_grid,
+                                 t_interp_order,
+                                 ForwardCorrectionFlag,
+                                 verbosity);
 
-
-  ArrayOfIndex idir_idx0;
-  ArrayOfIndex idir_idx1;
-  ArrayOfIndex pdir_idx0;
-  ArrayOfIndex pdir_idx1;
-  ArrayOfGridPos gp_za_i;
-  ArrayOfGridPos gp_aa_i;
-  Tensor3 itw;
-
-  //calculate sca_optpropCalc_doit
-  CalcScatteringProperties(scattering_matrix,
-                           idir_idx0,
-                           idir_idx1,
-                           pdir_idx0,
-                           pdir_idx1,
-                           gp_za_i,
-                           gp_aa_i,
-                           itw,
-                           t_field,
-                           scat_data,
-                           pnd_field,
-                           stokes_dim,
-                           atmosphere_dim,
-                           za_grid,
-                           aa_grid,
-                           scat_za_grid,
-                           scat_aa_grid,
-                           t_interp_order,
-                           verbosity);
-
-  os2 << "particle optical properties calculated \n";
-  out0 << os2.str();
-  os2.clear();
-
-
-  if (ForwardCorrectionFlag) {
-    ForwardScatteringCorrection(
-        scattering_matrix,
-        extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
-        absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
-        idir_idx0,
-        idir_idx1,
-        pdir_idx0,
-        pdir_idx1,
-        atmosphere_dim,
-        za_grid,
-        aa_grid,
-        scat_za_grid,
-        scat_aa_grid);
-  }
-
-  RTDomainScatteringProperties MainDomainScatteringProperties(extinction_matrix,
-                                                            absorption_vector,
-                                                            scattering_matrix,
-                                                            idir_idx0,
-                                                            idir_idx1,
-                                                            pdir_idx0,
-                                                            pdir_idx1,
-                                                            gp_za_i,
-                                                            gp_aa_i,
-                                                            itw,
-                                                            scat_za_grid,
-                                                            scat_aa_grid);
-
-  //-------End of Scattering related quantities---------------------------------
+  //-------Surface related quantities-------------------------------------------
 
   Matrix surface_skin_t;
   Tensor4 surface_los;
@@ -908,7 +846,7 @@ void NewDoitMonoCalc(Workspace& ws,
     //calculate local ppath_lmax
     CalcPropagationPathMaxLength(
         p_path_maxlength,
-        extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+        MainDomainScatteringProperties.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,ndir,nst,nst)
         gas_extinction,
         p_grid,
         lat_grid,
@@ -924,7 +862,7 @@ void NewDoitMonoCalc(Workspace& ws,
 
 
 
-
+  // set up main rt domain
   RTDomain MainRTDomain(p_grid,
                         lat_grid,
                         lon_grid,
@@ -932,31 +870,23 @@ void NewDoitMonoCalc(Workspace& ws,
                         aa_grid,
                         atmosphere_dim);
 
-  ArrayOfVector PressureArray;
-  ArrayOfVector TemperatureArray;
+  //Set cloudbox_field of MainRTDomain
+  MainRTDomain.set_CloudboxField(cloudbox_field_mono);
+
   ArrayOfMatrix VmrArray;
-  ArrayOfMatrix InterpWeightsArray;
-  ArrayOfMatrix InterpWeightsZenithArray;
-  ArrayOfArrayOfGridPos GposArray;
-  ArrayOfArrayOfGridPos GposZenithArray;
-  ArrayOfVector LstepArray;
-  Index MaxLimbIndex;
 
+  //Estimate the ppath for main rt domain
   if (atmosphere_dim ==1) {
-
-
-
-      //Estimate the ppath for main domain
       EstimatePPathElements1D(ws,
-                              PressureArray,
-                              TemperatureArray,
+                              MainRTDomain.get_PressureArray(),
+                              MainRTDomain.get_TemperatureArray(),
                               VmrArray,
-                              InterpWeightsArray,
-                              InterpWeightsZenithArray,
-                              GposArray,
-                              GposZenithArray,
-                              LstepArray,
-                              MaxLimbIndex,
+                              MainRTDomain.get_InterpWeightsArray(),
+                              MainRTDomain.get_InterpWeightsAngleArray(),
+                              MainRTDomain.get_GposPArray(),
+                              MainRTDomain.get_GposZenithArray(),
+                              MainRTDomain.get_LStepArray(),
+                              MainRTDomain.get_MaxLimbIndex(),
                               cloudbox_limits,
                               za_grid,
                               ppath_step_agenda,
@@ -970,16 +900,6 @@ void NewDoitMonoCalc(Workspace& ws,
                               refellipsoid,
                               Vector(1, f_mono),
                               verbosity);
-
-    MainRTDomain.set_PressureArray(PressureArray);
-    MainRTDomain.set_TemperatureArray(TemperatureArray);
-    MainRTDomain.set_InterpWeightsArray(InterpWeightsArray);
-    MainRTDomain.set_InterpWeightsAngleArray(InterpWeightsZenithArray);
-    MainRTDomain.set_GposPArray(GposArray);
-    MainRTDomain.set_GposZenithArray(GposZenithArray);
-    MainRTDomain.set_LStepArray(LstepArray);
-    MainRTDomain.set_MaxLimbIndex(MaxLimbIndex);
-
 
       //TODO: Add here the ppath estimation for the subdomains
       //Estimate the ppath for the subdomains and save them ArrayOf...
@@ -1014,26 +934,24 @@ void NewDoitMonoCalc(Workspace& ws,
 //                            verbosity);
   }
 
-  //TODO: Add here the Gasextinction of the subdomains
 
-  //calculate gas extinction
-  ArrayOfVector GasExtinctionArray(MainRTDomain.get_PressureArray().nelem());
 
+  //calculate gas extinction on p-path points
+  MainRTDomain.get_GasExtinctionArray().resize(MainRTDomain.get_PressureArray().nelem());
 
   for (Index i = 0; i < MainRTDomain.get_PressureArray().nelem(); i++) {
     Vector gas_extinction_temp;
     CalcGasExtinction(ws,
-                      gas_extinction_temp,
-                      PressureArray[i],
-                      TemperatureArray[i],
+                      MainRTDomain.get_GasExtinctionArray()[i],
+                      MainRTDomain.get_PressureArray()[i],
+                      MainRTDomain.get_TemperatureArray()[i],
                       VmrArray[i],
                       propmat_clearsky_agenda,
                       f_mono);
 
-    GasExtinctionArray[i] = gas_extinction_temp;
-
   }
-  MainRTDomain.set_GasExtinctionArray(GasExtinctionArray);
+
+  //TODO: Add here the Gasextinction of the subdomains
 
   os << "gas absorption calculated \n";
   out0 << os.str();
@@ -1042,7 +960,7 @@ void NewDoitMonoCalc(Workspace& ws,
   //TODO:add subdomain variables. Ask Olli if there is a better way to include
   // the subdomain.
 
-  MainRTDomain.set_CloudboxField(cloudbox_field_mono);
+
 
   //run new doit
   RunNewDoit(
@@ -1065,6 +983,9 @@ void NewDoitMonoCalc(Workspace& ws,
              verbosity);
 
   cloudbox_field_mono=MainRTDomain.get_CloudboxField();
+  extinction_matrix=MainDomainScatteringProperties.get_ExtinctionMatrix();
+  absorption_vector=MainDomainScatteringProperties.get_AbsorptionVector();
+  scattering_matrix=MainDomainScatteringProperties.get_ScatteringMatrix();
 
 }
 
@@ -1154,6 +1075,97 @@ void CalcGasExtinctionField(Workspace& ws,
     }
   }
 }
+
+void CalcDomainScatteringProperties(
+    RTDomainScatteringProperties& DomainScatteringProperties,
+    const Tensor3& t_field,
+    const ArrayOfArrayOfSingleScatteringData& scat_data,
+    const ConstTensor4View& pnd_field,
+    const Index& stokes_dim,
+    const Index& atmosphere_dim,
+    const Vector& za_grid,
+    const Vector& aa_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid,
+    const Index& t_interp_order,
+    const Index& ForwardCorrectionFlag,
+    const Verbosity& verbosity){
+
+
+  // some resizing
+  DomainScatteringProperties.get_ExtinctionMatrix().resize(t_field.npages(),
+                                                               t_field.nrows(),
+                                                               t_field.ncols(),
+                                                               za_grid.nelem(),
+                                                               stokes_dim,
+                                                               stokes_dim);
+
+  DomainScatteringProperties.get_AbsorptionVector().resize(t_field.npages(),
+                                                               t_field.nrows(),
+                                                               t_field.ncols(),
+                                                               za_grid.nelem(),
+                                                               stokes_dim);
+
+
+  DomainScatteringProperties.set_ScatZaGrid(scat_za_grid);
+  DomainScatteringProperties.set_ScatAaGrid(scat_aa_grid);
+
+
+  //calculate particle optical properties
+  //It assumens at least azimuthally randomly oriented particles
+  CalcParticleOpticalProperties( DomainScatteringProperties.get_ExtinctionMatrix(),
+                                 DomainScatteringProperties.get_AbsorptionVector(),
+                                scat_data,
+                                za_grid,
+                                pnd_field,
+                                t_field,
+                                stokes_dim);
+
+  //calculate sca_optpropCalc_doit
+  CalcScatteringProperties(DomainScatteringProperties.get_ScatteringMatrix(),
+                           DomainScatteringProperties.get_IdirIdx0(),
+                           DomainScatteringProperties.get_IdirIdx1(),
+                           DomainScatteringProperties.get_PdirIdx0(),
+                           DomainScatteringProperties.get_PdirIdx1(),
+                           DomainScatteringProperties.get_GpZaI(),
+                           DomainScatteringProperties.get_GpAaI(),
+                           DomainScatteringProperties.get_Itw(),
+                           t_field,
+                           scat_data,
+                           pnd_field,
+                           stokes_dim,
+                           atmosphere_dim,
+                           za_grid,
+                           aa_grid,
+                           DomainScatteringProperties.get_ScatZaGrid(),
+                           DomainScatteringProperties.get_ScatAaGrid(),
+                           t_interp_order,
+                           verbosity);
+
+  //forward scattering correction
+  if (ForwardCorrectionFlag) {
+    ForwardScatteringCorrection(
+        DomainScatteringProperties.get_ScatteringMatrix(),
+        DomainScatteringProperties.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,ndir,nst,nst)
+        DomainScatteringProperties.get_AbsorptionVector(),  //(Np,Nlat,Nlon,ndir,nst)
+        DomainScatteringProperties.get_IdirIdx0(),
+        DomainScatteringProperties.get_IdirIdx1(),
+        DomainScatteringProperties.get_PdirIdx0(),
+        DomainScatteringProperties.get_PdirIdx1(),
+        atmosphere_dim,
+        za_grid,
+        aa_grid,
+        DomainScatteringProperties.get_ScatZaGrid(),
+        DomainScatteringProperties.get_ScatAaGrid());
+  }
+
+
+
+
+
+};
+
+
 
 void CalcParticleOpticalProperties(Tensor6& extinction_matrix,//(Np,Nlat,Nlon,ndir,nst,nst)
                     Tensor5& absorption_vector,//(Np,Nlat,Nlon,ndir,nst)
