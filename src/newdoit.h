@@ -61,30 +61,29 @@ extern const Numeric DEG2RAD;
 
 class RTDomain {
  public:
-
   //TODO: Add doxygen doc and remove unneeded methods and constructors.
 
   RTDomain() = default;
 
   // constructor for 3d
   RTDomain(const Vector& p_grid,
-             const Vector& lat_grid,
-             const Vector& lon_grid,
-             const Vector& za_grid,
-             const Vector& aa_grid,
-             const ArrayOfVector& PressureArray,
-             const ArrayOfVector& TemperatureArray,
-             const ArrayOfVector& GasExtinctionArray,
-             const ArrayOfMatrix& InterpWeightsArray,
-             const ArrayOfMatrix& InterpWeightsAngleArray,
-             const ArrayOfArrayOfGridPos& GposPArray,
-             const ArrayOfArrayOfGridPos& GposLatArray,
-             const ArrayOfArrayOfGridPos& GposLonArray,
-             const ArrayOfArrayOfGridPos& GposZenithArray,
-             const ArrayOfArrayOfGridPos& GposAzimuthArray,
-             const ArrayOfVector& LStepArray,
-             const Index& MaxLimbIndex,
-             const Index& AtmosphereDim)
+           const Vector& lat_grid,
+           const Vector& lon_grid,
+           const Vector& za_grid,
+           const Vector& aa_grid,
+           const ArrayOfVector& PressureArray,
+           const ArrayOfVector& TemperatureArray,
+           const ArrayOfVector& GasExtinctionArray,
+           const ArrayOfMatrix& InterpWeightsArray,
+           const ArrayOfMatrix& InterpWeightsAngleArray,
+           const ArrayOfArrayOfGridPos& GposPArray,
+           const ArrayOfArrayOfGridPos& GposLatArray,
+           const ArrayOfArrayOfGridPos& GposLonArray,
+           const ArrayOfArrayOfGridPos& GposZenithArray,
+           const ArrayOfArrayOfGridPos& GposAzimuthArray,
+           const ArrayOfVector& LStepArray,
+           const Index& MaxLimbIndex,
+           const Index& AtmosphereDim)
       : mp_grid(p_grid),
         mlat_grid(lat_grid),
         mlon_grid(lon_grid),
@@ -106,20 +105,20 @@ class RTDomain {
 
   // constructor for 1d
   RTDomain(const Vector& p_grid,
-             const Vector& lat_grid,
-             const Vector& lon_grid,
-             const Vector& za_grid,
-             const Vector& aa_grid,
-             const ArrayOfVector& PressureArray,
-             const ArrayOfVector& TemperatureArray,
-             const ArrayOfVector& GasExtinctionArray,
-             const ArrayOfMatrix& InterpWeightsArray,
-             const ArrayOfMatrix& InterpWeightsAngleArray,
-             const ArrayOfArrayOfGridPos& GposPArray,
-             const ArrayOfArrayOfGridPos& GposZenithArray,
-             const ArrayOfVector& LStepArray,
-             const Index& MaxLimbIndex,
-             const Index& AtmosphereDim)
+           const Vector& lat_grid,
+           const Vector& lon_grid,
+           const Vector& za_grid,
+           const Vector& aa_grid,
+           const ArrayOfVector& PressureArray,
+           const ArrayOfVector& TemperatureArray,
+           const ArrayOfVector& GasExtinctionArray,
+           const ArrayOfMatrix& InterpWeightsArray,
+           const ArrayOfMatrix& InterpWeightsAngleArray,
+           const ArrayOfArrayOfGridPos& GposPArray,
+           const ArrayOfArrayOfGridPos& GposZenithArray,
+           const ArrayOfVector& LStepArray,
+           const Index& MaxLimbIndex,
+           const Index& AtmosphereDim)
       : mp_grid(p_grid),
         mlat_grid(lat_grid),
         mlon_grid(lon_grid),
@@ -138,11 +137,11 @@ class RTDomain {
 
   // constructor (only) grids
   RTDomain(const Vector& p_grid,
-             const Vector& lat_grid,
-             const Vector& lon_grid,
-             const Vector& za_grid,
-             const Vector& aa_grid,
-             const Index& AtmosphereDim)
+           const Vector& lat_grid,
+           const Vector& lon_grid,
+           const Vector& za_grid,
+           const Vector& aa_grid,
+           const Index& AtmosphereDim)
       : mp_grid(p_grid),
         mlat_grid(lat_grid),
         mlon_grid(lon_grid),
@@ -214,11 +213,11 @@ class RTDomain {
     mAtmosphereDim = AtmosphereDim;
   }
 
-  void set_CloudboxField (const Tensor6& CloudboxField) {
+  void set_CloudboxField(const Tensor6& CloudboxField) {
     mCloudboxField = CloudboxField;
   }
 
-  void set_CloudboxScatteringField (const Tensor6& CloudboxScatteringField) {
+  void set_CloudboxScatteringField(const Tensor6& CloudboxScatteringField) {
     mCloudboxScatteringField = CloudboxScatteringField;
   }
 
@@ -295,12 +294,13 @@ class RTDomain {
   const Index& get_AtmosphereDim() const { return mAtmosphereDim; }
   Index& get_AtmosphereDim() { return mAtmosphereDim; }
 
-  const Tensor6& get_CloudboxField() const { return mCloudboxField;}
-  Tensor6& get_CloudboxField() { return mCloudboxField;}
+  const Tensor6& get_CloudboxField() const { return mCloudboxField; }
+  Tensor6& get_CloudboxField() { return mCloudboxField; }
 
-  const Tensor6& get_CloudboxScatteringField() const { return mCloudboxScatteringField;}
-  Tensor6& get_CloudboxScatteringField() { return mCloudboxScatteringField;}
-
+  const Tensor6& get_CloudboxScatteringField() const {
+    return mCloudboxScatteringField;
+  }
+  Tensor6& get_CloudboxScatteringField() { return mCloudboxScatteringField; }
 
  protected:
   Vector mp_grid;
@@ -323,12 +323,12 @@ class RTDomain {
   Index mAtmosphereDim;
   Tensor6 mCloudboxField;
   Tensor6 mCloudboxScatteringField;
-
 };
+
+typedef Array<RTDomain> ArrayOfRTDomain;
 
 class RTDomainScatteringProperties {
  public:
-
   //TODO: Add doxygen doc and remove unneeded methods and constructors.
 
   RTDomainScatteringProperties() = default;
@@ -349,17 +349,17 @@ class RTDomainScatteringProperties {
  * @param[in] ScatAaGrid Azimuth angle grid for the scattering calculation.
  */
   RTDomainScatteringProperties(const Tensor6& ExtinctionMatrix,
-                            const Tensor5& AbsorptionVector,
-                            const Tensor7& ScatteringMatrix,
-                            const ArrayOfIndex& IdirIdx0,
-                            const ArrayOfIndex& IdirIdx1,
-                            const ArrayOfIndex& PdirIdx0,
-                            const ArrayOfIndex& PdirIdx1,
-                            const ArrayOfGridPos& GpZaI,
-                            const ArrayOfGridPos& GpAaI,
-                            const Tensor3& Itw,
-                            const Vector& ScatZaGrid,
-                            const Vector& ScatAaGrid)
+                               const Tensor5& AbsorptionVector,
+                               const Tensor7& ScatteringMatrix,
+                               const ArrayOfIndex& IdirIdx0,
+                               const ArrayOfIndex& IdirIdx1,
+                               const ArrayOfIndex& PdirIdx0,
+                               const ArrayOfIndex& PdirIdx1,
+                               const ArrayOfGridPos& GpZaI,
+                               const ArrayOfGridPos& GpAaI,
+                               const Tensor3& Itw,
+                               const Vector& ScatZaGrid,
+                               const Vector& ScatAaGrid)
       : mExtinctionMatrix(ExtinctionMatrix),
         mAbsorptionVector(AbsorptionVector),
         mScatteringMatrix(ScatteringMatrix),
@@ -369,15 +369,14 @@ class RTDomainScatteringProperties {
         mPdirIdx1(PdirIdx1),
         mGpZaI(GpZaI),
         mGpAaI(GpAaI),
-        mItw(Itw) ,
+        mItw(Itw),
         mScatZaGrid(ScatZaGrid),
         mScatAaGrid(ScatAaGrid) {}
 
   //Set methods
-  void set_ScatZaGrid (const Vector& ScatZaGrid) {mScatZaGrid = ScatZaGrid; }
+  void set_ScatZaGrid(const Vector& ScatZaGrid) { mScatZaGrid = ScatZaGrid; }
 
-  void set_ScatAaGrid (const Vector& ScatAaGrid) {mScatAaGrid = ScatAaGrid; }
-
+  void set_ScatAaGrid(const Vector& ScatAaGrid) { mScatAaGrid = ScatAaGrid; }
 
   //Get methods
   const Tensor6& get_ExtinctionMatrix() const { return mExtinctionMatrix; }
@@ -389,33 +388,78 @@ class RTDomainScatteringProperties {
   const Tensor7& get_ScatteringMatrix() const { return mScatteringMatrix; }
   Tensor7& get_ScatteringMatrix() { return mScatteringMatrix; }
 
-  const ArrayOfIndex& get_IdirIdx0() const { return  mIdirIdx0;}
-  ArrayOfIndex& get_IdirIdx0() { return  mIdirIdx0;}
+  const ArrayOfIndex& get_IdirIdx0() const { return mIdirIdx0; }
+  ArrayOfIndex& get_IdirIdx0() { return mIdirIdx0; }
 
-  const ArrayOfIndex& get_IdirIdx1() const { return  mIdirIdx1;}
-  ArrayOfIndex& get_IdirIdx1() { return  mIdirIdx1;}
+  const ArrayOfIndex& get_IdirIdx1() const { return mIdirIdx1; }
+  ArrayOfIndex& get_IdirIdx1() { return mIdirIdx1; }
 
-  const ArrayOfIndex& get_PdirIdx0() const { return  mPdirIdx0;}
-  ArrayOfIndex& get_PdirIdx0() { return  mPdirIdx0;}
+  const ArrayOfIndex& get_PdirIdx0() const { return mPdirIdx0; }
+  ArrayOfIndex& get_PdirIdx0() { return mPdirIdx0; }
 
-  const ArrayOfIndex& get_PdirIdx1() const { return  mPdirIdx1;}
-  ArrayOfIndex& get_PdirIdx1() { return  mPdirIdx1;}
+  const ArrayOfIndex& get_PdirIdx1() const { return mPdirIdx1; }
+  ArrayOfIndex& get_PdirIdx1() { return mPdirIdx1; }
 
-  const ArrayOfGridPos& get_GpZaI() const { return  mGpZaI;}
-  ArrayOfGridPos& get_GpZaI() { return  mGpZaI;}
+  const ArrayOfGridPos& get_GpZaI() const { return mGpZaI; }
+  ArrayOfGridPos& get_GpZaI() { return mGpZaI; }
 
-  const ArrayOfGridPos& get_GpAaI() const { return  mGpAaI;}
-  ArrayOfGridPos& get_GpAaI() { return  mGpAaI;}
+  const ArrayOfGridPos& get_GpAaI() const { return mGpAaI; }
+  ArrayOfGridPos& get_GpAaI() { return mGpAaI; }
 
-  const Tensor3& get_Itw() const { return mItw;}
-  Tensor3& get_Itw() { return mItw;}
+  const Tensor3& get_Itw() const { return mItw; }
+  Tensor3& get_Itw() { return mItw; }
 
-  const Vector& get_ScatZaGrid() const {return mScatZaGrid;}
-  Vector& get_ScatZaGrid() {return mScatZaGrid;}
+  const Vector& get_ScatZaGrid() const { return mScatZaGrid; }
+  Vector& get_ScatZaGrid() { return mScatZaGrid; }
 
-  const Vector& get_ScatAaGrid() const {return mScatAaGrid;}
-  Vector& get_ScatAaGrid() {return mScatAaGrid;}
+  const Vector& get_ScatAaGrid() const { return mScatAaGrid; }
+  Vector& get_ScatAaGrid() { return mScatAaGrid; }
 
+  /** Calculates the scattered field
+  *
+  * @param[out] cloudbox_scat_field Monochromatic scattered radiation field inside the
+  *              cloudbox at iteration step.
+  * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
+  *              cloudbox.
+  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+  * @param[in] verbosity Verbosity setting.
+  */
+  void CalcScatteredField(Tensor6& cloudbox_scat_field,
+                          //WS Input:
+                          const Tensor6& cloudbox_field_mono,
+                          const Index& atmosphere_dim,
+                          const Verbosity& verbosity);
+
+ private:
+  /** Calculates the scattered field for 1D atmosphere
+  *
+  * @param[out] cloudbox_scat_field Monochromatic scattered radiation field inside the
+  *              cloudbox at iteration step.
+  * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
+  *              cloudbox.
+  * @param[in] verbosity Verbosity setting.
+  */
+  void CalcScatteredField1D(
+      // Output
+      Tensor6& cloudbox_scat_field,
+      // Input:
+      const ConstTensor6View& cloudbox_field_mono,
+      const Verbosity& verbosity);
+
+  /** Calculates the scattered field for 3D atmosphere
+  *
+  * @param[out] cloudbox_scat_field Monochromatic scattered radiation field inside the
+  *              cloudbox at iteration step.
+  * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
+  *              cloudbox.
+  * @param[in] verbosity Verbosity setting.
+  */
+  void CalcScatteredField3D(
+      // Output
+      Tensor6& cloudbox_scat_field,
+      // Input:
+      const ConstTensor6View& cloudbox_field_mono,
+      const Verbosity& verbosity);
 
  protected:
   Tensor6 mExtinctionMatrix;
@@ -430,8 +474,9 @@ class RTDomainScatteringProperties {
   Tensor3 mItw;
   Vector mScatZaGrid;
   Vector mScatAaGrid;
-
 };
+
+typedef Array<RTDomainScatteringProperties> ArrayOfRTDomainScatteringProperties;
 
 /** Initialises variables for DOIT scattering calculations.
  *
@@ -994,100 +1039,18 @@ void RunNewDoit(//Input and Output:
     RTDomain& MainDomain,
     Index& convergence_flag,
     Index& iteration_counter,
+    RTDomainScatteringProperties& MainDomainScatteringProperties,
     //Input
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
-    //Precalculated quantities for scattering integral calulation
-    const RTDomainScatteringProperties& MainDomainScatteringProperties,
-    //Additional input
     const Numeric& f_mono,
     const String& iy_unit,
     const Vector& epsilon,
     const Index& max_num_iterations,
     const Index& accelerated,
     const Verbosity& verbosity);
-
-
-/** Calculates the scattered field during DOIT iteration step
- *
- * @param[out] cloudbox_scat_field Monochromatic scattered radiation field inside the
- *              cloudbox at iteration step.
- * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
- *              cloudbox.
- * @param[in] scattering_matrix Scattering matrix field
- *              (Np,Nlat,Nlon,pdir,idir,nst,nst).
- * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
- * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
- * @param[in] scat_aa_grid Azimuth angle grid for the scattering calculation.
- * @param[out] idir_idx0 index of flattened incidence zenith angle meshgrid
- * @param[out] idir_idx1 index of flattened incidence azimuth angle meshgrid
- * @param[out] pdir_idx0 index of flattened propagation zenith angle meshgrid
- * @param[out] pdir_idx1 index of flattened propagation azimuth angle meshgrid
- * @param[out] gp_za_i interpolation gridpoints zenith incidence angle
- * @param[out] gp_aa_i interpolation gridpoints azimuth incidence angle
- * @param[out] itw interpolation weight for incidence angles
- * @param[in] verbosity Verbosity setting.
- */
-void CalcScatteredField(  // WS Output and Input
-    Tensor6& cloudbox_scat_field,
-    //WS Input:
-    const Tensor6& cloudbox_field_mono,
-    const RTDomainScatteringProperties& ScatteringProperties,
-    const Index& atmosphere_dim,
-    const Verbosity& verbosity);
-
-/** Calculates the 1D scattered field during DOIT iteration step
- *
- * @param[out] cloudbox_scat_field Monochromatic scattered radiation field inside the
- *              cloudbox at iteration step.
- * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
- *              cloudbox.
- * @param[in] scattering_matrix Scattering matrix field
- *              (Np,Nlat,Nlon,pdir,idir,nst,nst).
- * @param[out] iza_grid incidence zenith angle grid.
- * @param[out] pdir_idx0 index of flattened propagation zenith angle meshgrid
- * @param[out] gp_za_i interpolation gridpoints zenith incidence angle
- * @param[out] itw interpolation weight for incidence angles
- * @param[in] verbosity Verbosity setting.
- */
-void CalcScatteredField1D(
-    // Output
-    Tensor6& cloudbox_scat_field,
-    // Input:
-    const ConstTensor6View& cloudbox_field_mono,
-    const RTDomainScatteringProperties& ScatteringProperties,
-    const Verbosity& verbosity);
-
-/** Calculates the 3D scattered field during DOIT iteration step
- *
- * @param[out] cloudbox_scat_field Monochromatic scattered radiation field inside the
- *              cloudbox at iteration step.
- * @param[in] cloudbox_field_mono Monochromatic radiation field inside the
- *              cloudbox.
- * @param[in] scattering_matrix Scattering matrix field
- *              (Np,Nlat,Nlon,pdir,idir,nst,nst).
- * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
- * @param[in] iza_grid incidence zenith angle grid
- * @param[in] iaa_grid incidence azimuth angle grid
- * @param[out] idir_idx0 index of flattened incidence zenith angle meshgrid
- * @param[out] idir_idx1 index of flattened incidence azimuth angle meshgrid
- * @param[out] pdir_idx0 index of flattened propagation zenith angle meshgrid
- * @param[out] pdir_idx1 index of flattened propagation azimuth angle meshgrid
- * @param[out] gp_za_i interpolation gridpoints zenith incidence angle
- * @param[out] gp_aa_i interpolation gridpoints azimuth incidence angle
- * @param[out] itw interpolation weight for incidence angles
- * @param[in] verbosity Verbosity setting.
- */
-void CalcScatteredField3D(
-    // WS Output and Input
-    Tensor6& cloudbox_scat_field,
-    //WS Input:
-    const Tensor6& cloudbox_field_mono,
-    const RTDomainScatteringProperties& ScatteringProperties,
-    const Verbosity& verbosity);
-
 
 /** RT calculation at iteration step
  *

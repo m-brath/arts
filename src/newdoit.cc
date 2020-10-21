@@ -61,6 +61,174 @@ extern const Numeric RAD2DEG;
 extern const Numeric DEG2RAD;
 extern const Numeric SPEED_OF_LIGHT;
 
+void RTDomainScatteringProperties::CalcScatteredField(
+    Tensor6& cloudbox_scat_field,
+    //WS Input:
+    const Tensor6& cloudbox_field_mono,
+    const Index& atmosphere_dim,
+    const Verbosity& verbosity) {
+  if (atmosphere_dim == 1) {
+    CalcScatteredField1D(cloudbox_scat_field, cloudbox_field_mono, verbosity);
+
+  } else {
+    CalcScatteredField3D(cloudbox_scat_field, cloudbox_field_mono, verbosity);
+  }
+}
+
+void RTDomainScatteringProperties::CalcScatteredField1D(
+    // Output
+    Tensor6& cloudbox_scat_field,
+    // Input:
+    const ConstTensor6View& cloudbox_field_mono,
+    const Verbosity& verbosity) {
+  CREATE_OUT3;
+
+  // Number of zenith angles.
+  const Index Npza = mPdirIdx0.nelem();
+  const Index Niza = mScatZaGrid.nelem();
+
+  // Get stokes dimension from *cloudbox_scat_field*:
+  const Index stokes_dim = cloudbox_field_mono.ncols();
+
+  // and pressure dimension
+  const Index Np = cloudbox_field_mono.nvitrines();
+
+  //Prepare intensity field interpolated on equidistant grid.
+  Matrix cloudbox_field_int(Niza, stokes_dim, 0);
+
+  //Prepare product field
+  Matrix product_field(Niza, stokes_dim, 0);
+
+  for (Index i_p = 0; i_p < Np; i_p++) {
+    // Interpolate intensity field:
+    // Only one interpolation is required. We have to interpolate the
+    // intensity field on the equidistant grid. There is no further interpolation
+    // needed, because we evaluate the scattering matrix directly for the propagation/
+    // outgoing direction, which is the direction of the actual radiation field.
+    for (Index i = 0; i < stokes_dim; i++) {
+      interp(cloudbox_field_int(joker, i),
+             mItw(joker, 0, joker),
+             cloudbox_field_mono(i_p, 0, 0, joker, 0, i),
+             mGpZaI);
+    }
+
+    //There is only loop over zenith angle grid; no azimuth angle grid.
+    for (Index i_pza = 0; i_pza < Npza; i_pza++) {
+      product_field = 0;
+
+      //as we did the azimuth integration already during scattering data preparation
+      //we just need to do the zenith integration
+      for (Index i_iza = 0; i_iza < Niza; i_iza++) {
+        // Multiplication of scattering matrix with incoming
+        // intensity field.
+
+        for (Index i = 0; i < stokes_dim; i++) {
+          for (Index j = 0; j < stokes_dim; j++) {
+            product_field(i_iza, i) +=
+                mScatteringMatrix(i_p, 0, 0, i_pza, i_iza, i, j) *
+                cloudbox_field_int(i_iza, j);
+          }
+        }
+      }
+
+      out3 << "Compute integral. \n";
+      for (Index i = 0; i < stokes_dim; i++) {
+        cloudbox_scat_field(i_p, 0, 0, i_pza, 0, i) =
+            AngIntegrate_trapezoid(product_field(joker, i), mScatZaGrid) / 2 /
+            PI;
+      }
+    }
+  }
+
+  out3 << "DONE calculating scattering field 1d. \n";
+}
+
+void RTDomainScatteringProperties::CalcScatteredField3D(
+    // Output
+    Tensor6& cloudbox_scat_field,
+    // Input:
+    const ConstTensor6View& cloudbox_field_mono,
+    const Verbosity& verbosity) {
+  CREATE_OUT2;
+  CREATE_OUT3;
+
+  // Number of incoming zenith angles.
+  const Index Niza = mScatZaGrid.nelem();
+
+  // Number of incoming azimuth angles.
+  const Index Niaa = mScatAaGrid.nelem();
+
+  // Get stokes dimension from *cloudbox_scat_field*:
+  const Index stokes_dim = cloudbox_field_mono.ncols();
+
+  const Index Np = cloudbox_field_mono.nvitrines();
+  const Index Nlat = cloudbox_field_mono.nshelves();
+  const Index Nlon = cloudbox_field_mono.nbooks();
+
+  //Prepare intensity field interpolated on equidistant grid.
+  Tensor3 cloudbox_field_int(Niza, Niaa, stokes_dim, 0);
+
+  //Grid stepsize of zenith and azimuth angle grid, these are needed for the
+  //integration function.
+  Vector grid_stepsize(2);
+  grid_stepsize[0] = 180. / (Numeric)(Niza - 1);
+  grid_stepsize[1] = 360. / (Numeric)(Niaa - 1);
+
+  //
+  Tensor3 product_field(Niza, Niaa, stokes_dim, 0);
+
+  for (Index i_p = 0; i_p < Np; i_p++) {
+    for (Index i_lat = 0; i_lat < Nlat; i_lat++) {
+      for (Index i_lon = 0; i_lon < Nlon; i_lon++) {
+        // Interpolate intensity field:
+        // Only one interpolation is required. We have to interpolate the
+        // intensity field on the equidistant grid. There is no further interpolation
+        // needed, because we evaluate the scattering matrix directly for the propagation/
+        // outgoing direction, which is the direction of the actual radiation field.
+        for (Index i = 0; i < stokes_dim; i++) {
+          interp(cloudbox_field_int(joker, joker, i),
+                 mItw,
+                 cloudbox_field_mono(i_p, i_lat, i_lon, joker, joker, i),
+                 mGpZaI,
+                 mGpAaI);
+        }
+
+        //loop over outgoing directions
+        for (Index i_prop = 0; i_prop < mPdirIdx0.nelem(); i_prop++) {
+          //loop over incoming directions
+          for (Index i_inc = 0; i_inc < mIdirIdx0.nelem(); i_inc++) {
+            //Calculate the product of scattering matrix and incoming radiation field
+            for (Index i = 0; i < stokes_dim; i++) {
+              for (Index j = 0; j < stokes_dim; j++) {
+                product_field(mIdirIdx0[i_inc], mIdirIdx1[i_inc], i) +=
+                    mScatteringMatrix(i_p,
+                                      i_lon,
+                                      i_lat,
+                                      mIdirIdx0[i_inc],
+                                      mIdirIdx1[i_inc],
+                                      i,
+                                      j) *
+                    cloudbox_field_int(mIdirIdx0[i_inc], mIdirIdx1[i_inc], j);
+              }
+            }
+          }
+
+          //Integrate over incoming zenith and azimuth direction
+          out3 << "Compute integral. \n";
+          for (Index i = 0; i < stokes_dim; i++) {
+            cloudbox_scat_field(
+                i_p, i_lat, i_lon, mPdirIdx0[i_prop], mPdirIdx1[i_prop], i) =
+                AngIntegrate_trapezoid_opti(product_field(joker, joker, i),
+                                            mScatZaGrid,
+                                            mScatAaGrid,
+                                            grid_stepsize);
+          }
+        }
+      }
+    }
+  }
+}
+
 void Initialize_cloudbox_field(  //Output
     Tensor7& cloudbox_field,
     // WS Input
@@ -967,14 +1135,11 @@ void NewDoitMonoCalc(Workspace& ws,
              MainRTDomain,
              convergence_flag,
              iteration_counter,
-             //Input
+             MainDomainScatteringProperties,
              surface_reflection_matrix,
              surface_emission,
              cloudbox_limits,
              atmosphere_dim,
-             //Precalculated quantities for scattering integral calulation
-             MainDomainScatteringProperties,
-             //Additional input
              f_mono,
              iy_unit,
              epsilon,
@@ -1723,14 +1888,12 @@ void RunNewDoit(  //Input and Output:
     RTDomain& MainDomain,
     Index& convergence_flag,
     Index& iteration_counter,
+    RTDomainScatteringProperties& MainDomainScatteringProperties,
     //Input
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
-    //Precalculated quantities for scattering integral calulation
-    const RTDomainScatteringProperties& MainDomainScatteringProperties,
-    //Additional input
     const Numeric& f_mono,
     const String& iy_unit,
     const Vector& epsilon,
@@ -1779,9 +1942,8 @@ void RunNewDoit(  //Input and Output:
 
     // Calculate the scattered field.
     out2 << "  Calculate scattering field. \n";
-    CalcScatteredField(MainDomain.get_CloudboxScatteringField(),
+    MainDomainScatteringProperties.CalcScatteredField(MainDomain.get_CloudboxScatteringField(),
                        MainDomain.get_CloudboxField(),
-                       MainDomainScatteringProperties,
                        atmosphere_dim,
                        verbosity);
 
@@ -1822,187 +1984,6 @@ void RunNewDoit(  //Input and Output:
       }
     }
   }  //end of while loop, convergence is reached.
-}
-
-void CalcScatteredField(// WS Output and Input
-                        Tensor6& cloudbox_scat_field,
-                        //WS Input:
-                        const Tensor6& cloudbox_field_mono,
-                        const RTDomainScatteringProperties& ScatteringProperties,
-                        const Index& atmosphere_dim,
-                        const Verbosity& verbosity) {
-
-  if (atmosphere_dim == 1) {
-    CalcScatteredField1D(cloudbox_scat_field,
-                         cloudbox_field_mono,
-                         ScatteringProperties,
-                         verbosity);
-
-  } else {
-    CalcScatteredField3D(cloudbox_scat_field,
-                         cloudbox_field_mono,
-                         ScatteringProperties,
-                         verbosity);
-  }
-}
-
-void CalcScatteredField1D(
-    // Output
-    Tensor6& cloudbox_scat_field,
-    // Input:
-    const ConstTensor6View& cloudbox_field_mono,
-    const RTDomainScatteringProperties& ScatteringProperties,
-    const Verbosity& verbosity) {
-  CREATE_OUT3;
-
-  // Number of zenith angles.
-  const Index Npza = ScatteringProperties.get_PdirIdx0().nelem();
-  const Index Niza = ScatteringProperties.get_ScatZaGrid().nelem();
-
-  // Get stokes dimension from *cloudbox_scat_field*:
-  const Index stokes_dim = cloudbox_field_mono.ncols();
-
-  // and pressure dimension
-  const Index Np = cloudbox_field_mono.nvitrines();
-
-  //Prepare intensity field interpolated on equidistant grid.
-  Matrix cloudbox_field_int(Niza, stokes_dim, 0);
-
-  //Prepare product field
-  Matrix product_field(Niza, stokes_dim, 0);
-
-
-
-  for (Index i_p = 0; i_p < Np; i_p++) {
-    // Interpolate intensity field:
-    // Only one interpolation is required. We have to interpolate the
-    // intensity field on the equidistant grid. There is no further interpolation
-    // needed, because we evaluate the scattering matrix directly for the propagation/
-    // outgoing direction, which is the direction of the actual radiation field.
-    for (Index i = 0; i < stokes_dim; i++) {
-      interp(cloudbox_field_int(joker, i),
-             ScatteringProperties.get_Itw()(joker, 0, joker),
-             cloudbox_field_mono(i_p, 0, 0, joker, 0, i),
-             ScatteringProperties.get_GpZaI());
-    }
-
-    //There is only loop over zenith angle grid; no azimuth angle grid.
-    for (Index i_pza = 0; i_pza < Npza; i_pza++) {
-      product_field = 0;
-
-      //as we did the azimuth integration already during scattering data preparation
-      //we just need to do the zenith integration
-      for (Index i_iza = 0; i_iza < Niza; i_iza++) {
-        // Multiplication of scattering matrix with incoming
-        // intensity field.
-
-        for (Index i = 0; i < stokes_dim; i++) {
-          for (Index j = 0; j < stokes_dim; j++) {
-            product_field(i_iza, i) +=
-                ScatteringProperties.get_ScatteringMatrix()(
-                    i_p, 0, 0, i_pza, i_iza, i, j) *
-                cloudbox_field_int(i_iza, j);
-          }
-        }
-      }
-
-      out3 << "Compute integral. \n";
-      for (Index i = 0; i < stokes_dim; i++) {
-        cloudbox_scat_field(i_p, 0, 0, i_pza, 0, i) =
-            AngIntegrate_trapezoid(product_field(joker, i),
-                                   ScatteringProperties.get_ScatZaGrid()) /
-            2 / PI;
-      }
-    }
-  }
-
-  out3 << "DONE calculating scattering field 1d. \n";
-}
-
-void CalcScatteredField3D(
-    // Output
-    Tensor6& cloudbox_scat_field,
-    // Input:
-    const Tensor6& cloudbox_field_mono,
-    const RTDomainScatteringProperties& ScatteringProperties,
-    const Verbosity& verbosity) {
-
-  CREATE_OUT2;
-  CREATE_OUT3;
-
-  // Number of incoming zenith angles.
-  const Index Niza = ScatteringProperties.get_ScatZaGrid().nelem();
-
-  // Number of incoming azimuth angles.
-  const Index Niaa = ScatteringProperties.get_ScatAaGrid().nelem();
-
-  // Get stokes dimension from *cloudbox_scat_field*:
-  const Index stokes_dim = cloudbox_field_mono.ncols();
-
-  const Index Np = cloudbox_field_mono.nvitrines();
-  const Index Nlat = cloudbox_field_mono.nshelves();
-  const Index Nlon = cloudbox_field_mono.nbooks();
-
-
-  //Prepare intensity field interpolated on equidistant grid.
-  Tensor3 cloudbox_field_int(Niza, Niaa, stokes_dim, 0);
-
-  //Grid stepsize of zenith and azimuth angle grid, these are needed for the
-  //integration function.
-  Vector grid_stepsize(2);
-  grid_stepsize[0] = 180. / (Numeric)(Niza - 1);
-  grid_stepsize[1] = 360. / (Numeric)(Niaa - 1);
-
-  //
-  Tensor3 product_field(Niza, Niaa, stokes_dim, 0);
-
-  for (Index i_p = 0; i_p < Np; i_p++) {
-    for (Index i_lat = 0; i_lat < Nlat; i_lat++) {
-      for (Index i_lon = 0; i_lon < Nlon; i_lon++) {
-        // Interpolate intensity field:
-        // Only one interpolation is required. We have to interpolate the
-        // intensity field on the equidistant grid. There is no further interpolation
-        // needed, because we evaluate the scattering matrix directly for the propagation/
-        // outgoing direction, which is the direction of the actual radiation field.
-        for (Index i = 0; i < stokes_dim; i++) {
-          interp(cloudbox_field_int(joker, joker, i),
-                 ScatteringProperties.get_Itw(),
-                 cloudbox_field_mono(i_p, i_lat, i_lon, joker, joker, i),
-                 ScatteringProperties.get_GpZaI(),
-                 ScatteringProperties.get_GpAaI());
-        }
-
-        //loop over outgoing directions
-        for (Index i_prop = 0; i_prop < ScatteringProperties.get_PdirIdx0().nelem(); i_prop++) {
-
-          //loop over incoming directions
-          for (Index i_inc = 0; i_inc < ScatteringProperties.get_IdirIdx0().nelem(); i_inc++) {
-
-            //Calculate the product of scattering matrix and incoming radiation field
-            for (Index i = 0; i < stokes_dim; i++) {
-              for (Index j = 0; j < stokes_dim; j++) {
-                product_field(ScatteringProperties.get_IdirIdx0()[i_inc], ScatteringProperties.get_IdirIdx1()[i_inc], i) +=
-                    ScatteringProperties.get_ScatteringMatrix()(
-                        i_p, i_lon, i_lat, ScatteringProperties.get_IdirIdx0()[i_inc], ScatteringProperties.get_IdirIdx1()[i_inc], i, j) *
-                    cloudbox_field_int(ScatteringProperties.get_IdirIdx0()[i_inc], ScatteringProperties.get_IdirIdx1()[i_inc], j);
-              }
-            }
-          }
-
-          //Integrate over incoming zenith and azimuth direction
-          out3 << "Compute integral. \n";
-          for (Index i = 0; i < stokes_dim; i++) {
-            cloudbox_scat_field(
-                i_p, i_lat, i_lon, ScatteringProperties.get_PdirIdx0()[i_prop], ScatteringProperties.get_PdirIdx1()[i_prop], i) =
-                AngIntegrate_trapezoid_opti(product_field(joker, joker, i),
-                                            ScatteringProperties.get_ScatZaGrid(),
-                                            ScatteringProperties.get_ScatAaGrid(),
-                                            grid_stepsize);
-          }
-        }
-      }
-    }
-  }
 }
 
 void UpdateSpectralRadianceField(//Input and Output:
