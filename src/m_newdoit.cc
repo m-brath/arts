@@ -219,6 +219,18 @@ void NewDoitCalc(Workspace& ws,
                          verbosity);
   }
 
+  for (Index l = 0; l < cloudbox_field.nlibraries(); l++)
+    for (Index v = 0; v < cloudbox_field.nvitrines(); v++)
+      for (Index s = 0; s < cloudbox_field.nshelves(); s++)
+        for (Index b = 0; b < cloudbox_field.nbooks(); b++)
+          for (Index p = 0; p < cloudbox_field.npages(); p++)
+            for (Index r = 0; r < cloudbox_field.nrows(); r++)
+              for (Index c = 0; c < cloudbox_field.ncols(); c++)
+                if (std::isnan(cloudbox_field(l, v, s, b, p, r, c)))
+                  throw std::runtime_error(
+                      "*cloudbox_field_mono* contains at least one NaN value.\n"
+                      "This indicates an improper initialization of *cloudbox_field*.");
+
   ostringstream os, os1, os2, os3;
   os << "limit fields to cloudbox \n";
   out1 << os.str();
