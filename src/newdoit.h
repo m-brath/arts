@@ -17,7 +17,7 @@
 */
 
 /*!
-  \file   newdoit.cc
+  \file   newdoit.h
   \author Manfred Brath manfred.brath@uni-hamburg.de
   \date   06/09/2019
   
@@ -66,74 +66,74 @@ class RTDomain {
   RTDomain() = default;
 
   // constructor for 3d
-  RTDomain(const Vector& p_grid,
-           const Vector& lat_grid,
-           const Vector& lon_grid,
-           const Vector& za_grid,
-           const Vector& aa_grid,
-           const ArrayOfVector& PressureArray,
-           const ArrayOfVector& TemperatureArray,
-           const ArrayOfVector& GasExtinctionArray,
-           const ArrayOfMatrix& InterpWeightsArray,
-           const ArrayOfMatrix& InterpWeightsAngleArray,
-           const ArrayOfArrayOfGridPos& GposPArray,
-           const ArrayOfArrayOfGridPos& GposLatArray,
-           const ArrayOfArrayOfGridPos& GposLonArray,
-           const ArrayOfArrayOfGridPos& GposZenithArray,
-           const ArrayOfArrayOfGridPos& GposAzimuthArray,
-           const ArrayOfVector& LStepArray,
-           const Index& MaxLimbIndex,
-           const Index& AtmosphereDim)
-      : mp_grid(p_grid),
-        mlat_grid(lat_grid),
-        mlon_grid(lon_grid),
-        mza_grid(za_grid),
-        maa_grid(aa_grid),
-        mPressureArray(PressureArray),
-        mTemperatureArray(TemperatureArray),
-        mGasExtinctionArray(GasExtinctionArray),
-        mInterpWeightsArray(InterpWeightsArray),
-        mInterpWeightsAngleArray(InterpWeightsAngleArray),
-        mGposPArray(GposPArray),
-        mGposLatArray(GposLatArray),
-        mGposLonArray(GposLonArray),
-        mGposZenithArray(GposZenithArray),
-        mGposAzimuthArray(GposAzimuthArray),
-        mLStepArray(LStepArray),
-        mMaxLimbIndex(MaxLimbIndex),
-        mAtmosphereDim(AtmosphereDim) {}
+//  RTDomain(const Vector& p_grid,
+//           const Vector& lat_grid,
+//           const Vector& lon_grid,
+//           const Vector& za_grid,
+//           const Vector& aa_grid,
+//           const ArrayOfVector& PressureArray,
+//           const ArrayOfVector& TemperatureArray,
+//           const ArrayOfVector& GasExtinctionArray,
+//           const ArrayOfMatrix& InterpWeightsArray,
+//           const ArrayOfMatrix& InterpWeightsAngleArray,
+//           const ArrayOfArrayOfGridPos& GposPArray,
+//           const ArrayOfArrayOfGridPos& GposLatArray,
+//           const ArrayOfArrayOfGridPos& GposLonArray,
+//           const ArrayOfArrayOfGridPos& GposZenithArray,
+//           const ArrayOfArrayOfGridPos& GposAzimuthArray,
+//           const ArrayOfVector& LStepArray,
+//           const Index& MaxLimbIndex,
+//           const Index& AtmosphereDim)
+//      : mp_grid(p_grid),
+//        mlat_grid(lat_grid),
+//        mlon_grid(lon_grid),
+//        mza_grid(za_grid),
+//        maa_grid(aa_grid),
+//        mPressureArray(PressureArray),
+//        mTemperatureArray(TemperatureArray),
+//        mGasExtinctionArray(GasExtinctionArray),
+//        mInterpWeightsArray(InterpWeightsArray),
+//        mInterpWeightsAngleArray(InterpWeightsAngleArray),
+//        mGposPArray(GposPArray),
+//        mGposLatArray(GposLatArray),
+//        mGposLonArray(GposLonArray),
+//        mGposZenithArray(GposZenithArray),
+//        mGposAzimuthArray(GposAzimuthArray),
+//        mLStepArray(LStepArray),
+//        mMaxLimbIndex(MaxLimbIndex),
+//        mAtmosphereDim(AtmosphereDim) {}
 
   // constructor for 1d
-  RTDomain(const Vector& p_grid,
-           const Vector& lat_grid,
-           const Vector& lon_grid,
-           const Vector& za_grid,
-           const Vector& aa_grid,
-           const ArrayOfVector& PressureArray,
-           const ArrayOfVector& TemperatureArray,
-           const ArrayOfVector& GasExtinctionArray,
-           const ArrayOfMatrix& InterpWeightsArray,
-           const ArrayOfMatrix& InterpWeightsAngleArray,
-           const ArrayOfArrayOfGridPos& GposPArray,
-           const ArrayOfArrayOfGridPos& GposZenithArray,
-           const ArrayOfVector& LStepArray,
-           const Index& MaxLimbIndex,
-           const Index& AtmosphereDim)
-      : mp_grid(p_grid),
-        mlat_grid(lat_grid),
-        mlon_grid(lon_grid),
-        mza_grid(za_grid),
-        maa_grid(aa_grid),
-        mPressureArray(PressureArray),
-        mTemperatureArray(TemperatureArray),
-        mGasExtinctionArray(GasExtinctionArray),
-        mInterpWeightsArray(InterpWeightsArray),
-        mInterpWeightsAngleArray(InterpWeightsAngleArray),
-        mGposPArray(GposPArray),
-        mGposZenithArray(GposZenithArray),
-        mLStepArray(LStepArray),
-        mMaxLimbIndex(MaxLimbIndex),
-        mAtmosphereDim(AtmosphereDim) {}
+//  RTDomain(const Vector& p_grid,
+//           const Vector& lat_grid,
+//           const Vector& lon_grid,
+//           const Vector& za_grid,
+//           const Vector& aa_grid,
+//           const ArrayOfVector& PressureArray,
+//           const ArrayOfVector& TemperatureArray,
+//           const ArrayOfVector& GasExtinctionArray,
+//           const ArrayOfMatrix& InterpWeightsArray,
+//           const ArrayOfMatrix& InterpWeightsAngleArray,
+//           const ArrayOfArrayOfGridPos& GposPArray,
+//           const ArrayOfArrayOfGridPos& GposZenithArray,
+//           const ArrayOfVector& LStepArray,
+//           const Index& MaxLimbIndex,
+//           const Index& AtmosphereDim)
+//      : mp_grid(p_grid),
+//        mlat_grid(lat_grid),
+//        mlon_grid(lon_grid),
+//        mza_grid(za_grid),
+//        maa_grid(aa_grid),
+//        mPressureArray(PressureArray),
+//        mTemperatureArray(TemperatureArray),
+//        mGasExtinctionArray(GasExtinctionArray),
+//        mInterpWeightsArray(InterpWeightsArray),
+//        mInterpWeightsAngleArray(InterpWeightsAngleArray),
+//        mGposPArray(GposPArray),
+//        mGposZenithArray(GposZenithArray),
+//        mLStepArray(LStepArray),
+//        mMaxLimbIndex(MaxLimbIndex),
+//        mAtmosphereDim(AtmosphereDim) {}
 
   // constructor (only) grids
   RTDomain(const Vector& p_grid,
@@ -294,6 +294,12 @@ class RTDomain {
   const Index& get_AtmosphereDim() const { return mAtmosphereDim; }
   Index& get_AtmosphereDim() { return mAtmosphereDim; }
 
+  const Tensor7& get_ExtinctionMatrix() const { return mExtinctionMatrix; }
+  Tensor7& get_ExtinctionMatrix() { return mExtinctionMatrix; }
+
+  const Tensor6& get_AbsorptionVector() const { return mAbsorptionVector; }
+  Tensor6& get_AbsorptionVector() { return mAbsorptionVector; }
+
   const Tensor6& get_CloudboxField() const { return mCloudboxField; }
   Tensor6& get_CloudboxField() { return mCloudboxField; }
 
@@ -321,6 +327,8 @@ class RTDomain {
   ArrayOfVector mLStepArray;
   Index mMaxLimbIndex;
   Index mAtmosphereDim;
+  Tensor7 mExtinctionMatrix;
+  Tensor6 mAbsorptionVector;
   Tensor6 mCloudboxField;
   Tensor6 mCloudboxScatteringField;
 };
@@ -335,9 +343,7 @@ class RTDomainScatteringProperties {
 
   /**Constructor for DomainScatteringProperties
  *
- * @param[in] ExtinctionMatrix Bulk extinction matrix (Np,Nlat,Nlon,ndir,nst,nst)
- * @param[in] AbsorptionVector absorption vector (Np,Nlat,Nlon,ndir,nst)
- * @param[in] ScatteringMatrix scattering matrix (Np,Nlat,Nlon,npdir,nidir,nst,nst)
+  * @param[in] ScatteringMatrix scattering matrix (Np,Nlat,Nlon,npdir,nidir,nst,nst)
  * @param[in] IdirIdx0 index of flattened incidence zenith angle meshgrid
  * @param[in] IdirIdx1 index of flattened incidence azimuth angle meshgrid
  * @param[in] PdirIdx0 index of flattened propagation zenith angle meshgrid
@@ -348,8 +354,7 @@ class RTDomainScatteringProperties {
  * @param[in] ScatZaGrid Zenith angle grid for the scattering calculation.
  * @param[in] ScatAaGrid Azimuth angle grid for the scattering calculation.
  */
-  RTDomainScatteringProperties(const Tensor6& ExtinctionMatrix,
-                               const Tensor5& AbsorptionVector,
+  RTDomainScatteringProperties(
                                const Tensor7& ScatteringMatrix,
                                const ArrayOfIndex& IdirIdx0,
                                const ArrayOfIndex& IdirIdx1,
@@ -360,9 +365,7 @@ class RTDomainScatteringProperties {
                                const Tensor3& Itw,
                                const Vector& ScatZaGrid,
                                const Vector& ScatAaGrid)
-      : mExtinctionMatrix(ExtinctionMatrix),
-        mAbsorptionVector(AbsorptionVector),
-        mScatteringMatrix(ScatteringMatrix),
+      : mScatteringMatrix(ScatteringMatrix),
         mIdirIdx0(IdirIdx0),
         mIdirIdx1(IdirIdx1),
         mPdirIdx0(PdirIdx0),
@@ -379,12 +382,6 @@ class RTDomainScatteringProperties {
   void set_ScatAaGrid(const Vector& ScatAaGrid) { mScatAaGrid = ScatAaGrid; }
 
   //Get methods
-  const Tensor6& get_ExtinctionMatrix() const { return mExtinctionMatrix; }
-  Tensor6& get_ExtinctionMatrix() { return mExtinctionMatrix; }
-
-  const Tensor5& get_AbsorptionVector() const { return mAbsorptionVector; }
-  Tensor5& get_AbsorptionVector() { return mAbsorptionVector; }
-
   const Tensor7& get_ScatteringMatrix() const { return mScatteringMatrix; }
   Tensor7& get_ScatteringMatrix() { return mScatteringMatrix; }
 
@@ -462,8 +459,6 @@ class RTDomainScatteringProperties {
       const Verbosity& verbosity);
 
  protected:
-  Tensor6 mExtinctionMatrix;
-  Tensor5 mAbsorptionVector;
   Tensor7 mScatteringMatrix;
   ArrayOfIndex mIdirIdx0;
   ArrayOfIndex mIdirIdx1;
@@ -802,8 +797,9 @@ void CalcGasExtinctionField(Workspace& ws,
  * @param ForwardCorrectionFlag
  * @param verbosity
  */
-void CalcDomainScatteringProperties(
+void CalcDomainExtAbsScatProperties(
     RTDomainScatteringProperties& DomainScatteringProperties,
+    RTDomain& Domain,
     const Tensor3& t_field,
     const ArrayOfArrayOfSingleScatteringData& scat_data,
     const ConstTensor4View& pnd_field,
@@ -819,9 +815,8 @@ void CalcDomainScatteringProperties(
 
 /** Calculates bulk optical properties from per-scat-species bulk properties.
  *
- * @param[in,out] ws Current workspace.
- * @param[out] extinction_matrix Bulk extinction matrix (Np,Nlat,Nlon,ndir,nst,nst)
- * @param[out] absorption_vector absorption vector (Np,Nlat,Nlon,ndir,nst)
+ * @param[out] extinction_matrix Bulk extinction matrix (Np,Nlat,Nlon,Nza,Naa,nst,nst)
+ * @param[out] absorption_vector absorption vector (Np,Nlat,Nlon,Nza,Naa,nst)
  * @param[in] scat_data Array of single scattering data.
  * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
  *             cloudbox.
@@ -831,8 +826,8 @@ void CalcDomainScatteringProperties(
  */
 void CalcParticleOpticalProperties(
     //Output
-    Tensor6& extinction_matrix,
-    Tensor5& absorption_vector,
+    Tensor7& extinction_matrix,
+    Tensor6& absorption_vector,
     //input
     const ArrayOfArrayOfSingleScatteringData& scat_data,
     const Vector& za_grid,
@@ -904,8 +899,8 @@ void CalcScatteringProperties(  //Output
  */
 void ForwardScatteringCorrection(  //Output
     Tensor7& scattering_matrix,
-    Tensor6& extinction_matrix,        //(Np,Nlat,Nlon,ndir,nst,nst)
-    Tensor5& absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
+    Tensor7& extinction_matrix,        //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+    Tensor6& absorption_vector,  //(Np,Nlat,Nlon,Nza,Naa,nst)
     const ArrayOfIndex& idir_idx0,
     const ArrayOfIndex& idir_idx1,
     const ArrayOfIndex& pdir_idx0,
@@ -977,7 +972,7 @@ void CalcSurfaceProperties(Workspace& ws,
  */
 void CalcPropagationPathMaxLength(
     Tensor3& p_path_maxlength,
-    const Tensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+    const Tensor7View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
     const ConstTensor3View& gas_extinct,
     const ConstVectorView& p_grid,
     const ConstVectorView& lat_grid,
@@ -1087,8 +1082,8 @@ void UpdateSpectralRadianceField(//Input and Output:
     Tensor6& cloudbox_field_mono,
     Tensor6& cloudbox_scat_field,
     //Input:
-    const ConstTensor6View& extinction_matrix,
-    const ConstTensor5View& absorption_vector,
+    const ConstTensor7View& extinction_matrix,
+    const ConstTensor6View& absorption_vector,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
@@ -1132,8 +1127,8 @@ void UpdateSpectralRadianceField1D(
     //Input and Output:
     Tensor6& cloudbox_field_mono,
     Tensor6& cloudbox_scat_field,
-    const ConstTensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
-    const ConstTensor5View& absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
+    const ConstTensor7View& extinction_matrix,  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+    const ConstTensor6View& absorption_vector,  //(Np,Nlat,Nlon,Nza,Naa,nst)
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,

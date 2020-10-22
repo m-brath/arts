@@ -949,8 +949,18 @@ void NewDoitMonoCalc(Workspace& ws,
 
   //-------Scattering related quantities----------------------------------------
 
+  // set up main rt domain
+  RTDomain MainRTDomain(p_grid,
+                        lat_grid,
+                        lon_grid,
+                        za_grid,
+                        aa_grid,
+                        atmosphere_dim);
+
   RTDomainScatteringProperties MainDomainScatteringProperties;
-  CalcDomainScatteringProperties(MainDomainScatteringProperties,
+
+  CalcDomainExtAbsScatProperties(MainDomainScatteringProperties,
+                                 MainRTDomain,
                                  t_field,
                                  scat_data,
                                  pnd_field,
@@ -1014,7 +1024,7 @@ void NewDoitMonoCalc(Workspace& ws,
     //calculate local ppath_lmax
     CalcPropagationPathMaxLength(
         p_path_maxlength,
-        MainDomainScatteringProperties.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,ndir,nst,nst)
+        MainRTDomain.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,ndir,nst,nst)
         gas_extinction,
         p_grid,
         lat_grid,
@@ -1030,13 +1040,7 @@ void NewDoitMonoCalc(Workspace& ws,
 
 
 
-  // set up main rt domain
-  RTDomain MainRTDomain(p_grid,
-                        lat_grid,
-                        lon_grid,
-                        za_grid,
-                        aa_grid,
-                        atmosphere_dim);
+
 
   //Set cloudbox_field of MainRTDomain
   MainRTDomain.set_CloudboxField(cloudbox_field_mono);
@@ -1148,8 +1152,8 @@ void NewDoitMonoCalc(Workspace& ws,
              verbosity);
 
   cloudbox_field_mono=MainRTDomain.get_CloudboxField();
-  extinction_matrix=MainDomainScatteringProperties.get_ExtinctionMatrix();
-  absorption_vector=MainDomainScatteringProperties.get_AbsorptionVector();
+  extinction_matrix=MainRTDomain.get_ExtinctionMatrix()(joker,joker,joker,joker,0,joker,joker);
+  absorption_vector=MainRTDomain.get_AbsorptionVector()(joker,joker,joker,joker,0,joker);
   scattering_matrix=MainDomainScatteringProperties.get_ScatteringMatrix();
 
 }
@@ -1241,8 +1245,9 @@ void CalcGasExtinctionField(Workspace& ws,
   }
 }
 
-void CalcDomainScatteringProperties(
+void CalcDomainExtAbsScatProperties(
     RTDomainScatteringProperties& DomainScatteringProperties,
+    RTDomain& Domain,
     const Tensor3& t_field,
     const ArrayOfArrayOfSingleScatteringData& scat_data,
     const ConstTensor4View& pnd_field,
@@ -1258,19 +1263,20 @@ void CalcDomainScatteringProperties(
 
 
   // some resizing
-  DomainScatteringProperties.get_ExtinctionMatrix().resize(t_field.npages(),
-                                                               t_field.nrows(),
-                                                               t_field.ncols(),
-                                                               za_grid.nelem(),
-                                                               stokes_dim,
-                                                               stokes_dim);
+  Domain.get_ExtinctionMatrix().resize(t_field.npages(),
+                                         t_field.nrows(),
+                                         t_field.ncols(),
+                                         za_grid.nelem(),
+                                         1,
+                                         stokes_dim,
+                                         stokes_dim);
 
-  DomainScatteringProperties.get_AbsorptionVector().resize(t_field.npages(),
-                                                               t_field.nrows(),
-                                                               t_field.ncols(),
-                                                               za_grid.nelem(),
-                                                               stokes_dim);
-
+  Domain.get_AbsorptionVector().resize(t_field.npages(),
+                                         t_field.nrows(),
+                                         t_field.ncols(),
+                                         za_grid.nelem(),
+                                         1,
+                                         stokes_dim);
 
   DomainScatteringProperties.set_ScatZaGrid(scat_za_grid);
   DomainScatteringProperties.set_ScatAaGrid(scat_aa_grid);
@@ -1278,8 +1284,8 @@ void CalcDomainScatteringProperties(
 
   //calculate particle optical properties
   //It assumens at least azimuthally randomly oriented particles
-  CalcParticleOpticalProperties( DomainScatteringProperties.get_ExtinctionMatrix(),
-                                 DomainScatteringProperties.get_AbsorptionVector(),
+  CalcParticleOpticalProperties(Domain.get_ExtinctionMatrix(),
+                                Domain.get_AbsorptionVector(),
                                 scat_data,
                                 za_grid,
                                 pnd_field,
@@ -1311,8 +1317,8 @@ void CalcDomainScatteringProperties(
   if (ForwardCorrectionFlag) {
     ForwardScatteringCorrection(
         DomainScatteringProperties.get_ScatteringMatrix(),
-        DomainScatteringProperties.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,ndir,nst,nst)
-        DomainScatteringProperties.get_AbsorptionVector(),  //(Np,Nlat,Nlon,ndir,nst)
+        Domain.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+        Domain.get_AbsorptionVector(),  //(Np,Nlat,Nlon,Nza,Naa,nst)
         DomainScatteringProperties.get_IdirIdx0(),
         DomainScatteringProperties.get_IdirIdx1(),
         DomainScatteringProperties.get_PdirIdx0(),
@@ -1332,8 +1338,8 @@ void CalcDomainScatteringProperties(
 
 
 
-void CalcParticleOpticalProperties(Tensor6& extinction_matrix,//(Np,Nlat,Nlon,ndir,nst,nst)
-                    Tensor5& absorption_vector,//(Np,Nlat,Nlon,ndir,nst)
+void CalcParticleOpticalProperties(Tensor7& extinction_matrix,//(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+                    Tensor6& absorption_vector,//(Np,Nlat,Nlon,Nza,Naa,nst)
                     const ArrayOfArrayOfSingleScatteringData& scat_data,
                     const Vector& za_grid,
                     const ConstTensor4View& pnd_field,
@@ -1348,8 +1354,8 @@ void CalcParticleOpticalProperties(Tensor6& extinction_matrix,//(Np,Nlat,Nlon,nd
   const Index Nlon = pnd_field.ncols();
 
 
-  assert(absorption_vector.nshelves() == Np);
-  assert(extinction_matrix.nvitrines() == Np);
+  assert(absorption_vector.nvitrines() == Np);
+  assert(extinction_matrix.nlibraries() == Np);
 
   // preparing input data
   Matrix dir_array(za_grid.nelem(), 2, 0.);
@@ -1400,10 +1406,10 @@ void CalcParticleOpticalProperties(Tensor6& extinction_matrix,//(Np,Nlat,Nlon,nd
                     abs_vec_ssbulk,
                     ptype_ssbulk);
 
-      extinction_matrix(joker, ilat, ilon, joker, joker, joker) =
+      extinction_matrix(joker, ilat, ilon, joker, 0, joker, joker) =
           ext_mat_bulk_ii(0, joker, joker, joker, joker);
 
-      absorption_vector(joker, ilat, ilon, joker, joker) =
+      absorption_vector(joker, ilat, ilon, joker, 0, joker) =
           abs_vec_bulk_ii(0, joker, joker, joker);
     }
   }
@@ -1608,8 +1614,8 @@ void CalcScatteringProperties(  //Output
 
 void ForwardScatteringCorrection(  //Output
     Tensor7& scattering_matrix,    //(Np,Nlat,Nlon,npdir,nidir,nst,nst)
-    Tensor6& extinction_matrix,    //(Np,Nlat,Nlon,ndir,nst,nst)
-    Tensor5& absorption_vector,    //(Np,Nlat,Nlon,ndir,nst)
+    Tensor7& extinction_matrix,    //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+    Tensor6& absorption_vector,    //(Np,Nlat,Nlon,Nza,Naa,nst)
     const ArrayOfIndex& idir_idx0,
     const ArrayOfIndex& idir_idx1,
     const ArrayOfIndex& pdir_idx0,
@@ -1643,7 +1649,7 @@ void ForwardScatteringCorrection(  //Output
       for (Index i_pz = 0; i_pz <= za_grid.nelem() - 1; i_pz++) {
 
 
-        if (extinction_matrix(i_p, 0, 0, i_pz, 0, 0) > 0) {
+        if (extinction_matrix(i_p, 0, 0, i_pz,0, 0, 0) > 0) {
           // Find nearest incidence angle to forward propagation direction
           Index i_sz = 0;
           while (i_sz < idir_idx0.nelem() - 1 &&
@@ -1704,14 +1710,14 @@ void ForwardScatteringCorrection(  //Output
                       scattering_matrix(i_p, 0, 0, i_pz, joker, i_sti, 0),
                       scat_za_grid) /
                       2 / PI +
-                  absorption_vector(i_p, 0, 0, i_pz, i_sti);
+                  absorption_vector(i_p, 0, 0, i_pz,0 , i_sti);
 
 
-            extinction_matrix(i_p, 0, 0, i_pz, i_sti, 0)=Ki1;
+            extinction_matrix(i_p, 0, 0, i_pz, 0, i_sti, 0)=Ki1;
             if (i_sti>0) {
-              extinction_matrix(i_p, 0, 0, i_pz, 0, i_sti) = Ki1;
+              extinction_matrix(i_p, 0, 0, i_pz, 0, 0, i_sti) = Ki1;
 
-              extinction_matrix(i_p, 0, 0, i_pz, i_sti, i_sti) = extinction_matrix(i_p, 0, 0, i_pz, 0, 0);
+              extinction_matrix(i_p, 0, 0, i_pz, 0, i_sti, i_sti) = extinction_matrix(i_p, 0, 0, i_pz, 0, 0, 0);
             }
           }
         }
@@ -1836,7 +1842,7 @@ void CalcSurfaceProperties(Workspace& ws,
 
 void CalcPropagationPathMaxLength(
     Tensor3& p_path_maxlength,
-    const Tensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
+    const Tensor7View& extinction_matrix,  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
     const ConstTensor3View& gas_extinct,
     const ConstVectorView& p_grid,
     const ConstVectorView& lat_grid,
@@ -1868,7 +1874,7 @@ void CalcPropagationPathMaxLength(
         // but since this is more an rough estimation we assume, that the
         // optical thickness is only a function of the position.
         for (Index idir = 0; idir < Ndir; idir++) {
-          ext_mat_elem += (extinction_matrix(ip, ilat, ilon, idir, 0, 0) *
+          ext_mat_elem += (extinction_matrix(ip, ilat, ilon, idir, 0, 0, 0) *
                            sin(scat_za_grid[idir] * DEG2RAD));
         }
         ext_mat_elem /= Numeric(Ndir);
@@ -1953,8 +1959,8 @@ void RunNewDoit(  //Input and Output:
     UpdateSpectralRadianceField(
                                 MainDomain.get_CloudboxField(),
                                 MainDomain.get_CloudboxScatteringField(),
-                                MainDomainScatteringProperties.get_ExtinctionMatrix(),
-                                MainDomainScatteringProperties.get_AbsorptionVector(),
+                                MainDomain.get_ExtinctionMatrix(),
+                                MainDomain.get_AbsorptionVector(),
                                 surface_reflection_matrix,
                                 surface_emission,
                                 cloudbox_limits,
@@ -1990,8 +1996,8 @@ void UpdateSpectralRadianceField(//Input and Output:
                                  Tensor6& cloudbox_field_mono,
                                  Tensor6& cloudbox_scat_field,
                                  //Input:
-                                 const ConstTensor6View& extinction_matrix,
-                                 const ConstTensor5View& absorption_vector,
+                                 const ConstTensor7View& extinction_matrix,
+                                 const ConstTensor6View& absorption_vector,
                                  const ConstTensor6View& surface_reflection_matrix,
                                  const ConstTensor5View& surface_emission,
                                  const ArrayOfIndex& cloudbox_limits,
@@ -2041,8 +2047,8 @@ void UpdateSpectralRadianceField1D(
     //Input and Output:
     Tensor6& cloudbox_field_mono,
     Tensor6& cloudbox_scat_field,
-    const ConstTensor6View& extinction_matrix,  //(Np,Nlat,Nlon,ndir,nst,nst)
-    const ConstTensor5View& absorption_vector,  //(Np,Nlat,Nlon,ndir,nst)
+    const ConstTensor7View& extinction_matrix,  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+    const ConstTensor6View& absorption_vector,  //(Np,Nlat,Nlon,Nza,Naa,nst)
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
@@ -2078,8 +2084,8 @@ void UpdateSpectralRadianceField1D(
 
   //Loop over all directions, defined by za_grid
   for (Index i_za = 0; i_za < N_za; i_za++) {
-    ext_mat_field = extinction_matrix(joker, joker, joker, i_za, joker, joker);
-    abs_vec_field = absorption_vector(joker, joker, joker, i_za, joker);
+    ext_mat_field = extinction_matrix(joker, joker, joker, i_za, 0, joker, joker);
+    abs_vec_field = absorption_vector(joker, joker, joker, i_za, 0, joker);
 
     //======================================================================
     // Radiative transfer inside the cloudbox
