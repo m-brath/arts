@@ -180,6 +180,11 @@ NumericSet( mc_taustep_limit, 0.1 )
 nlteOff
 
 #
+# Turn off gas scattering calculations by default
+#
+gas_scatteringOff
+
+#
 # Use built-in Partition functions per default
 #
 partition_functionsInitFromBuiltin
