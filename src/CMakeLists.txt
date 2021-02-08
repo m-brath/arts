@@ -233,6 +233,7 @@ add_library (artscore STATIC
   m_fluxes.cc
   m_predefined_absorption_models.cc
   m_fos.cc
+  m_gas_scattering.cc
   m_general.cc
   m_geodetic.cc
   m_hitran_xsec.cc
