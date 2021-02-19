@@ -6631,6 +6631,24 @@ void define_md_data_raw() {
       GIN_DESC()));
 
   md_data_raw.push_back(create_mdrecord(
+      NAME("gas_scatteringXsecConst"),
+      DESCRIPTION(
+          "Sets gas scattering cross section to a constant value .\n"),
+      AUTHORS("Manfred Brath"),
+      OUT("sca_xsec"),
+      GOUT(),
+      GOUT_TYPE(),
+      GOUT_DESC(),
+      IN("f_grid",
+         "stokes_dim",
+         "ppvar_p",
+         "ppvar_t"),
+      GIN("ConstXsec"),
+      GIN_TYPE("Numeric"),
+      GIN_DEFAULT("0."),
+      GIN_DESC("Constant Xsec value")));
+
+  md_data_raw.push_back(create_mdrecord(
       NAME("g0Earth"),
       DESCRIPTION(
           "Gravity at zero altitude on Earth.\n"
