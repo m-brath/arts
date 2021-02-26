@@ -1175,7 +1175,7 @@ void CalcGasExtinction(Workspace& ws,
 
   // Local variables to be used in agendas
 
-  ArrayOfPropagationMatrix propmat_clearsky_local;
+  PropagationMatrix propmat_clearsky_local;
 
   const EnergyLevelMap rtp_temperature_nlte_local_dummy;
 
@@ -1184,15 +1184,14 @@ void CalcGasExtinction(Workspace& ws,
     const Vector rtp_mag_dummy(3, 0);
     const Vector ppath_los_dummy;
 
-    ArrayOfStokesVector nlte_dummy;
+    StokesVector nlte_dummy;
     ArrayOfPropagationMatrix partial_dummy;
-    ArrayOfStokesVector partial_source_dummy, partial_nlte_dummy;
+    ArrayOfStokesVector partial_source_dummy;
     propmat_clearsky_agendaExecute(ws,
                                    propmat_clearsky_local,
                                    nlte_dummy,
                                    partial_dummy,
                                    partial_source_dummy,
-                                   partial_nlte_dummy,
                                    ArrayOfRetrievalQuantity(0),
                                    (Vector)f_mono,  // monochromatic calculation
                                    rtp_mag_dummy,
@@ -1205,11 +1204,10 @@ void CalcGasExtinction(Workspace& ws,
 
     //Assuming non-polarized light and only one frequency
     //TODO: Check if polarization is needed for absorption
-    if (propmat_clearsky_local.nelem()) {
-      for (Index j = 0; j < propmat_clearsky_local.nelem(); j++) {
-        gas_extinct[ip] += propmat_clearsky_local[j].Kjj(0,0)[0];
-      }
-    }
+
+    gas_extinct[ip] += propmat_clearsky_local.Kjj(0,0)[0];
+
+
   }
 }
 
@@ -1582,7 +1580,7 @@ void CalcScatteringProperties(  //Output
 
         Index idx_i = 0;
         Index idx_i1 = 0;
-        Numeric delta_phi = 360. * DEG2RAD / (scat_aa_grid.nelem() - 1);
+        Numeric delta_phi = 360. * DEG2RAD / Numeric((scat_aa_grid.nelem() - 1));
 
         //integrate over incoming azimuth
         for (Index i_za = 0; i_za < scat_za_grid.nelem(); i_za++) {
@@ -1641,9 +1639,9 @@ void ForwardScatteringCorrection(  //Output
     Numeric Ki1;
 
 
-    Index order=2;
-    ArrayOfGridPosPoly gp(1);
-    Matrix itw(gp.nelem(),order+1);
+    Index order=3;
+//    ArrayOfGridPosPoly gp(1);
+//    Matrix itw(gp.nelem(),order+1);
     Index counter;
 
 
@@ -1672,8 +1670,15 @@ void ForwardScatteringCorrection(  //Output
           }
 
           //Prepare interpolation
-          gridpos_poly(gp,scat_za_temp,EvalPoints_Za,order,1.1);
-          interpweights(itw,gp);
+//          gridpos_poly(gp,scat_za_temp,EvalPoints_Za,order,1.1);
+//          interpweights(itw,gp);
+//          GridPos gp;
+//          gridpos(gp, scat_za_temp, EvalPoints_Za,1.1);
+
+          // General Lagrange interpolation, special case interpolation order 1:
+
+          const LagrangeInterpolation lag(0,EvalPoints_Za[0],scat_za_temp, order);
+          const Vector iwlag = interpweights(lag);
 
           for (Index i_sti = 0; i_sti < Nst; i_sti++) {
             for (Index i_stj = 0; i_stj < Nst; i_stj++) {
@@ -1692,10 +1697,13 @@ void ForwardScatteringCorrection(  //Output
 
               //Interpolate the direction within the scattering grid nearest to
               // the forward direction.
-              interp(Zij,
-                     itw,
-                     Z_temp,
-                     gp);
+
+              Zij=interp(Z_temp, iwlag, lag);
+
+//              interp(Zij,
+//                     itw,
+//                     Z_temp,
+//                     gp);
 
               //Interpolated value on scattering matrix
               scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj)=Zij[0];
@@ -2363,11 +2371,9 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
   Vector rtp_temperature_nlte_dummy(0);
 
   // Two propmat_clearsky to average between
-  ArrayOfPropagationMatrix cur_propmat_clearsky(
-      1, PropagationMatrix(1, stokes_dim));
+  PropagationMatrix cur_propmat_clearsky(1, stokes_dim);
 
-  ArrayOfPropagationMatrix prev_propmat_clearsky(
-      1, PropagationMatrix(1, stokes_dim));
+  PropagationMatrix prev_propmat_clearsky(1, stokes_dim);
 
   PropagationMatrix ext_mat_local;
   StokesVector abs_vec_local;
@@ -2382,7 +2388,7 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
     std::swap(cur_propmat_clearsky, prev_propmat_clearsky);
 
     //Set current propmat clearsky
-    cur_propmat_clearsky[0].Kjj() = gas_extinction_ppath[k];
+    cur_propmat_clearsky.Kjj() = gas_extinction_ppath[k];
 
     // Skip any further calculations for the first point.
     // We need values at two ppath points before we can average.
@@ -2391,8 +2397,8 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
     }
 
     // Average prev_propmat_clearsky with cur_propmat_clearsky
-    prev_propmat_clearsky[0] += cur_propmat_clearsky[0];
-    prev_propmat_clearsky[0] *= 0.5;
+    prev_propmat_clearsky += cur_propmat_clearsky;
+    prev_propmat_clearsky *= 0.5;
 
     opt_prop_sum_propmat_clearsky(
         ext_mat_local, abs_vec_local, prev_propmat_clearsky);
@@ -2594,8 +2600,7 @@ void NewRTStepInCloudNoBackground(
   Vector rtp_temperature_nlte_dummy(0);
 
   // Two propmat_clearsky to average between
-  ArrayOfPropagationMatrix propmat_clearsky1(1,
-                                             PropagationMatrix(1, stokes_dim));
+  PropagationMatrix propmat_clearsky1(1, stokes_dim);
 
   PropagationMatrix ext_mat_01;
   PropagationMatrix ext_mat_0;
@@ -2630,7 +2635,7 @@ void NewRTStepInCloudNoBackground(
 
 
     //Set current propmat clearsky
-    propmat_clearsky1[0].Kjj() = gas_extinction_ppath[k];
+    propmat_clearsky1.Kjj() = gas_extinction_ppath[k];
 
     opt_prop_sum_propmat_clearsky(ext_mat_1, abs_vec_1, propmat_clearsky1);
 
@@ -2729,8 +2734,7 @@ void NewRTStepInCloudNoBackground2(
   Vector rtp_temperature_nlte_dummy(0);
 
   // Two propmat_clearsky to average between
-  ArrayOfPropagationMatrix propmat_clearsky2(1,
-                                             PropagationMatrix(1, stokes_dim));
+  PropagationMatrix propmat_clearsky2(1, stokes_dim);
 
   PropagationMatrix ext_mat_01;
   PropagationMatrix ext_mat_12;
@@ -2775,7 +2779,7 @@ void NewRTStepInCloudNoBackground2(
 
 
     //Set current propmat clearsky
-    propmat_clearsky2[0].Kjj() = gas_extinction_ppath[k];
+    propmat_clearsky2.Kjj() = gas_extinction_ppath[k];
 
     opt_prop_sum_propmat_clearsky(ext_mat_2, abs_vec_2, propmat_clearsky2);
 
@@ -2905,8 +2909,7 @@ void ShortCharacteristicsRT_step3rdOrder(
   Vector rtp_temperature_nlte_dummy(0);
 
   // Two propmat_clearsky to average between
-  ArrayOfPropagationMatrix propmat_clearsky(1,
-                                            PropagationMatrix(1, stokes_dim));
+  PropagationMatrix propmat_clearsky(1, stokes_dim);
 
   PropagationMatrix ext_mat_01;
   PropagationMatrix ext_mat_12;
@@ -2947,13 +2950,13 @@ void ShortCharacteristicsRT_step3rdOrder(
   Numeric f = f_grid[0];
 
   //Set current propmat clearsky
-  propmat_clearsky[0].Kjj() = gas_extinction_ppath[Nppath - 1];
+  propmat_clearsky.Kjj() = gas_extinction_ppath[Nppath - 1];
   opt_prop_sum_propmat_clearsky(ext_mat_0, abs_vec_0, propmat_clearsky);
 
-  propmat_clearsky[0].Kjj() = gas_extinction_ppath[0];
+  propmat_clearsky.Kjj() = gas_extinction_ppath[0];
   opt_prop_sum_propmat_clearsky(ext_mat_1, abs_vec_1, propmat_clearsky);
 
-  propmat_clearsky[0].Kjj() = gas_extinction_ppath_ip1[0];
+  propmat_clearsky.Kjj() = gas_extinction_ppath_ip1[0];
   opt_prop_sum_propmat_clearsky(ext_mat_2, abs_vec_2, propmat_clearsky);
 
   //Scattered intensity
