@@ -1638,12 +1638,7 @@ void ForwardScatteringCorrection(  //Output
     Vector Z_temp(scat_za_grid.nelem()-1);
     Numeric Ki1;
 
-
-    Index order=3;
-//    ArrayOfGridPosPoly gp(1);
-//    Matrix itw(gp.nelem(),order+1);
     Index counter;
-
 
     for (Index i_p = 0; i_p < Np; i_p++) {
       for (Index i_pz = 0; i_pz <= za_grid.nelem() - 1; i_pz++) {
@@ -1669,16 +1664,9 @@ void ForwardScatteringCorrection(  //Output
             }
           }
 
-          //Prepare interpolation
-//          gridpos_poly(gp,scat_za_temp,EvalPoints_Za,order,1.1);
-//          interpweights(itw,gp);
-//          GridPos gp;
-//          gridpos(gp, scat_za_temp, EvalPoints_Za,1.1);
-
-          // General Lagrange interpolation, special case interpolation order 1:
-
-          const LagrangeInterpolation lag(0,EvalPoints_Za[0],scat_za_temp, order);
-          const Vector iwlag = interpweights(lag);
+          //Prepare interpolation, we do a fixed Lagrangian interpolation of order 3
+          const FixedLagrangeInterpolation<3> lag(0,EvalPoints_Za[0],scat_za_temp);
+          const auto iwlag = interpweights(lag);
 
           for (Index i_sti = 0; i_sti < Nst; i_sti++) {
             for (Index i_stj = 0; i_stj < Nst; i_stj++) {
@@ -1693,24 +1681,16 @@ void ForwardScatteringCorrection(  //Output
               }
 
               //Remove forward scattering peak and replace it with interpolated
-              // value
-
-              //Interpolate the direction within the scattering grid nearest to
+              // value. Interpolate the direction within the scattering grid nearest to
               // the forward direction.
 
               Zij=interp(Z_temp, iwlag, lag);
-
-//              interp(Zij,
-//                     itw,
-//                     Z_temp,
-//                     gp);
 
               //Interpolated value on scattering matrix
               scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj)=Zij[0];
 
             }
           }
-
 
           // The four extinction matrix elements based on energy conservation
           // The other elements are not changed.
