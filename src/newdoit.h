@@ -1012,7 +1012,6 @@ void CheckForRefinement(
     const ConstVectorView& lat_grid,
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
-    const Vector& scat_aa_grid,
     const Tensor3& z_field,
     const Vector& refellipsoid,
     const Index& atmosphere_dim,
