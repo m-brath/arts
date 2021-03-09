@@ -1880,6 +1880,91 @@ void CalcPropagationPathMaxLength(
   }
 }
 
+void CheckForRefinement(
+    ArrayOfIndex& refine,
+    Tensor4& DlogK,
+    Tensor4& tau,
+    const Tensor7View& extinction_matrix,  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+    const ConstTensor3View& gas_extinct,
+    const ConstVectorView& p_grid,
+    const ConstVectorView& lat_grid,
+    const ConstVectorView& lon_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid,
+    const Tensor3& z_field,
+    const Vector& refellipsoid,
+    const Index& atmosphere_dim,
+    const Numeric& refine_crit,
+    const Numeric& tau_crit) {
+  const Index Np = p_grid.nelem();
+  const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
+  const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
+  const Index Nza = scat_za_grid.nelem();
+  const Index Naa = scat_aa_grid.nelem();
+  Numeric ext_mat_elem;
+
+  //allocate
+  Tensor3 ExtMat(Np, Nlat, Nlon);
+
+  // get the average total extinction at each position
+  for (Index ip = 0; ip < Np; ip++) {
+    for (Index ilat = 0; ilat < Nlat; ilat++) {
+      for (Index ilon = 0; ilon < Nlon; ilon++) {
+        ext_mat_elem = 0.;
+
+        // calculate average over all direction,
+        // for azimuthal random and arbitrary orientation, this is not fully correct,
+        // but this is more an rough estimation.
+        for (Index iza = 0; iza < Nza; iza++) {
+          for (Index iaa = 0; iaa < Naa; iaa++) {
+            ext_mat_elem += (extinction_matrix(ip, ilat, ilon, iza, iaa, 0, 0) *
+                             sin(scat_za_grid[iza] * DEG2RAD));
+          }
+          ext_mat_elem /= Numeric(Nza * Naa);
+
+          // Total extinction
+          ext_mat_elem += gas_extinct(ip, ilat, ilon);
+
+          ExtMat(ip, ilat, ilon) = ext_mat_elem;
+        }
+      }
+    }
+
+    //allocate
+    DlogK.resize(Np - 1, Nlat, Nlon, atmosphere_dim);
+    tau.resize(Np - 1, Nlat, Nlon, atmosphere_dim);
+
+    // estimate the change of the the extinction in terms of log difference between two
+    // adjacent cell(layers)
+    if (atmosphere_dim == 1) {
+      refine.resize(Np - 1);
+
+      for (ip = 0; ip < Np - 1; ip++) {
+        // calculate log10 extinction difference
+        if (ExtMat(ip + 1, 0, 0) > 0 && ExtMat(ip, 0, 0) > 0) {
+          DlogK(ip, 0, 0, 0) =
+              abs(log10(ExtMat(ip + 1, 0, 0)) - log10(ExtMat(ip, 0, 0)));
+        } else {
+          DlogK(ip, 0, 0, 0) = -1;
+        }
+
+        // calculate optical thickness
+        tau(ip, 0, 0, 0) = (ExtMat(ip + 1, 0, 0) + ExtMat(ip, 0, 0)) / 2 *
+                           abs(z_field(ip + 1, 0, 0) - z_field(ip, 0, 0));
+
+        if (DlogK(ip, 0, 0, 0) > refine_crit && tau(ip, 0, 0, 0) > tau_crit) {
+          refine[ip] = 1;
+        }
+      }
+
+    } else {
+      refine.resize((Np - 1) * (Nlat - 1) * (Nlon - 1));
+
+      throw runtime_error("3d is not implemented yet! Sorry");
+    }
+  }
+}
+
 void RunNewDoit(  //Input and Output:
     RTDomain& MainDomain,
     Index& convergence_flag,

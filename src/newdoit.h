@@ -982,6 +982,43 @@ void CalcPropagationPathMaxLength(
     const Numeric& ppath_lraytrace,
     const Numeric& tau_max);
 
+/**
+ * @param[out] refine Flag which indicate which grid CELL needs refinement.
+ * @param[out] DlogK Difference in log10 of the mean extinction in 1 to 3 directions.
+ * @param[out] tau_p mean optical thickness in in 1 to 3 directions.
+ * @param[in] extinction_matrix extinction_matrix extinction_matrix Bulk extinction matrix
+ *              (Np,Nlat,Nlon,ndir,nst,nst)
+ * @param[in] gas_extinct Field with the gas extinction, this is not used
+ *              for the actual RT calculation. It is just used for the adaptive
+ *              ppath length.
+ * @param[in] p_grid
+ * @param[in] lat_grid
+ * @param[in] lon_grid
+ * @param[in] scat_za_grid
+ * @param[in] scat_aa_grid
+ * @param[in] z_field
+ * @param[in] refellipsoid
+ * @param[in] atmosphere_dim
+ * @param[in] refine_crit
+ * @param[in] tau_crit
+ */
+void CheckForRefinement(
+    ArrayOfIndex& refine,
+    Tensor4& DlogK,
+    Tensor4& tau,
+    const Tensor7View& extinction_matrix,  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+    const ConstTensor3View& gas_extinct,
+    const ConstVectorView& p_grid,
+    const ConstVectorView& lat_grid,
+    const ConstVectorView& lon_grid,
+    const Vector& scat_za_grid,
+    const Vector& scat_aa_grid,
+    const Tensor3& z_field,
+    const Vector& refellipsoid,
+    const Index& atmosphere_dim,
+    const Numeric& refine_crit,
+    const Numeric& tau_crit);
+
 /** The actual DOIT scattering solver
  *
  * @param[out] cloudbox_field_mono Monochromatic radiation field inside the
