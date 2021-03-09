@@ -1004,6 +1004,38 @@ void NewDoitMonoCalc(Workspace& ws,
   }
 
 
+  CalcGasExtinctionField(ws,
+                         gas_extinction,
+                         p_grid,
+                         lat_grid,
+                         lon_grid,
+                         t_field,
+                         vmr_field,
+                         propmat_clearsky_agenda,
+                         f_mono);
+
+  //TODO: Include refinement here. This includes the check where to refine and
+  // the prepration of the subdomains.
+
+  Tensor4 DlogK;
+  Tensor4 tau;
+  ArrayOfIndex refine;
+
+  CheckForRefinement(
+      refine,
+      DlogK,
+      tau,
+      MainRTDomain.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+      gas_extinction,
+      p_grid,
+      lat_grid,
+      lon_grid,
+      scat_za_grid,
+      z_field,
+      refellipsoid,
+      atmosphere_dim,
+      1.,
+      0.1);
 
   //TODO: Remove this! For the adaptive this is not needed anymore.
   Tensor3 p_path_maxlength;
@@ -1012,16 +1044,6 @@ void NewDoitMonoCalc(Workspace& ws,
     //so we calculate the gas extinction on the cloud box pressure grid first.
     //The actual gas extinction which will be used for the RT calculation will
     //calculated additionally.
-
-    CalcGasExtinctionField(ws,
-                           gas_extinction,
-                           p_grid,
-                           lat_grid,
-                           lon_grid,
-                           t_field,
-                           vmr_field,
-                           propmat_clearsky_agenda,
-                           f_mono);
 
     //calculate local ppath_lmax
     CalcPropagationPathMaxLength(
@@ -1036,12 +1058,6 @@ void NewDoitMonoCalc(Workspace& ws,
         ppath_lraytrace,
         tau_max);
   }
-
-  //TODO: Include refinement here. This includes the check where to refine and
-  // the prepration of the subdomains.
-
-
-
 
 
   //Set cloudbox_field of MainRTDomain
@@ -1890,21 +1906,21 @@ void CheckForRefinement(
     const ConstVectorView& lat_grid,
     const ConstVectorView& lon_grid,
     const Vector& scat_za_grid,
-    const Vector& scat_aa_grid,
     const Tensor3& z_field,
     const Vector& refellipsoid,
     const Index& atmosphere_dim,
     const Numeric& refine_crit,
     const Numeric& tau_crit) {
+
   const Index Np = p_grid.nelem();
   const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
   const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
-  const Index Nza = scat_za_grid.nelem();
-  const Index Naa = scat_aa_grid.nelem();
+  const Index Nza = extinction_matrix.nbooks();
+  const Index Naa = extinction_matrix.npages();
   Numeric ext_mat_elem;
 
   //allocate
-  Tensor3 ExtMat(Np, Nlat, Nlon);
+  Tensor3 ExtMat(Np, Nlat, Nlon,0);
 
   // get the average total extinction at each position
   for (Index ip = 0; ip < Np; ip++) {
@@ -1920,48 +1936,58 @@ void CheckForRefinement(
             ext_mat_elem += (extinction_matrix(ip, ilat, ilon, iza, iaa, 0, 0) *
                              sin(scat_za_grid[iza] * DEG2RAD));
           }
-          ext_mat_elem /= Numeric(Nza * Naa);
-
-          // Total extinction
-          ext_mat_elem += gas_extinct(ip, ilat, ilon);
-
-          ExtMat(ip, ilat, ilon) = ext_mat_elem;
         }
+
+        ext_mat_elem /= Numeric(Nza * Naa);
+
+        // Total extinction
+        ext_mat_elem += gas_extinct(ip, ilat, ilon);
+
+        ExtMat(ip, ilat, ilon) = ext_mat_elem;
+      }
+    }
+  }
+
+  //allocate
+  DlogK.resize(Np - 1, Nlat, Nlon, atmosphere_dim);
+  tau.resize(Np - 1, Nlat, Nlon, atmosphere_dim);
+  Numeric dz;
+  Numeric ext1;
+  Numeric ext2;
+
+  // estimate the change of the the extinction in terms of log difference between two
+  // adjacent cell(layers)
+  if (atmosphere_dim == 1) {
+    refine.resize(Np - 1);
+
+    for (Index ip = 0; ip < Np - 1; ip++) {
+      // calculate log10 extinction difference
+      if (ExtMat(ip + 1, 0, 0) > 0 && ExtMat(ip, 0, 0) > 0) {
+        DlogK(ip, 0, 0, 0) =
+            abs(log10(ExtMat(ip + 1, 0, 0)) - log10(ExtMat(ip, 0, 0)));
+      } else {
+        DlogK(ip, 0, 0, 0) = -1;
+      }
+
+      dz=abs(z_field(ip + 1, 0, 0) - z_field(ip, 0, 0));
+
+      // calculate optical thickness
+      ext1=ExtMat(ip, 0, 0);
+      ext2=ExtMat(ip + 1, 0, 0);
+      tau(ip, 0, 0, 0) = ( ext2 + ext1) / 2. *dz;
+
+
+      if (DlogK(ip, 0, 0, 0) > refine_crit && tau(ip, 0, 0, 0) > tau_crit) {
+        refine[ip] = 1;
+      } else {
+        refine[ip] = 0;
       }
     }
 
-    //allocate
-    DlogK.resize(Np - 1, Nlat, Nlon, atmosphere_dim);
-    tau.resize(Np - 1, Nlat, Nlon, atmosphere_dim);
+  } else {
+    refine.resize((Np - 1) * (Nlat - 1) * (Nlon - 1));
 
-    // estimate the change of the the extinction in terms of log difference between two
-    // adjacent cell(layers)
-    if (atmosphere_dim == 1) {
-      refine.resize(Np - 1);
-
-      for (ip = 0; ip < Np - 1; ip++) {
-        // calculate log10 extinction difference
-        if (ExtMat(ip + 1, 0, 0) > 0 && ExtMat(ip, 0, 0) > 0) {
-          DlogK(ip, 0, 0, 0) =
-              abs(log10(ExtMat(ip + 1, 0, 0)) - log10(ExtMat(ip, 0, 0)));
-        } else {
-          DlogK(ip, 0, 0, 0) = -1;
-        }
-
-        // calculate optical thickness
-        tau(ip, 0, 0, 0) = (ExtMat(ip + 1, 0, 0) + ExtMat(ip, 0, 0)) / 2 *
-                           abs(z_field(ip + 1, 0, 0) - z_field(ip, 0, 0));
-
-        if (DlogK(ip, 0, 0, 0) > refine_crit && tau(ip, 0, 0, 0) > tau_crit) {
-          refine[ip] = 1;
-        }
-      }
-
-    } else {
-      refine.resize((Np - 1) * (Nlat - 1) * (Nlon - 1));
-
-      throw runtime_error("3d is not implemented yet! Sorry");
-    }
+    throw runtime_error("3d is not implemented yet! Sorry");
   }
 }
 
