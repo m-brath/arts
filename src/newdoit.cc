@@ -1997,6 +1997,7 @@ void CheckForRefinement(
 }
 
 void PrepareSubdomains(
+    Workspace& ws,
     ArrayOfRTDomain& Subdomains,
     ArrayOfRTDomainScatteringProperties& SubdomainsScatteringProperties,
     const RTDomain MainDomain,
@@ -2011,10 +2012,18 @@ void PrepareSubdomains(
     const ArrayOfIndex& refine,
     const Tensor4& DlogK,
     const Index& N_decade,
-    const Verbosity& verbosity){
+    const ArrayOfIndex& cloudbox_limits,
+    const Agenda& propmat_clearsky_agenda,
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Vector& refellipsoid,
+    const Vector& f_grid,
+    const Verbosity& verbosity) {
 
   if (MainDomain.get_AtmosphereDim() == 1) {
-    PrepareSubdomains1D(Subdomains,
+    PrepareSubdomains1D(ws,
+                        Subdomains,
                         SubdomainsScatteringProperties,
                         MainDomain,
                         MainDomainScatteringProperties,
@@ -2028,6 +2037,13 @@ void PrepareSubdomains(
                         refine,
                         DlogK,
                         N_decade,
+                        cloudbox_limits,
+                        propmat_clearsky_agenda,
+                        ppath_step_agenda,
+                        ppath_lmax,
+                        ppath_lraytrace,
+                        refellipsoid,
+                        f_grid,
                         verbosity);
   } else {
     throw runtime_error("3d is not implemented yet! Sorry");
@@ -2035,6 +2051,7 @@ void PrepareSubdomains(
 }
 
 void PrepareSubdomains1D(
+    Workspace& ws,
     ArrayOfRTDomain& Subdomains,
     ArrayOfRTDomainScatteringProperties& SubdomainsScatteringProperties,
     const RTDomain MainDomain,
@@ -2049,7 +2066,19 @@ void PrepareSubdomains1D(
     const ArrayOfIndex& refine,
     const Tensor4& DlogK,
     const Index& N_decade,
+    const ArrayOfIndex& cloudbox_limits,
+    const Agenda& propmat_clearsky_agenda,
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Vector& refellipsoid,
+    const Vector& f_grid,
     const Verbosity& verbosity) {
+
+  CREATE_OUT0;
+  ostringstream os;
+
+  // number of layers of the main domain
   const Index Nlayers = refine.nelem();
 
   Index Nz;
@@ -2063,6 +2092,7 @@ void PrepareSubdomains1D(
   Numeric dz_sub;
   Matrix itw;
   ArrayOfGridPos gridpositions_z;
+  ArrayOfMatrix VmrArray_sub;
 
   Subdomains.resize(refine.nelem());
   SubdomainsScatteringProperties.resize(refine.nelem());
@@ -2146,12 +2176,13 @@ void PrepareSubdomains1D(
                gridpositions_z);
       }
 
-
+      // calculate the bulk particle extinction, absorption and scattering
+      // properties
       CalcDomainExtAbsScatProperties(SubdomainsScatteringProperties[il],
                                      Subdomains[il],
-                                     t_field,
+                                     t_field_sub,
                                      scat_data,
-                                     pnd_field,
+                                     pnd_field_sub,
                                      MainDomain.get_CloudboxField().ncols(),
                                      MainDomain.get_AtmosphereDim(),
                                      MainDomain.get_za_grid(),
@@ -2163,6 +2194,50 @@ void PrepareSubdomains1D(
                                      verbosity);
 
 
+      //Estimate ppath for the subdomain
+      EstimatePPathElements1D(ws,
+                              Subdomains[il].get_PressureArray(),
+                              Subdomains[il].get_TemperatureArray(),
+                              VmrArray_sub,
+                              Subdomains[il].get_InterpWeightsArray(),
+                              Subdomains[il].get_InterpWeightsAngleArray(),
+                              Subdomains[il].get_GposPArray(),
+                              Subdomains[il].get_GposZenithArray(),
+                              Subdomains[il].get_LStepArray(),
+                              Subdomains[il].get_MaxLimbIndex(),
+                              cloudbox_limits,
+                              MainDomain.get_za_grid(),
+                              ppath_step_agenda,
+                              ppath_lmax,
+                              ppath_lraytrace,
+                              p_grid_sub,
+                              z_field_sub,
+                              t_field_sub,
+                              vmr_field_sub,
+                              refellipsoid,
+                              f_grid,
+                              verbosity);
+
+      //calculate gas extinction on p-path points
+      Subdomains[il].get_GasExtinctionArray().resize(Subdomains[il].get_PressureArray().nelem());
+
+      for (Index i = 0; i < Subdomains[il].get_PressureArray().nelem(); i++) {
+        Vector gas_extinction_temp;
+        CalcGasExtinction(ws,
+                          Subdomains[il].get_GasExtinctionArray()[i],
+                          Subdomains[il].get_PressureArray()[i],
+                          Subdomains[il].get_TemperatureArray()[i],
+                          VmrArray_sub[i],
+                          propmat_clearsky_agenda,
+                          f_grid[0]);
+
+      }
+
+      //TODO: Add here the Gasextinction of the subdomains
+
+      os << "gas absorption calculated \n";
+      out0 << os.str();
+      os.clear();
 
     }
   }

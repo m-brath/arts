@@ -1022,6 +1022,7 @@ void CheckForRefinement(
 
 /**Does the refinement and prepares the subdomains.
  *
+ * @param[in,out] ws Current workspace.
  * @param[out] Subdomains Array of sub radiative transfer domain
  * @param[out] SubdomainsScatteringProperties Array of subdomain scattering properties
  * @param[in] MainDomain Radiative transfer domain
@@ -1037,8 +1038,20 @@ void CheckForRefinement(
  * @param[in] refine Flag which indicate which grid CELL will be refinement.
  * @param[in] DlogK Difference in log10 of the mean extinction in 1 to 3 directions.
  * @param[in] N_decade Number of points per decade of change of extinction to be inserted.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] propmat_clearsky_agenda Agenda to calculate the absorption
+ *              coefficient matrix.
+ * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
+ * @param[in] ppath_lmax Maximum length between points describing propagation
+ *              paths.
+ * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
+ *              determining propagation paths.
+ * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
  */
 void PrepareSubdomains(
+    Workspace& ws,
     ArrayOfRTDomain& Subdomains,
     ArrayOfRTDomainScatteringProperties& SubdomainsScatteringProperties,
     const RTDomain MainDomain,
@@ -1053,10 +1066,18 @@ void PrepareSubdomains(
     const ArrayOfIndex& refine,
     const Tensor4& DlogK,
     const Index& N_decade,
+    const ArrayOfIndex& cloudbox_limits,
+    const Agenda& propmat_clearsky_agenda,
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Vector& refellipsoid,
+    const Vector& f_grid,
     const Verbosity& verbosity);
 
 /**Does the refinement and prepares the subdomains for 1D atmospheres.
  *
+ * @param[in,out] ws Current workspace.
  * @param[out] Subdomains Array of sub radiative transfer domain
  * @param[out] SubdomainsScatteringProperties Array of subdomain scattering properties
  * @param[in] MainDomain Radiative transfer domain
@@ -1072,8 +1093,20 @@ void PrepareSubdomains(
  * @param[in] refine Flag which indicate which grid CELL will be refinement.
  * @param[in] DlogK Difference in log10 of the mean extinction in 1 to 3 directions.
  * @param[in] N_decade Number of points per decade of change of extinction to be inserted.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] propmat_clearsky_agenda Agenda to calculate the absorption
+ *              coefficient matrix.
+ * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
+ * @param[in] ppath_lmax Maximum length between points describing propagation
+ *              paths.
+ * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
+ *              determining propagation paths.
+ * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
  */
 void PrepareSubdomains1D(
+    Workspace& ws,
     ArrayOfRTDomain& Subdomains,
     ArrayOfRTDomainScatteringProperties& SubdomainsScatteringProperties,
     const RTDomain MainDomain,
@@ -1088,6 +1121,13 @@ void PrepareSubdomains1D(
     const ArrayOfIndex& refine,
     const Tensor4& DlogK,
     const Index& N_decade,
+    const ArrayOfIndex& cloudbox_limits,
+    const Agenda& propmat_clearsky_agenda,
+    const Agenda& ppath_step_agenda,
+    const Numeric& ppath_lmax,
+    const Numeric& ppath_lraytrace,
+    const Vector& refellipsoid,
+    const Vector& f_grid,
     const Verbosity& verbosity);
 
 /** The actual DOIT scattering solver
@@ -1504,7 +1544,7 @@ void CheckConvergence(  //WS Input and Output:
 
 /** Precalculates the propagation path steps and quantities needed for interpolation
  *
- * @param ws[in,out] Current workspace.
+ * @param[in,out] ws Current workspace.
  * @param[out] PressureArray Array with the pressures of each propagation step
  * @param[out] TemperatureArray Array with the temperature at each propagation step
  * @param[out] VmrArray Array with the VMR at each propagation step
