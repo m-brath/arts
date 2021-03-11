@@ -31,12 +31,14 @@
   === External declarations
   ===========================================================================*/
 
+#include "newdoit.h"
+
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
-#include <algorithm>
-#include "newdoit.h"
+
 #include "agenda_class.h"
 #include "array.h"
 #include "auto_md.h"
@@ -318,10 +320,9 @@ void SetAngularGrids(Vector& za_grid,
     za_grid = za_grid_temp[Range(x.nelem() - 1, x.nelem(), -1)];
 
     //dirty hack to be assure that 90 deg is exactly 90 deg.
-    if (N_za_grid % 2){
-      za_grid[int(N_za_grid/2)]=90.;
+    if (N_za_grid % 2) {
+      za_grid[int(N_za_grid / 2)] = 90.;
     }
-
 
   } else {
     ostringstream os;
@@ -388,8 +389,6 @@ void SetClearsky_cloudbox(Tensor7& cloudbox_field,
                 p_grid[Range(cloudbox_limits[0],
                              (cloudbox_limits[1] - cloudbox_limits[0]) + 1)]);
 
-
-
       Matrix itw((cloudbox_limits[1] - cloudbox_limits[0]) + 1, 2);
       interpweights(itw, p_gp);
 
@@ -398,12 +397,12 @@ void SetClearsky_cloudbox(Tensor7& cloudbox_field,
           cloudbox_field(f_index, 0, joker, joker, joker, joker, joker);
       scat_i_p(1, joker, joker, joker, joker, joker) =
           cloudbox_field(f_index,
-                       cloudbox_field.nvitrines() - 1,
-                       joker,
-                       joker,
-                       joker,
-                       joker,
-                       joker);
+                         cloudbox_field.nvitrines() - 1,
+                         joker,
+                         joker,
+                         joker,
+                         joker,
+                         joker);
 
       for (Index za_index = 0; za_index < N_za; ++za_index) {
         for (Index aa_index = 0; aa_index < N_aa; ++aa_index) {
@@ -502,12 +501,12 @@ void SetClearsky_cloudbox(Tensor7& cloudbox_field,
             for (Index aa_index = 0; aa_index < N_aa; ++aa_index) {
               for (Index i = 0; i < N_i; ++i) {
                 VectorView target_field = cloudbox_field(f_index,
-                                                       Range(joker),
-                                                       lat_index,
-                                                       lon_index,
-                                                       za_index,
-                                                       aa_index,
-                                                       i);
+                                                         Range(joker),
+                                                         lat_index,
+                                                         lon_index,
+                                                         za_index,
+                                                         aa_index,
+                                                         i);
 
                 ConstVectorView source_field = scat_i_p(
                     Range(joker), lat_index, lon_index, za_index, aa_index, i);
@@ -529,12 +528,12 @@ void SetClearsky_cloudbox(Tensor7& cloudbox_field,
             for (Index aa_index = 0; aa_index < N_aa; ++aa_index) {
               for (Index i = 0; i < N_i; ++i) {
                 VectorView target_field = cloudbox_field(f_index,
-                                                       p_index,
-                                                       Range(joker),
-                                                       lon_index,
-                                                       za_index,
-                                                       aa_index,
-                                                       i);
+                                                         p_index,
+                                                         Range(joker),
+                                                         lon_index,
+                                                         za_index,
+                                                         aa_index,
+                                                         i);
 
                 ConstVectorView source_field = scat_i_lat(
                     p_index, Range(joker), lon_index, za_index, aa_index, i);
@@ -556,12 +555,12 @@ void SetClearsky_cloudbox(Tensor7& cloudbox_field,
             for (Index aa_index = 0; aa_index < N_aa; ++aa_index) {
               for (Index i = 0; i < N_i; ++i) {
                 VectorView target_field = cloudbox_field(f_index,
-                                                       p_index,
-                                                       lat_index,
-                                                       Range(joker),
-                                                       za_index,
-                                                       aa_index,
-                                                       i);
+                                                         p_index,
+                                                         lat_index,
+                                                         Range(joker),
+                                                         za_index,
+                                                         aa_index,
+                                                         i);
 
                 ConstVectorView source_field = scat_i_lon(
                     p_index, lat_index, Range(joker), za_index, aa_index, i);
@@ -610,7 +609,8 @@ void GetIncomingRadiation(Workspace& ws,
     //--- Get cloudbox_field at lower and upper boundary
     //    (boundary=0: lower, boundary=1: upper)
     for (Index boundary = 0; boundary <= 1; boundary++) {
-      const Index boundary_index = boundary ? cloudbox_field.nvitrines() - 1 : 0;
+      const Index boundary_index =
+          boundary ? cloudbox_field.nvitrines() - 1 : 0;
       pos[0] = z_field(cloudbox_limits[boundary], 0, 0);
 
       // doing the first angle separately for allowing dy between 2 angles
@@ -694,7 +694,8 @@ void GetIncomingRadiation(Workspace& ws,
     //--- Get cloudbox_field at lower and upper boundary
     //    (boundary=0: lower, boundary=1: upper)
     for (Index boundary = 0; boundary <= 1; boundary++) {
-      const Index boundary_index = boundary ? cloudbox_field.nvitrines() - 1 : 0;
+      const Index boundary_index =
+          boundary ? cloudbox_field.nvitrines() - 1 : 0;
       for (Index lat_index = 0; lat_index < Nlat_cloud; lat_index++) {
         for (Index lon_index = 0; lon_index < Nlon_cloud; lon_index++) {
           pos[2] = lon_grid[lon_index + cloudbox_limits[4]];
@@ -727,12 +728,12 @@ void GetIncomingRadiation(Workspace& ws,
               }
 
               cloudbox_field(joker,
-                           boundary_index,
-                           lat_index,
-                           lon_index,
-                           za_index,
-                           scat_aa_index,
-                           joker) = iy;
+                             boundary_index,
+                             lat_index,
+                             lon_index,
+                             za_index,
+                             scat_aa_index,
+                             joker) = iy;
             }
           }
         }
@@ -773,12 +774,12 @@ void GetIncomingRadiation(Workspace& ws,
               }
 
               cloudbox_field(joker,
-                           p_index,
-                           boundary_index,
-                           lon_index,
-                           za_index,
-                           scat_aa_index,
-                           joker) = iy;
+                             p_index,
+                             boundary_index,
+                             lon_index,
+                             za_index,
+                             scat_aa_index,
+                             joker) = iy;
             }
           }
         }
@@ -819,12 +820,12 @@ void GetIncomingRadiation(Workspace& ws,
               }
 
               cloudbox_field(joker,
-                           p_index,
-                           lat_index,
-                           boundary_index,
-                           za_index,
-                           scat_aa_index,
-                           joker) = iy;
+                             p_index,
+                             lat_index,
+                             boundary_index,
+                             za_index,
+                             scat_aa_index,
+                             joker) = iy;
             }
           }
         }
@@ -880,28 +881,24 @@ void LimitInputGridsAndFieldsToCloudbox(Vector& p_grid_cldbx,
     lon_grid_cldbx = lat_grid;
   }
 
-
   t_field_cldbx = t_field(Range(cloudbox_limits[0], Np_cldbx),
                           Range(Idx0_lat_cldbx, Nlat_cldbx),
                           Range(Idx0_lon_cldbx, Nlon_cldbx));
 
-
   z_field_cldbx = z_field(Range(cloudbox_limits[0], Np_cldbx),
                           Range(Idx0_lat_cldbx, Nlat_cldbx),
                           Range(Idx0_lon_cldbx, Nlon_cldbx));
-
 
   if (vmr_field.nbooks()) {
     vmr_field_cldbx = vmr_field(joker,
                                 Range(cloudbox_limits[0], Np_cldbx),
                                 Range(Idx0_lat_cldbx, Nlat_cldbx),
                                 Range(Idx0_lon_cldbx, Nlon_cldbx));
-
   }
 }
 
 void NewDoitMonoCalc(Workspace& ws,
-    //Input and Output:
+                     //Input and Output:
                      Tensor6& cloudbox_field_mono,
                      Tensor3& gas_extinction,
                      Tensor6& extinction_matrix,
@@ -934,7 +931,9 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Vector& refellipsoid,
                      const Vector& epsilon,
                      const Index& max_num_iterations,
-                     const Numeric& tau_max,
+                     const Numeric& refinement_criterion,
+                     const Numeric& tau_min,
+                     const Index& N_decade,
                      const Index& accelerated,
                      const Index& ForwardCorrectionFlag,
                      const Numeric& ppath_lmax,
@@ -942,20 +941,14 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Verbosity& verbosity)
 
 {
-
   CREATE_OUT0;
   ostringstream os, os1, os2;
-
 
   //-------Scattering related quantities----------------------------------------
 
   // set up main rt domain
-  RTDomain MainRTDomain(p_grid,
-                        lat_grid,
-                        lon_grid,
-                        za_grid,
-                        aa_grid,
-                        atmosphere_dim);
+  RTDomain MainRTDomain(
+      p_grid, lat_grid, lon_grid, za_grid, aa_grid, atmosphere_dim);
 
   //Set cloudbox field of MainRTDomain
   MainRTDomain.set_CloudboxField(cloudbox_field_mono);
@@ -1015,7 +1008,6 @@ void NewDoitMonoCalc(Workspace& ws,
     }
   }
 
-
   CalcGasExtinctionField(ws,
                          gas_extinction,
                          p_grid,
@@ -1026,119 +1018,65 @@ void NewDoitMonoCalc(Workspace& ws,
                          propmat_clearsky_agenda,
                          f_mono);
 
-  //TODO: Include refinement here. This includes the check where to refine and
-  // the prepration of the subdomains.
-
-  Tensor4 DlogK;
-  Tensor4 tau;
-  ArrayOfIndex refine;
-
-  CheckForRefinement(
-      refine,
-      DlogK,
-      tau,
-      MainRTDomain.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
-      gas_extinction,
-      p_grid,
-      lat_grid,
-      lon_grid,
-      scat_za_grid,
-      z_field,
-      refellipsoid,
-      atmosphere_dim,
-      1.,
-      tau_max);
-
-  //TODO: Remove this! For the adaptive this is not needed anymore.
-//  Tensor3 p_path_maxlength;
-//  if (tau_max > 0) {
-//    //To estimate the maximum ppath length, we need gas and particle extinction,
-//    //so we calculate the gas extinction on the cloud box pressure grid first.
-//    //The actual gas extinction which will be used for the RT calculation will
-//    //calculated additionally.
-//
-//    //calculate local ppath_lmax
-//    CalcPropagationPathMaxLength(
-//        p_path_maxlength,
-//        MainRTDomain.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,ndir,nst,nst)
-//        gas_extinction,
-//        p_grid,
-//        lat_grid,
-//        lon_grid,
-//        za_grid,
-//        ppath_lmax,
-//        ppath_lraytrace,
-//        tau_max);
-//  }
-
-
-
-
   ArrayOfMatrix VmrArray;
 
   //Estimate the ppath for main rt domain
-  if (atmosphere_dim ==1) {
-      EstimatePPathElements1D(ws,
-                              MainRTDomain.get_PressureArray(),
-                              MainRTDomain.get_TemperatureArray(),
-                              VmrArray,
-                              MainRTDomain.get_InterpWeightsArray(),
-                              MainRTDomain.get_InterpWeightsAngleArray(),
-                              MainRTDomain.get_GposPArray(),
-                              MainRTDomain.get_GposZenithArray(),
-                              MainRTDomain.get_LStepArray(),
-                              MainRTDomain.get_MaxLimbIndex(),
-                              cloudbox_limits,
-                              za_grid,
-                              ppath_step_agenda,
-                              ppath_lmax,
-                              ppath_lraytrace,
-//                              p_path_maxlength,
-                              p_grid,
-                              z_field,
-                              t_field,
-                              vmr_field,
-                              refellipsoid,
-                              Vector(1, f_mono),
-                              verbosity);
-
-      //TODO: Add here the ppath estimation for the subdomains
-      //Estimate the ppath for the subdomains and save them ArrayOf...
-      //Each array element is one subdomain.
-      //Ask Olli for the best strategy
-
+  if (atmosphere_dim == 1) {
+    EstimatePPathElements1D(ws,
+                            MainRTDomain.get_PressureArray(),
+                            MainRTDomain.get_TemperatureArray(),
+                            VmrArray,
+                            MainRTDomain.get_InterpWeightsArray(),
+                            MainRTDomain.get_InterpWeightsAngleArray(),
+                            MainRTDomain.get_GposPArray(),
+                            MainRTDomain.get_GposZenithArray(),
+                            MainRTDomain.get_LStepArray(),
+                            MainRTDomain.get_MaxLimbIndex(),
+                            cloudbox_limits,
+                            0,
+                            za_grid,
+                            ppath_step_agenda,
+                            ppath_lmax,
+                            ppath_lraytrace,
+                            //                              p_path_maxlength,
+                            p_grid,
+                            z_field,
+                            t_field,
+                            vmr_field,
+                            refellipsoid,
+                            Vector(1, f_mono),
+                            verbosity);
 
   } else {
     throw runtime_error("3d is not implemented yet! Sorry");
-//    EstimatePPathElements3D(ws,
-//                            PressureArray,
-//                            TemperatureArray,
-//                            VmrArray,
-//                            InterpWeightsArray,
-//                            InterpWeightsZenithArray,
-//                            GposArray,
-//                            GposZenithArray,
-//                            LstepArray,
-//                            MaxLimbIndex,
-//                            cloudbox_limits,
-//                            za_grid,
-//                            ppath_step_agenda,
-//                            ppath_lmax,
-//                            ppath_lraytrace,
-//                            p_path_maxlength,
-//                            p_grid,
-//                            z_field,
-//                            t_field,
-//                            vmr_field,
-//                            refellipsoid,
-//                            Vector(1, f_mono),
-//                            verbosity);
+    //    EstimatePPathElements3D(ws,
+    //                            PressureArray,
+    //                            TemperatureArray,
+    //                            VmrArray,
+    //                            InterpWeightsArray,
+    //                            InterpWeightsZenithArray,
+    //                            GposArray,
+    //                            GposZenithArray,
+    //                            LstepArray,
+    //                            MaxLimbIndex,
+    //                            cloudbox_limits,
+    //                            za_grid,
+    //                            ppath_step_agenda,
+    //                            ppath_lmax,
+    //                            ppath_lraytrace,
+    //                            p_path_maxlength,
+    //                            p_grid,
+    //                            z_field,
+    //                            t_field,
+    //                            vmr_field,
+    //                            refellipsoid,
+    //                            Vector(1, f_mono),
+    //                            verbosity);
   }
 
-
-
   //calculate gas extinction on p-path points
-  MainRTDomain.get_GasExtinctionArray().resize(MainRTDomain.get_PressureArray().nelem());
+  MainRTDomain.get_GasExtinctionArray().resize(
+      MainRTDomain.get_PressureArray().nelem());
 
   for (Index i = 0; i < MainRTDomain.get_PressureArray().nelem(); i++) {
     Vector gas_extinction_temp;
@@ -1149,23 +1087,63 @@ void NewDoitMonoCalc(Workspace& ws,
                       VmrArray[i],
                       propmat_clearsky_agenda,
                       f_mono);
-
   }
 
-  //TODO: Add here the Gasextinction of the subdomains
-
-  os << "gas absorption calculated \n";
+  os << "Main domain prepared \n";
   out0 << os.str();
   os.clear();
 
-  //TODO:add subdomain variables. Ask Olli if there is a better way to include
-  // the subdomain.
 
+  Tensor4 DlogK;
+  Tensor4 tau;
+  ArrayOfIndex refine;
+  ArrayOfRTDomain Subdomains;
+  ArrayOfRTDomainScatteringProperties SubdomainsScatteringProperties;
 
+  if (refinement_criterion > 0) {
+    CheckForRefinement(
+        refine,
+        DlogK,
+        tau,
+        MainRTDomain.get_ExtinctionMatrix(),  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+        gas_extinction,
+        p_grid,
+        lat_grid,
+        lon_grid,
+        scat_za_grid,
+        z_field,
+        refellipsoid,
+        atmosphere_dim,
+        refinement_criterion,
+        tau_min);
+
+    PrepareSubdomains(ws,
+                      Subdomains,
+                      SubdomainsScatteringProperties,
+                      MainRTDomain,
+                      MainDomainScatteringProperties,
+                      t_field,
+                      z_field,
+                      vmr_field,
+                      pnd_field,
+                      scat_data,
+                      t_interp_order,
+                      ForwardCorrectionFlag,
+                      refine,
+                      DlogK,
+                      N_decade,
+                      cloudbox_limits,
+                      propmat_clearsky_agenda,
+                      ppath_step_agenda,
+                      ppath_lmax,
+                      ppath_lraytrace,
+                      refellipsoid,
+                      Vector(1, f_mono),
+                      verbosity);
+  }
 
   //run new doit
-  RunNewDoit(
-             MainRTDomain,
+  RunNewDoit(MainRTDomain,
              convergence_flag,
              iteration_counter,
              MainDomainScatteringProperties,
@@ -1180,11 +1158,12 @@ void NewDoitMonoCalc(Workspace& ws,
              accelerated,
              verbosity);
 
-  cloudbox_field_mono=MainRTDomain.get_CloudboxField();
-  extinction_matrix=MainRTDomain.get_ExtinctionMatrix()(joker,joker,joker,joker,0,joker,joker);
-  absorption_vector=MainRTDomain.get_AbsorptionVector()(joker,joker,joker,joker,0,joker);
-  scattering_matrix=MainDomainScatteringProperties.get_ScatteringMatrix();
-
+  cloudbox_field_mono = MainRTDomain.get_CloudboxField();
+  extinction_matrix = MainRTDomain.get_ExtinctionMatrix()(
+      joker, joker, joker, joker, 0, joker, joker);
+  absorption_vector =
+      MainRTDomain.get_AbsorptionVector()(joker, joker, joker, joker, 0, joker);
+  scattering_matrix = MainDomainScatteringProperties.get_ScatteringMatrix();
 }
 
 void CalcGasExtinction(Workspace& ws,
@@ -1232,9 +1211,7 @@ void CalcGasExtinction(Workspace& ws,
     //Assuming non-polarized light and only one frequency
     //TODO: Check if polarization is needed for absorption
 
-    gas_extinct[ip] += propmat_clearsky_local.Kjj(0,0)[0];
-
-
+    gas_extinct[ip] += propmat_clearsky_local.Kjj(0, 0)[0];
   }
 }
 
@@ -1247,7 +1224,6 @@ void CalcGasExtinctionField(Workspace& ws,
                             const ConstTensor4View& vmr_field,
                             const Agenda& propmat_clearsky_agenda,
                             const ConstVectorView& f_mono) {
-
   const Index Np = p_grid.nelem();
   const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
   const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
@@ -1286,28 +1262,25 @@ void CalcDomainExtAbsScatProperties(
     const Vector& scat_aa_grid,
     const Index& t_interp_order,
     const Index& ForwardCorrectionFlag,
-    const Verbosity& verbosity){
-
-
+    const Verbosity& verbosity) {
   // some resizing
   Domain.get_ExtinctionMatrix().resize(t_field.npages(),
-                                         t_field.nrows(),
-                                         t_field.ncols(),
-                                         za_grid.nelem(),
-                                         aa_grid.nelem(),
-                                         stokes_dim,
-                                         stokes_dim);
+                                       t_field.nrows(),
+                                       t_field.ncols(),
+                                       za_grid.nelem(),
+                                       aa_grid.nelem(),
+                                       stokes_dim,
+                                       stokes_dim);
 
   Domain.get_AbsorptionVector().resize(t_field.npages(),
-                                         t_field.nrows(),
-                                         t_field.ncols(),
-                                         za_grid.nelem(),
+                                       t_field.nrows(),
+                                       t_field.ncols(),
+                                       za_grid.nelem(),
                                        aa_grid.nelem(),
-                                         stokes_dim);
+                                       stokes_dim);
 
   DomainScatteringProperties.set_ScatZaGrid(scat_za_grid);
   DomainScatteringProperties.set_ScatAaGrid(scat_aa_grid);
-
 
   //calculate particle optical properties
   //It assumens at least azimuthally randomly oriented particles
@@ -1356,22 +1329,16 @@ void CalcDomainExtAbsScatProperties(
         DomainScatteringProperties.get_ScatZaGrid(),
         DomainScatteringProperties.get_ScatAaGrid());
   }
-
-
-
-
-
 };
 
-
-
-void CalcParticleOpticalProperties(Tensor7& extinction_matrix,//(Np,Nlat,Nlon,Nza,Naa,nst,nst)
-                    Tensor6& absorption_vector,//(Np,Nlat,Nlon,Nza,Naa,nst)
-                    const ArrayOfArrayOfSingleScatteringData& scat_data,
-                    const Vector& za_grid,
-                    const ConstTensor4View& pnd_field,
-                    const ConstTensor3View& t_field,
-                    const Index& stokes_dim) {
+void CalcParticleOpticalProperties(
+    Tensor7& extinction_matrix,  //(Np,Nlat,Nlon,Nza,Naa,nst,nst)
+    Tensor6& absorption_vector,  //(Np,Nlat,Nlon,Nza,Naa,nst)
+    const ArrayOfArrayOfSingleScatteringData& scat_data,
+    const Vector& za_grid,
+    const ConstTensor4View& pnd_field,
+    const ConstTensor3View& t_field,
+    const Index& stokes_dim) {
   // Initialization
   extinction_matrix = 0.;
   absorption_vector = 0.;
@@ -1379,7 +1346,6 @@ void CalcParticleOpticalProperties(Tensor7& extinction_matrix,//(Np,Nlat,Nlon,Nz
   const Index Np = pnd_field.npages();
   const Index Nlat = pnd_field.nrows();
   const Index Nlon = pnd_field.ncols();
-
 
   assert(absorption_vector.nvitrines() == Np);
   assert(extinction_matrix.nlibraries() == Np);
@@ -1400,10 +1366,8 @@ void CalcParticleOpticalProperties(Tensor7& extinction_matrix,//(Np,Nlat,Nlon,Nz
   Tensor4 abs_vec_bulk_ii;
   Index ptype_bulk_ii;
 
-
   for (Index ilat = 0; ilat < Nlat; ilat++) {
     for (Index ilon = 0; ilon < Nlon; ilon++) {
-
       //Calculate the optical properties for each scattering element
       opt_prop_NScatElems(ext_mat_Nse,
                           abs_vec_Nse,
@@ -1411,7 +1375,7 @@ void CalcParticleOpticalProperties(Tensor7& extinction_matrix,//(Np,Nlat,Nlon,Nz
                           t_ok,
                           scat_data,
                           stokes_dim,
-                          t_field(joker,ilat,ilon),
+                          t_field(joker, ilat, ilon),
                           dir_array,
                           0);
 
@@ -1426,8 +1390,8 @@ void CalcParticleOpticalProperties(Tensor7& extinction_matrix,//(Np,Nlat,Nlon,Nz
                             t_ok);
 
       //Calculate the bulk optical properties
-      opt_prop_Bulk(ext_mat_bulk_ii, //(nf,nT,ndir,nst,nst)
-                    abs_vec_bulk_ii, //(nf,nT,ndir,nst)
+      opt_prop_Bulk(ext_mat_bulk_ii,  //(nf,nT,ndir,nst,nst)
+                    abs_vec_bulk_ii,  //(nf,nT,ndir,nst)
                     ptype_bulk_ii,
                     ext_mat_ssbulk,
                     abs_vec_ssbulk,
@@ -1593,21 +1557,20 @@ void CalcScatteringProperties(  //Output
         out2 << os.str();
         os.clear();
 
-        Tensor5 scat_mat_bulk_ii_temp(1,
-                                      Np,
-                                      za_grid.nelem(),
-                                      stokes_dim,
-                                      stokes_dim);
+        Tensor5 scat_mat_bulk_ii_temp(
+            1, Np, za_grid.nelem(), stokes_dim, stokes_dim);
         Tensor6 scat_mat_bulk_ii_int(1,
                                      Np,
                                      za_grid.nelem(),
                                      scat_za_grid.nelem(),
                                      stokes_dim,
-                                     stokes_dim,0.);
+                                     stokes_dim,
+                                     0.);
 
         Index idx_i = 0;
         Index idx_i1 = 0;
-        Numeric delta_phi = 360. * DEG2RAD / Numeric((scat_aa_grid.nelem() - 1));
+        Numeric delta_phi =
+            360. * DEG2RAD / Numeric((scat_aa_grid.nelem() - 1));
 
         //integrate over incoming azimuth
         for (Index i_za = 0; i_za < scat_za_grid.nelem(); i_za++) {
@@ -1652,26 +1615,21 @@ void ForwardScatteringCorrection(  //Output
     const Vector& aa_grid,
     const Vector& scat_za_grid,
     const Vector& scat_aa_grid) {
-
   Index Np = scattering_matrix.nlibraries();
   Index Nst = scattering_matrix.ncols();
 
   if (atmosphere_dim == 1) {
-
-
     Vector Zij(1);
     Vector EvalPoints_Za(1);
-    Vector scat_za_temp(scat_za_grid.nelem()-1);
-    Vector Z_temp(scat_za_grid.nelem()-1);
+    Vector scat_za_temp(scat_za_grid.nelem() - 1);
+    Vector Z_temp(scat_za_grid.nelem() - 1);
     Numeric Ki1;
 
     Index counter;
 
     for (Index i_p = 0; i_p < Np; i_p++) {
       for (Index i_pz = 0; i_pz <= za_grid.nelem() - 1; i_pz++) {
-
-
-        if (extinction_matrix(i_p, 0, 0, i_pz,0, 0, 0) > 0) {
+        if (extinction_matrix(i_p, 0, 0, i_pz, 0, 0, 0) > 0) {
           // Find nearest incidence angle to forward propagation direction
           Index i_sz = 0;
           while (i_sz < idir_idx0.nelem() - 1 &&
@@ -1680,30 +1638,31 @@ void ForwardScatteringCorrection(  //Output
             i_sz++;
           }
 
-          EvalPoints_Za[0]=scat_za_grid[i_sz]; //nearest to forward direction
+          EvalPoints_Za[0] = scat_za_grid[i_sz];  //nearest to forward direction
 
           //Take the scattering grid without the nearest one to the forward direction
-          counter=-1;
-          for (Index i_tz = 0; i_tz <= scat_za_grid.nelem()-1; i_tz++){
-            if (i_tz!=i_sz){
+          counter = -1;
+          for (Index i_tz = 0; i_tz <= scat_za_grid.nelem() - 1; i_tz++) {
+            if (i_tz != i_sz) {
               counter++;
-              scat_za_temp[counter]=scat_za_grid[i_tz];
+              scat_za_temp[counter] = scat_za_grid[i_tz];
             }
           }
 
           //Prepare interpolation, we do a fixed Lagrangian interpolation of order 3
-          const FixedLagrangeInterpolation<3> lag(0,EvalPoints_Za[0],scat_za_temp);
+          const FixedLagrangeInterpolation<3> lag(
+              0, EvalPoints_Za[0], scat_za_temp);
           const auto iwlag = interpweights(lag);
 
           for (Index i_sti = 0; i_sti < Nst; i_sti++) {
             for (Index i_stj = 0; i_stj < Nst; i_stj++) {
-
               //Take the scattering data without the nearest one to the forward direction
-              counter=-1;
-              for (Index i_tz = 0; i_tz <= scat_za_grid.nelem()-1; i_tz++){
-                if (i_tz!=i_sz){
+              counter = -1;
+              for (Index i_tz = 0; i_tz <= scat_za_grid.nelem() - 1; i_tz++) {
+                if (i_tz != i_sz) {
                   counter++;
-                  Z_temp[counter]=scattering_matrix(i_p, 0, 0, i_pz, i_tz, i_sti, i_stj);
+                  Z_temp[counter] =
+                      scattering_matrix(i_p, 0, 0, i_pz, i_tz, i_sti, i_stj);
                 }
               }
 
@@ -1711,11 +1670,10 @@ void ForwardScatteringCorrection(  //Output
               // value. Interpolate the direction within the scattering grid nearest to
               // the forward direction.
 
-              Zij=interp(Z_temp, iwlag, lag);
+              Zij = interp(Z_temp, iwlag, lag);
 
               //Interpolated value on scattering matrix
-              scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj)=Zij[0];
-
+              scattering_matrix(i_p, 0, 0, i_pz, i_sz, i_sti, i_stj) = Zij[0];
             }
           }
 
@@ -1727,14 +1685,14 @@ void ForwardScatteringCorrection(  //Output
                       scattering_matrix(i_p, 0, 0, i_pz, joker, i_sti, 0),
                       scat_za_grid) /
                       2 / PI +
-                  absorption_vector(i_p, 0, 0, i_pz,0 , i_sti);
+                  absorption_vector(i_p, 0, 0, i_pz, 0, i_sti);
 
-
-            extinction_matrix(i_p, 0, 0, i_pz, 0, i_sti, 0)=Ki1;
-            if (i_sti>0) {
+            extinction_matrix(i_p, 0, 0, i_pz, 0, i_sti, 0) = Ki1;
+            if (i_sti > 0) {
               extinction_matrix(i_p, 0, 0, i_pz, 0, 0, i_sti) = Ki1;
 
-              extinction_matrix(i_p, 0, 0, i_pz, 0, i_sti, i_sti) = extinction_matrix(i_p, 0, 0, i_pz, 0, 0, 0);
+              extinction_matrix(i_p, 0, 0, i_pz, 0, i_sti, i_sti) =
+                  extinction_matrix(i_p, 0, 0, i_pz, 0, 0, 0);
             }
           }
         }
@@ -1746,23 +1704,22 @@ void ForwardScatteringCorrection(  //Output
 }
 
 void CalcSurfaceProperties(Workspace& ws,
-                      //Output
-                      Matrix& surface_skin_t,
-                      Tensor4& surface_los,
-                      Tensor6& surface_reflection_matrix,
-                      Tensor5& surface_emission,
+                           //Output
+                           Matrix& surface_skin_t,
+                           Tensor4& surface_los,
+                           Tensor6& surface_reflection_matrix,
+                           Tensor5& surface_emission,
 
-                      //Input
-                      const Agenda& surface_rtprop_agenda,
-                      const ConstVectorView& f_grid,
-                      const ConstVectorView& za_grid,
-                      const ConstVectorView& aa_grid,
-                      const Vector& lat_grid,
-                      const Vector& lon_grid,
-                      const Index& atmosphere_dim,
-                      const Index& stokes_dim,
-                      const Matrix& z_surface) {
-
+                           //Input
+                           const Agenda& surface_rtprop_agenda,
+                           const ConstVectorView& f_grid,
+                           const ConstVectorView& za_grid,
+                           const ConstVectorView& aa_grid,
+                           const Vector& lat_grid,
+                           const Vector& lon_grid,
+                           const Index& atmosphere_dim,
+                           const Index& stokes_dim,
+                           const Matrix& z_surface) {
   chk_not_empty("surface_rtprop_agenda", surface_rtprop_agenda);
   const Index Nza = za_grid.nelem();
   const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
@@ -1792,8 +1749,9 @@ void CalcSurfaceProperties(Workspace& ws,
   //prepare output container
   surface_skin_t.resize(Nlat, Nlon);
   surface_los.resize(Nlat, Nlon, Naa * Nza, 2);
-  surface_reflection_matrix.resize(Nlat, Nlon, Naa * Nza, 1, stokes_dim, stokes_dim);
-  surface_emission.resize(Nlat, Nlon,Naa * Nza, 1, stokes_dim);
+  surface_reflection_matrix.resize(
+      Nlat, Nlon, Naa * Nza, 1, stokes_dim, stokes_dim);
+  surface_emission.resize(Nlat, Nlon, Naa * Nza, 1, stokes_dim);
   surface_skin_t = 0.;
   surface_los = NAN;
   surface_reflection_matrix = NAN;
@@ -1802,7 +1760,6 @@ void CalcSurfaceProperties(Workspace& ws,
   // loop over geographic coordinates
   for (Index ilat = 0; ilat < Nlat; ilat++) {
     for (Index ilon = 0; ilon < Nlon; ilon++) {
-
       rte_pos[0] = z_surface(ilat, ilon);
       // for a 3d atmosphere rte_pos has 3 components
       if (atmosphere_dim == 3) {
@@ -1815,7 +1772,6 @@ void CalcSurfaceProperties(Workspace& ws,
         for (Index iza = 0; iza < Nza; iza++) {
           if (za_grid[iza] > 90) {
             rte_los[0] = za_grid[iza];
-
 
             if (atmosphere_dim == 3) {
               rte_los[1] = aa_grid[iaa];
@@ -1868,18 +1824,15 @@ void CalcPropagationPathMaxLength(
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
     const Numeric& tau_max) {
-
-
   const Index Np = p_grid.nelem();
   const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
   const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
   const Index Ndir = extinction_matrix.npages();
   Numeric ext_mat_elem;
 
-
   //prepare output container
   p_path_maxlength.resize(Np, Nlat, Nlon);
-  p_path_maxlength = min(ppath_lmax,ppath_lraytrace);
+  p_path_maxlength = min(ppath_lmax, ppath_lraytrace);
 
   for (Index ip = 0; ip < Np; ip++) {
     for (Index ilat = 0; ilat < Nlat; ilat++) {
@@ -1897,9 +1850,10 @@ void CalcPropagationPathMaxLength(
         ext_mat_elem /= Numeric(Ndir);
 
         // maximum propagation path length for each grid point.
-        const Numeric maxlength=tau_max / (ext_mat_elem + gas_extinct(ip, ilat, ilon));
+        const Numeric maxlength =
+            tau_max / (ext_mat_elem + gas_extinct(ip, ilat, ilon));
 
-        if (maxlength < p_path_maxlength(ip, ilat, ilon)){
+        if (maxlength < p_path_maxlength(ip, ilat, ilon)) {
           p_path_maxlength(ip, ilat, ilon) = maxlength;
         }
       }
@@ -1922,7 +1876,6 @@ void CheckForRefinement(
     const Index& atmosphere_dim,
     const Numeric& refine_crit,
     const Numeric& tau_crit) {
-
   const Index Np = p_grid.nelem();
   const Index Nlat = lat_grid.nelem() > 0 ? lat_grid.nelem() : 1;
   const Index Nlon = lon_grid.nelem() > 0 ? lon_grid.nelem() : 1;
@@ -1931,7 +1884,7 @@ void CheckForRefinement(
   Numeric ext_mat_elem;
 
   //allocate
-  Tensor3 ExtMat(Np, Nlat, Nlon,0);
+  Tensor3 ExtMat(Np, Nlat, Nlon, 0);
 
   // get the average total extinction at each position
   for (Index ip = 0; ip < Np; ip++) {
@@ -1978,9 +1931,8 @@ void CheckForRefinement(
       }
 
       // calculate optical thickness
-      tau(ip, 0, 0, 0) = ( ExtMat(ip + 1, 0, 0) + ExtMat(ip, 0, 0)) / 2. *
-          abs(z_field(ip + 1, 0, 0) - z_field(ip, 0, 0));
-
+      tau(ip, 0, 0, 0) = (ExtMat(ip + 1, 0, 0) + ExtMat(ip, 0, 0)) / 2. *
+                         abs(z_field(ip + 1, 0, 0) - z_field(ip, 0, 0));
 
       if (DlogK(ip, 0, 0, 0) > refine_crit && tau(ip, 0, 0, 0) > tau_crit) {
         refine[ip] = 1;
@@ -2020,7 +1972,6 @@ void PrepareSubdomains(
     const Vector& refellipsoid,
     const Vector& f_grid,
     const Verbosity& verbosity) {
-
   if (MainDomain.get_AtmosphereDim() == 1) {
     PrepareSubdomains1D(ws,
                         Subdomains,
@@ -2074,7 +2025,6 @@ void PrepareSubdomains1D(
     const Vector& refellipsoid,
     const Vector& f_grid,
     const Verbosity& verbosity) {
-
   CREATE_OUT0;
   ostringstream os;
 
@@ -2111,7 +2061,6 @@ void PrepareSubdomains1D(
   //3D it would be N_za*N_aa
   Index N_idir = MainDomainScatteringProperties.get_ScatteringMatrix().npages();
 
-
   for (Index il = 0; il < Nlayers; il++) {
     if (refine[il]) {
       // Get the number of sublayers, we want to have for the subdomain
@@ -2126,7 +2075,7 @@ void PrepareSubdomains1D(
       p_grid_sub.resize(Nz + 1);
 
       // define z_field of subdomain
-      nlinspace(dump, z_field(il , 0, 0), z_field(il + 1, 0, 0), Nz + 1);
+      nlinspace(dump, z_field(il, 0, 0), z_field(il + 1, 0, 0), Nz + 1);
       z_field_sub(joker, 0, 0) = dump;
 
       // set up interpolation
@@ -2148,13 +2097,10 @@ void PrepareSubdomains1D(
                                 MainDomain.get_aa_grid(),
                                 MainDomain.get_AtmosphereDim());
 
-
-
       //allocate
       Subdomains[il].get_CloudboxField().resize(Nz, 1, 1, N_za, 1, N_st);
       Subdomains[il].get_CloudboxScatteringField().resize(
           Nz, 1, 1, N_za, 1, N_st);
-
 
       //interpolate temperature field
       interp(
@@ -2178,23 +2124,26 @@ void PrepareSubdomains1D(
 
       // calculate the bulk particle extinction, absorption and scattering
       // properties
-      CalcDomainExtAbsScatProperties(SubdomainsScatteringProperties[il],
-                                     Subdomains[il],
-                                     t_field_sub,
-                                     scat_data,
-                                     pnd_field_sub,
-                                     MainDomain.get_CloudboxField().ncols(),
-                                     MainDomain.get_AtmosphereDim(),
-                                     MainDomain.get_za_grid(),
-                                     MainDomain.get_aa_grid(),
-                                     MainDomainScatteringProperties.get_ScatZaGrid(),
-                                     MainDomainScatteringProperties.get_ScatAaGrid(),
-                                     t_interp_order,
-                                     ForwardCorrectionFlag,
-                                     verbosity);
-
+      CalcDomainExtAbsScatProperties(
+          SubdomainsScatteringProperties[il],
+          Subdomains[il],
+          t_field_sub,
+          scat_data,
+          pnd_field_sub,
+          MainDomain.get_CloudboxField().ncols(),
+          MainDomain.get_AtmosphereDim(),
+          MainDomain.get_za_grid(),
+          MainDomain.get_aa_grid(),
+          MainDomainScatteringProperties.get_ScatZaGrid(),
+          MainDomainScatteringProperties.get_ScatAaGrid(),
+          t_interp_order,
+          ForwardCorrectionFlag,
+          verbosity);
 
       //Estimate ppath for the subdomain
+      //TODO: the subdomain has a different pressuregrid that the main domain
+      //This results so far in problems with the ppath calculation, as the ppath
+      //relates everting to the main domain p_grid :(
       EstimatePPathElements1D(ws,
                               Subdomains[il].get_PressureArray(),
                               Subdomains[il].get_TemperatureArray(),
@@ -2206,6 +2155,7 @@ void PrepareSubdomains1D(
                               Subdomains[il].get_LStepArray(),
                               Subdomains[il].get_MaxLimbIndex(),
                               cloudbox_limits,
+                              il,
                               MainDomain.get_za_grid(),
                               ppath_step_agenda,
                               ppath_lmax,
@@ -2219,7 +2169,8 @@ void PrepareSubdomains1D(
                               verbosity);
 
       //calculate gas extinction on p-path points
-      Subdomains[il].get_GasExtinctionArray().resize(Subdomains[il].get_PressureArray().nelem());
+      Subdomains[il].get_GasExtinctionArray().resize(
+          Subdomains[il].get_PressureArray().nelem());
 
       for (Index i = 0; i < Subdomains[il].get_PressureArray().nelem(); i++) {
         Vector gas_extinction_temp;
@@ -2230,17 +2181,15 @@ void PrepareSubdomains1D(
                           VmrArray_sub[i],
                           propmat_clearsky_agenda,
                           f_grid[0]);
-
       }
 
-      //TODO: Add here the Gasextinction of the subdomains
-
-      os << "gas absorption calculated \n";
-      out0 << os.str();
-      os.clear();
 
     }
   }
+
+  os << "subdomain prepared \n";
+  out0 << os.str();
+  os.clear();
 }
 
 void RunNewDoit(  //Input and Output:
@@ -2272,22 +2221,21 @@ void RunNewDoit(  //Input and Output:
     acceleration_input.resize(4);
   }
   while (convergence_flag == 0) {
-
     // store cloudbox field, because we need it for the convergence check
     cloudbox_field_mono_old = MainDomain.get_CloudboxField();
 
     // Calculate the scattered field.
     out2 << "  Calculate scattering field. \n";
-    MainDomainScatteringProperties.CalcScatteredField(MainDomain.get_CloudboxScatteringField(),
-                       MainDomain.get_CloudboxField(),
-                       atmosphere_dim,
-                       verbosity);
+    MainDomainScatteringProperties.CalcScatteredField(
+        MainDomain.get_CloudboxScatteringField(),
+        MainDomain.get_CloudboxField(),
+        atmosphere_dim,
+        verbosity);
 
     // Update cloudbox_field.
     out2 << "  Execute doit_rte_agenda. \n";
     Vector f_grid(1, f_mono);
-    UpdateSpectralRadianceField(
-                                MainDomain,
+    UpdateSpectralRadianceField(MainDomain,
                                 surface_reflection_matrix,
                                 surface_emission,
                                 cloudbox_limits,
@@ -2309,25 +2257,28 @@ void RunNewDoit(  //Input and Output:
     // Convergence Acceleration, if wished.
     //TODO: I think this acceleration work only for 1D
     if (accelerated > 0 && convergence_flag == 0) {
-      acceleration_input[(iteration_counter - 1) % 4] = MainDomain.get_CloudboxField();
+      acceleration_input[(iteration_counter - 1) % 4] =
+          MainDomain.get_CloudboxField();
       // NG - Acceleration
       if (iteration_counter % 4 == 0) {
-        cloudbox_field_ngAcceleration(
-            MainDomain.get_CloudboxField(), acceleration_input, accelerated, verbosity);
+        cloudbox_field_ngAcceleration(MainDomain.get_CloudboxField(),
+                                      acceleration_input,
+                                      accelerated,
+                                      verbosity);
       }
     }
   }  //end of while loop, convergence is reached.
 }
 
-void UpdateSpectralRadianceField(//Input and Output:
-                                 RTDomain& Domain,
-                                 //Input:
-                                 const ConstTensor6View& surface_reflection_matrix,
-                                 const ConstTensor5View& surface_emission,
-                                 const ArrayOfIndex& cloudbox_limits,
-                                 const Index& atmosphere_dim,
-                                 const Vector& f_grid,
-                                 const Verbosity& verbosity) {
+void UpdateSpectralRadianceField(  //Input and Output:
+    RTDomain& Domain,
+    //Input:
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const ArrayOfIndex& cloudbox_limits,
+    const Index& atmosphere_dim,
+    const Vector& f_grid,
+    const Verbosity& verbosity) {
   if (atmosphere_dim == 1) {
     UpdateSpectralRadianceField1D(Domain,
                                   surface_reflection_matrix,
@@ -2336,25 +2287,25 @@ void UpdateSpectralRadianceField(//Input and Output:
                                   f_grid,
                                   verbosity);
   } else if (atmosphere_dim == 3) {
-//    UpdateSpectralRadianceField3D(ws,
-//                                  cloudbox_field_mono,
-//                                  cloudbox_scat_field,
-//                                  gas_extinction,
-//                                  extinction_matrix,
-//                                  absorption_vector,
-//                                  cloudbox_limits,
-//                                  za_grid,
-//                                  aa_grid,
-//                                  ppath_step_agenda,
-//                                  ppath_lmax,
-//                                  ppath_lraytrace,
-//                                  p_path_maxlength,
-//                                  p_grid,
-//                                  z_field,
-//                                  refellipsoid,
-//                                  t_field,
-//                                  f_grid,
-//                                  verbosity);
+    //    UpdateSpectralRadianceField3D(ws,
+    //                                  cloudbox_field_mono,
+    //                                  cloudbox_scat_field,
+    //                                  gas_extinction,
+    //                                  extinction_matrix,
+    //                                  absorption_vector,
+    //                                  cloudbox_limits,
+    //                                  za_grid,
+    //                                  aa_grid,
+    //                                  ppath_step_agenda,
+    //                                  ppath_lmax,
+    //                                  ppath_lraytrace,
+    //                                  p_path_maxlength,
+    //                                  p_grid,
+    //                                  z_field,
+    //                                  refellipsoid,
+    //                                  t_field,
+    //                                  f_grid,
+    //                                  verbosity);
   }
 }
 
@@ -2387,25 +2338,22 @@ void UpdateSpectralRadianceField1D(
 
   Matrix cloudbox_field_limb;
 
-
-  Index MaxUpwardAngleIndex=int(Numeric(N_za)/2.-0.5);
+  Index MaxUpwardAngleIndex = int(Numeric(N_za) / 2. - 0.5);
 
   //Loop over all directions, defined by za_grid
   for (Index i_za = 0; i_za < N_za; i_za++) {
-
     //======================================================================
     // Radiative transfer inside the cloudbox
     //=====================================================================
 
     // Sequential update for uplooking angles
-    if (i_za <= MaxUpwardAngleIndex ) {
+    if (i_za <= MaxUpwardAngleIndex) {
       // Loop over all positions inside the cloud box defined by the
       // cloudbox_limits excluding the upper boundary. For uplooking
       // directions, we start from cloudbox_limits[1]-1 and go down
       // to cloudbox_limits[0] to do a sequential update of the
       // radiation field
       for (Index i_p = N_p - 2; i_p >= 0; i_p--) {
-
         const Index idx = subscript2index(i_za, i_p, N_za);
 
         UpdateCloudPropagationPath1D(Domain,
@@ -2422,8 +2370,7 @@ void UpdateSpectralRadianceField1D(
       //
       // Sequential updating for downlooking angles
       //
-      for (Index i_p = 0 + 1; i_p <= N_p-1; i_p++) {
-
+      for (Index i_p = 0 + 1; i_p <= N_p - 1; i_p++) {
         const Index idx = subscript2index(i_za, i_p, N_za);
 
         UpdateCloudPropagationPath1D(Domain,
@@ -2451,8 +2398,9 @@ void UpdateSpectralRadianceField1D(
       Index limb_it = 0;
       while (!conv_flag && limb_it < 10) {
         limb_it++;
-        cloudbox_field_limb = Domain.get_CloudboxField()(joker, 0, 0, i_za, 0, joker);
-        for (Index i_p = 0; i_p <= N_p-1; i_p++) {
+        cloudbox_field_limb =
+            Domain.get_CloudboxField()(joker, 0, 0, i_za, 0, joker);
+        for (Index i_p = 0; i_p <= N_p - 1; i_p++) {
           // For this case the cloudbox goes down to the surface and we
           // look downwards. These cases are outside the cloudbox and
           // not needed. Switch is included here, as ppath_step_agenda
@@ -2474,12 +2422,14 @@ void UpdateSpectralRadianceField1D(
         }
 
         conv_flag = true;
-        for (Index i_p = 0; conv_flag && i_p < Domain.get_CloudboxField().nvitrines();
+        for (Index i_p = 0;
+             conv_flag && i_p < Domain.get_CloudboxField().nvitrines();
              i_p++) {
           for (Index stokes_index = 0; conv_flag && stokes_index < stokes_dim;
                stokes_index++) {
-            Numeric diff = Domain.get_CloudboxField()(i_p, 0, 0, i_za, 0, stokes_index) -
-                           cloudbox_field_limb(i_p, stokes_index);
+            Numeric diff =
+                Domain.get_CloudboxField()(i_p, 0, 0, i_za, 0, stokes_index) -
+                cloudbox_field_limb(i_p, stokes_index);
 
             // If the absolute difference of the components
             // is larger than the pre-defined values, continue with
@@ -2521,9 +2471,7 @@ void UpdateSpectralRadianceField3D(Workspace& ws,
                                    // Calculate thermal emission:
                                    const Tensor3& t_field,
                                    const Vector& f_grid,
-                                   const Verbosity& verbosity) {
-
-}
+                                   const Verbosity& verbosity) {}
 
 void UpdateCloudPropagationPath1D(
     RTDomain& Domain,
@@ -2535,7 +2483,6 @@ void UpdateCloudPropagationPath1D(
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
     const Verbosity& verbosity) {
-
   Index Npath = Domain.get_PressureArray()[idx].nelem();
   Index Ncloud = Domain.get_CloudboxScatteringField().nvitrines();
 
@@ -2550,34 +2497,33 @@ void UpdateCloudPropagationPath1D(
     // Stokes dimension
     const Index stokes_dim = Domain.get_CloudboxField().ncols();
 
-
     // Initialize variables for interpolated values
     Tensor3 ext_mat_int(stokes_dim, stokes_dim, Npath, 0.);
     Matrix abs_vec_int(stokes_dim, Npath, 0.);
     Matrix sca_vec_int(stokes_dim, Npath, 0.);
     Matrix cloudbox_field_mono_int(stokes_dim, Npath, 0.);
 
-
     InterpolateOnPropagation1D(
-                         ext_mat_int,
-                         abs_vec_int,
-                         sca_vec_int,
-                         cloudbox_field_mono_int,
-                         Domain.get_ExtinctionMatrix()(joker, joker, joker, za_index, 0, joker, joker),
-                         Domain.get_AbsorptionVector()(joker, joker, joker, za_index, 0, joker),
-                         Domain.get_CloudboxScatteringField(),
-                         Domain.get_CloudboxField(),
-                         Domain.get_GposPArray()[idx],
-                         Domain.get_GposZenithArray()[idx],
-                         Domain.get_InterpWeightsArray()[idx],
-                         Domain.get_InterpWeightsAngleArray()[idx],
-                         verbosity);
+        ext_mat_int,
+        abs_vec_int,
+        sca_vec_int,
+        cloudbox_field_mono_int,
+        Domain.get_ExtinctionMatrix()(
+            joker, joker, joker, za_index, 0, joker, joker),
+        Domain.get_AbsorptionVector()(joker, joker, joker, za_index, 0, joker),
+        Domain.get_CloudboxScatteringField(),
+        Domain.get_CloudboxField(),
+        Domain.get_GposPArray()[idx],
+        Domain.get_GposZenithArray()[idx],
+        Domain.get_InterpWeightsArray()[idx],
+        Domain.get_InterpWeightsAngleArray()[idx],
+        verbosity);
 
     // ppath_what_background(ppath_step) tells the
     // radiative background.  More information in the
     // function get_iy_of_background.
     // if there is no background we proceed the RT
-//    Index bkgr = ppath_what_background(ppath_step);
+    //    Index bkgr = ppath_what_background(ppath_step);
 
     // Radiative transfer from one layer to the next, starting
     // at the intersection with the next layer and propagating
@@ -2601,18 +2547,18 @@ void UpdateCloudPropagationPath1D(
                               verbosity);
 
     // bkgr=2 indicates that the background is the surface
-//    if (bkgr == 2) {
-//       cout << "hit surface "<< ppath_step.gp_p << endl;
-//      cloud_RT_surface(ws,
-//                       cloudbox_field_mono,
-//                       surface_rtprop_agenda,
-//                       f_grid,
-//                       stokes_dim,
-//                       ppath_step,
-//                       cloudbox_limits,
-//                       za_grid,
-//                       za_index);
-//    }
+    //    if (bkgr == 2) {
+    //       cout << "hit surface "<< ppath_step.gp_p << endl;
+    //      cloud_RT_surface(ws,
+    //                       cloudbox_field_mono,
+    //                       surface_rtprop_agenda,
+    //                       f_grid,
+    //                       stokes_dim,
+    //                       ppath_step,
+    //                       cloudbox_limits,
+    //                       za_grid,
+    //                       za_index);
+    //    }
 
   }  //end if inside cloudbox
 }
@@ -2631,7 +2577,6 @@ void InterpolateOnPropagation1D(  //Output
     const MatrixView& itw,
     const MatrixView& itw_za,
     const Verbosity& verbosity) {
-
   CREATE_OUT3;
 
   // Stokes dimension
@@ -2642,13 +2587,11 @@ void InterpolateOnPropagation1D(  //Output
 
   //Interpolate the quantities on the ppath_step
   for (Index i = 0; i < stokes_dim; i++) {
-
     // Interpolation of extinction matrix
     // Extinction matrix requires a second loop
     // over stokes_dim
     out3 << "Interpolate ext_mat:\n";
     for (Index j = 0; j < stokes_dim; j++) {
-
       interp(ext_mat_int(i, j, joker),
              itw,
              ext_mat_field(joker, 0, 0, i, j),
@@ -2660,22 +2603,20 @@ void InterpolateOnPropagation1D(  //Output
     interp(
         abs_vec_int(i, joker), itw, abs_vec_field(joker, 0, 0, i), cloud_gp_p);
 
-
     out3 << "Interpolate cloudbox_scat_field and cloudbox_field_mono:\n";
     // Interpolate scattered field
     interp(sca_vec_int(i, joker),
-             itw_za,
-             cloudbox_scat_field(joker, 0, 0, joker, 0, i),
-             cloud_gp_p,
-             cloud_gp_za);
+           itw_za,
+           cloudbox_scat_field(joker, 0, 0, joker, 0, i),
+           cloud_gp_p,
+           cloud_gp_za);
 
     // Interpolate radiation field
     interp(cloudbox_field_mono_int(i, joker),
-             itw_za,
-             cloudbox_field_mono(joker, 0, 0, joker, 0, i),
-             cloud_gp_p,
-             cloud_gp_za);
-
+           itw_za,
+           cloudbox_field_mono(joker, 0, 0, joker, 0, i),
+           cloud_gp_p,
+           cloud_gp_za);
   }
 }
 
@@ -2764,7 +2705,7 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
 
     // Some messages:
     if (out3.sufficient_priority()) {
-      vector_tmp=abs_vec_local.VectorAtPosition();
+      vector_tmp = abs_vec_local.VectorAtPosition();
       ext_mat_local.MatrixAtPosition(matrix_tmp);
       out3 << "-----------------------------------------\n";
       out3 << "Input for radiative transfer step \n"
@@ -2853,22 +2794,22 @@ void RadiativeTransferStep(  //Output and Input:
   if (stokes_dim == 1) {
     stokes_vec[0] = stokes_vec[0] * trans_mat(0, 0) +
                     (abs_vec_av.Kjj()[0] * rtp_planck_value + sca_vec_av[0]) /
-                    ext_mat_av.Kjj()[0] * (1 - trans_mat(0, 0));
+                        ext_mat_av.Kjj()[0] * (1 - trans_mat(0, 0));
   }
 
-    //--- Vector case: ---------------------------------------------------------
+  //--- Vector case: ---------------------------------------------------------
 
-    // We have here two cases, diagonal or non-diagonal ext_mat_gas
-    // For diagonal ext_mat_gas, we expect abs_vec_gas to only have a
-    // non-zero value in position 1.
+  // We have here two cases, diagonal or non-diagonal ext_mat_gas
+  // For diagonal ext_mat_gas, we expect abs_vec_gas to only have a
+  // non-zero value in position 1.
 
-    //- Unpolarised
+  //- Unpolarised
   else if (extmat_case == 1 && unpol_abs_vec && unpol_sca_vec) {
     const Numeric invK = 1.0 / ext_mat_av.Kjj()[0];
     // Stokes dim 1
     stokes_vec[0] = stokes_vec[0] * trans_mat(0, 0) +
                     (abs_vec_av.Kjj()[0] * rtp_planck_value + sca_vec_av[0]) *
-                    invK * (1 - trans_mat(0, 0));
+                        invK * (1 - trans_mat(0, 0));
 
     // Stokes dims > 1
     for (Index i = 1; i < stokes_dim; i++) {
@@ -2877,7 +2818,7 @@ void RadiativeTransferStep(  //Output and Input:
     }
   }
 
-    //- General case
+  //- General case
   else {
     Matrix invK(stokes_dim, stokes_dim);
     ext_mat_av.MatrixInverseAtPosition(invK);
@@ -2963,12 +2904,10 @@ void NewRTStepInCloudNoBackground(
   // Frequency
   Numeric f = f_grid[0];
 
-
   for (Index k = Nppath - 1; k >= 0; k--) {
     std::swap(source_1, source_0);
     std::swap(j_1, j_0);
     std::swap(ext_mat_1, ext_mat_0);
-
 
     //Set current propmat clearsky
     propmat_clearsky1.Kjj() = gas_extinction_ppath[k];
@@ -2995,8 +2934,6 @@ void NewRTStepInCloudNoBackground(
       continue;
     }
 
-
-
     //mean extinction between point 2 and  point 1
     ext_mat_01 = ext_mat_0;
     ext_mat_01 += ext_mat_1;
@@ -3018,17 +2955,11 @@ void NewRTStepInCloudNoBackground(
     j_01 += j_1;
     j_01 *= 0.5;
 
-    Qmax=j_01;
-    Qmax*=lstep;
+    Qmax = j_01;
+    Qmax *= lstep;
 
-    RTSolver2ndOrder(stokes_vec,
-                     source_0,
-                     source_1,
-                     trans_mat_01,
-                     tau_01,
-                     Qmax);
-
-
+    RTSolver2ndOrder(
+        stokes_vec, source_0, source_1, trans_mat_01, tau_01, Qmax);
   }
 
   // Assign calculated Stokes Vector to cloudbox_field_mono.
@@ -3103,7 +3034,6 @@ void NewRTStepInCloudNoBackground2(
   // Frequency
   Numeric f = f_grid[0];
 
-
   for (Index k = Nppath - 1; k >= 0; k--) {
     std::swap(source_1, source_0);
     std::swap(source_2, source_1);
@@ -3112,7 +3042,6 @@ void NewRTStepInCloudNoBackground2(
 
     std::swap(ext_mat_1, ext_mat_0);
     std::swap(ext_mat_2, ext_mat_1);
-
 
     //Set current propmat clearsky
     propmat_clearsky2.Kjj() = gas_extinction_ppath[k];
@@ -3139,8 +3068,6 @@ void NewRTStepInCloudNoBackground2(
       continue;
     }
 
-
-
     //mean extinction between point 0 and  point 1
     ext_mat_01 = ext_mat_0;
     ext_mat_01 += ext_mat_1;
@@ -3156,8 +3083,6 @@ void NewRTStepInCloudNoBackground2(
     compute_transmission_matrix_from_averaged_matrix_at_frequency(
         trans_mat_01, lstep, ext_mat_01, 0);
 
-
-
     tau_01 = ext_mat_01.Kjj(0, 0)[0] * lstep;
     tau_12 = ext_mat_12.Kjj(0, 0)[0] * lstep;
 
@@ -3165,8 +3090,8 @@ void NewRTStepInCloudNoBackground2(
     j_01 += j_1;
     j_01 *= 0.5;
 
-    Qmax=j_01;
-    Qmax*=lstep;
+    Qmax = j_01;
+    Qmax *= lstep;
 
     RTSolver3rdOrder(stokes_vec,
                      source_0,
@@ -3177,8 +3102,7 @@ void NewRTStepInCloudNoBackground2(
                      tau_12,
                      Qmax);
 
-    if (k==0){
-
+    if (k == 0) {
       compute_transmission_matrix_from_averaged_matrix_at_frequency(
           trans_mat_12, lstep, ext_mat_12, 0);
 
@@ -3186,19 +3110,12 @@ void NewRTStepInCloudNoBackground2(
       j_01 += j_2;
       j_01 *= 0.5;
 
-      Qmax=j_01;
-      Qmax*=lstep;
+      Qmax = j_01;
+      Qmax *= lstep;
 
-      RTSolver2ndOrder(stokes_vec,
-                       source_1,
-                       source_2,
-                       trans_mat_12,
-                       tau_12,
-                       Qmax);
-
+      RTSolver2ndOrder(
+          stokes_vec, source_1, source_2, trans_mat_12, tau_12, Qmax);
     }
-
-
   }
 
   // Assign calculated Stokes Vector to cloudbox_field_mono.
@@ -3297,18 +3214,18 @@ void ShortCharacteristicsRT_step3rdOrder(
 
   //Scattered intensity
   for (Index i = 0; i < stokes_dim; i++) {
-    sca_vec_0[i] = sca_vec_int(i, Nppath-1);
+    sca_vec_0[i] = sca_vec_int(i, Nppath - 1);
     sca_vec_1[i] = sca_vec_int(i, 0);
     sca_vec_2[i] = sca_vec_int_ip1(i, 0);
   }
 
   // Add particle absorption to abs_vec.
-  abs_vec_0 += (StokesVector)abs_vec_int(joker, Nppath-1);
+  abs_vec_0 += (StokesVector)abs_vec_int(joker, Nppath - 1);
   abs_vec_1 += (StokesVector)abs_vec_int(joker, 0);
   abs_vec_2 += (StokesVector)abs_vec_int_ip1(joker, 0);
 
   // Add particle extinction to ext_mat.
-  PropagationMatrix PM0(ext_mat_int(joker, joker, Nppath-1));
+  PropagationMatrix PM0(ext_mat_int(joker, joker, Nppath - 1));
   ext_mat_0 += PM0;
 
   PropagationMatrix PM1(ext_mat_int(joker, joker, 0));
@@ -3317,7 +3234,7 @@ void ShortCharacteristicsRT_step3rdOrder(
   PropagationMatrix PM2(ext_mat_int_ip1(joker, joker, 0));
   ext_mat_2 += PM2;
 
-  rte_planck_value_0 = planck(f, temperature_ppath[Nppath-1]);
+  rte_planck_value_0 = planck(f, temperature_ppath[Nppath - 1]);
   rte_planck_value_1 = planck(f, temperature_ppath[0]);
   rte_planck_value_2 = planck(f, temperature_ppath_ip1[0]);
 
@@ -3353,8 +3270,8 @@ void ShortCharacteristicsRT_step3rdOrder(
   j_01 += j_1;
   j_01 *= 0.5;
 
-  Qmax=j_01;
-  Qmax*=lstep01;
+  Qmax = j_01;
+  Qmax *= lstep01;
 
   RTSolver3rdOrder(stokes_vec,
                    source_0,
@@ -3364,7 +3281,6 @@ void ShortCharacteristicsRT_step3rdOrder(
                    tau_01,
                    tau_12,
                    Qmax);
-
 
   // Assign calculated Stokes Vector to cloudbox_field_mono.
   if (atmosphere_dim == 1)
@@ -3378,10 +3294,9 @@ void ShortCharacteristicsRT_step3rdOrder(
                         joker) = stokes_vec;
 }
 
-
 void CalcSourceForRTStep(  //Output:
     VectorView source,
-    VectorView j, //emission density
+    VectorView j,  //emission density
     //Input
     const PropagationMatrix& ext_mat,
     const StokesVector& abs_vec,
@@ -3392,12 +3307,11 @@ void CalcSourceForRTStep(  //Output:
 
   //--- Scalar case: ---------------------------------------------------------
   if (stokes_dim == 1) {
-
-    j[0]= (abs_vec.Kjj()[0] * rtp_planck_value + sca_vec[0]);
+    j[0] = (abs_vec.Kjj()[0] * rtp_planck_value + sca_vec[0]);
 
     source[0] = j[0] / ext_mat.Kjj()[0];
   }
-    //- General case
+  //- General case
   else {
     Matrix invK(stokes_dim, stokes_dim);
     ext_mat.MatrixInverseAtPosition(invK);
@@ -3428,12 +3342,12 @@ void RTSolver2ndOrder(  //in and out:
   Numeric e0 = 1 - exp(-tau_01);
   Numeric e1 = tau_01 - e0;
 
-  Numeric u = e0 -e1 / tau_01 ;
-  Numeric v = e1 /tau_01;
+  Numeric u = e0 - e1 / tau_01;
+  Numeric v = e1 / tau_01;
 
   //    Q3rd=u*source_0+v*source_1+w*source_2;
   for (Index j = 0; j < stokes_dim; j++) {
-    Q2nd[j] = u * source_0[j] + v * source_1[j] ;
+    Q2nd[j] = u * source_0[j] + v * source_1[j];
   }
 
   //--- Scalar case: ---------------------------------------------------------
@@ -3514,19 +3428,15 @@ void RTSolver3rdOrder(  //in and out:
   }
 }
 
-
-void CheckConvergence(
-    Index& convergence_flag,
-    Index& iteration_counter,
-    Tensor6& cloudbox_field_mono,
-    const Tensor6& cloudbox_field_mono_old,
-    const Numeric& f_mono,
-    const Vector& epsilon,
-    const Index& max_iterations,
-    const String& iy_unit,
-    const Verbosity& verbosity) {
-
-
+void CheckConvergence(Index& convergence_flag,
+                      Index& iteration_counter,
+                      Tensor6& cloudbox_field_mono,
+                      const Tensor6& cloudbox_field_mono_old,
+                      const Numeric& f_mono,
+                      const Vector& epsilon,
+                      const Index& max_iterations,
+                      const String& iy_unit,
+                      const Verbosity& verbosity) {
   CREATE_OUT1;
   CREATE_OUT2;
 
@@ -3539,14 +3449,12 @@ void CheckConvergence(
 
   bool Tb_unit = (iy_unit != "1");
 
-
   iteration_counter += 1;
   out2 << "  Number of DOIT iteration: " << iteration_counter << "\n";
 
-
   if (iteration_counter > max_iterations) {
     ostringstream out;
-    out << "At frequency " << f_mono/1e9 << " GHz \n"
+    out << "At frequency " << f_mono / 1e9 << " GHz \n"
         << "method does not converge (number of iterations \n"
         << "is > " << max_iterations << "). "
         << " number density \n"
@@ -3556,7 +3464,7 @@ void CheckConvergence(
         << "optimized zenith angle grid. \n"
         << "*cloudbox_field* might be wrong.\n";
     out1 << "Warning in DOIT calculation (output set to NaN):\n" << out.str();
-//    cloudbox_field_mono = NAN;
+    //    cloudbox_field_mono = NAN;
     convergence_flag = 1;
 
   } else {
@@ -3598,82 +3506,72 @@ void CheckConvergence(
   }
 }
 
-
-void EstimatePPathElements1D(
-    Workspace& ws,
-    ArrayOfVector& PressureArray,
-    ArrayOfVector& TemperatureArray,
-    ArrayOfMatrix& VmrArray,
-    ArrayOfMatrix& InterpWeightsArray,
-    ArrayOfMatrix& InterpWeightsZenithArray,
-    ArrayOfArrayOfGridPos& GposArray,
-    ArrayOfArrayOfGridPos& GposZenithArray,
-    ArrayOfVector& LstepArray,
-    Index& MaxLimbIndex,
-    const ArrayOfIndex& cloudbox_limits,
-    const Vector& za_grid,
-    const Agenda& ppath_step_agenda,
-    const Numeric& ppath_lmax,
-    const Numeric& ppath_lraytrace,
-//    const Tensor3& p_path_maxlength,
-    const Vector& p_grid,
-    const Tensor3& z_field,
-    const ConstTensor3View& t_field,
-    const ConstTensor4View& vmr_field,
-    const Vector& refellipsoid,
-    const Vector& f_grid,
-    const Verbosity& verbosity) {
+void EstimatePPathElements1D(Workspace& ws,
+                             ArrayOfVector& PressureArray,
+                             ArrayOfVector& TemperatureArray,
+                             ArrayOfMatrix& VmrArray,
+                             ArrayOfMatrix& InterpWeightsArray,
+                             ArrayOfMatrix& InterpWeightsZenithArray,
+                             ArrayOfArrayOfGridPos& GposArray,
+                             ArrayOfArrayOfGridPos& GposZenithArray,
+                             ArrayOfVector& LstepArray,
+                             Index& MaxLimbIndex,
+                             const ArrayOfIndex& cloudbox_limits,
+                             const Index p_index,
+                             const Vector& za_grid,
+                             const Agenda& ppath_step_agenda,
+                             const Numeric& ppath_lmax,
+                             const Numeric& ppath_lraytrace,
+                             //    const Tensor3& p_path_maxlength,
+                             const Vector& p_grid,
+                             const Tensor3& z_field,
+                             const ConstTensor3View& t_field,
+                             const ConstTensor4View& vmr_field,
+                             const Vector& refellipsoid,
+                             const Vector& f_grid,
+                             const Verbosity& verbosity) {
   CREATE_OUT2;
   CREATE_OUT3;
 
-  out2
-      << "  EstimatePressurePoints1D for absorption\n";
+  out2 << "  EstimatePressurePoints1D for absorption\n";
   out2 << "  ------------------------------------------------------------- \n";
 
   // Number of zenith angles.
   const Index N_za = za_grid.nelem();
   const Index N_p = p_grid.nelem();
-
+  Index i_pcomb;
 
   // If theta is between 90° and the limiting value, the intersection point
   // is exactly at the same level as the starting point (cp. AUG)
-  Numeric theta_lim =
-      180. - asin((refellipsoid[0] + z_field(0, 0, 0)) /
-                  (refellipsoid[0] + z_field(N_p-1, 0, 0))) *
-             RAD2DEG;
-
+  Numeric theta_lim = 180. - asin((refellipsoid[0] + z_field(0, 0, 0)) /
+                                  (refellipsoid[0] + z_field(N_p - 1, 0, 0))) *
+                                 RAD2DEG;
 
   //Get the highest zenith angle index , which is still a limb angle
-  MaxLimbIndex= N_za-1;
-  while (MaxLimbIndex>=0 && za_grid[MaxLimbIndex]>=theta_lim){
+  MaxLimbIndex = N_za - 1;
+  while (MaxLimbIndex >= 0 && za_grid[MaxLimbIndex] >= theta_lim) {
     MaxLimbIndex--;
   }
 
-  if (za_grid[MaxLimbIndex]<=90){
-    MaxLimbIndex=-1;
+  if (za_grid[MaxLimbIndex] <= 90) {
+    MaxLimbIndex = -1;
   }
 
+  PressureArray.resize(N_p * N_za);
+  TemperatureArray.resize(N_p * N_za);
+  VmrArray.resize(N_p * N_za);
+  InterpWeightsArray.resize(N_p * N_za);
+  InterpWeightsZenithArray.resize(N_p * N_za);
+  GposArray.resize(N_p * N_za);
+  GposZenithArray.resize(N_p * N_za);
+  LstepArray.resize(N_p * N_za);
 
-
-  PressureArray.resize(N_p*N_za);
-  TemperatureArray.resize(N_p*N_za);
-  VmrArray.resize(N_p*N_za);
-  InterpWeightsArray.resize(N_p*N_za);
-  InterpWeightsZenithArray.resize(N_p*N_za);
-  GposArray.resize(N_p*N_za);
-  GposZenithArray.resize(N_p*N_za);
-  LstepArray.resize(N_p*N_za);
-
-//  const bool adaptive = (p_path_maxlength.npages() > 0);
+  //  const bool adaptive = (p_path_maxlength.npages() > 0);
   Numeric ppath_lmax_temp = ppath_lmax;
   Numeric ppath_lraytrace_temp = ppath_lraytrace;
 
-
   //Loop over all directions, defined by za_grid
   for (Index i_za = 0; i_za < N_za; i_za++) {
-
-
-
     // uplooking angles
     if (za_grid[i_za] <= 90.) {
       // Loop over all positions inside the cloud box defined by the
@@ -3682,65 +3580,15 @@ void EstimatePPathElements1D(
       // to cloudbox_limits[0] to do a sequential update of the
       // radiation field
       for (Index i_p = N_p - 2; i_p >= 0; i_p--) {
-//        if (adaptive) {
-//          ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
-//          ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
-//        }
+        //        if (adaptive) {
+        //          ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
+        //          ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
+        //        }
 
         const Index idx = subscript2index(i_za, i_p, N_za);
 
-        Vector Pressures;
-        Vector Temperatures;
-        Matrix Vmrs;
-        ArrayOfGridPos cloud_gp_p;
-        ArrayOfGridPos cloud_gp_za;
-        Vector lstep;
-        Matrix itw;
-        Matrix itw_za;
-        CloudPropagationPath1D(ws,
-                             Pressures,
-                             Temperatures,
-                             Vmrs,
-                             cloud_gp_p,
-                             cloud_gp_za,
-                             lstep,
-                             itw,
-                             itw_za,
-                             i_p,
-                             i_za,
-                             za_grid,
-                             cloudbox_limits,
-                             ppath_step_agenda,
-                             ppath_lmax_temp,
-                             ppath_lraytrace_temp,
-                             p_grid,
-                             z_field,
-                             t_field,
-                             vmr_field,
-                             refellipsoid,
-                             f_grid,
-                             verbosity);
-
-        PressureArray[idx] = Pressures;
-        TemperatureArray[idx] = Temperatures;
-        VmrArray[idx] = Vmrs;
-        InterpWeightsArray[idx] = itw;
-        InterpWeightsZenithArray[idx] = itw_za;
-        GposArray[idx] = cloud_gp_p;
-        GposZenithArray[idx] = cloud_gp_za;
-        LstepArray[idx] = lstep;
-      }
-    } else if (za_grid[i_za] >= theta_lim) {
-      //
-      // downlooking angles
-      //
-      for (Index i_p = 0 + 1; i_p <= N_p-1; i_p++) {
-//        if (adaptive) {
-//          ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
-//          ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
-//        }
-
-        const Index idx = subscript2index(i_za, i_p, N_za);
+        //combined pressure index
+        i_pcomb = i_p + p_index;
 
         Vector Pressures;
         Vector Temperatures;
@@ -3759,7 +3607,63 @@ void EstimatePPathElements1D(
                                lstep,
                                itw,
                                itw_za,
-                               i_p,
+                               i_pcomb,
+                               i_za,
+                               za_grid,
+                               cloudbox_limits,
+                               ppath_step_agenda,
+                               ppath_lmax_temp,
+                               ppath_lraytrace_temp,
+                               p_grid,
+                               z_field,
+                               t_field,
+                               vmr_field,
+                               refellipsoid,
+                               f_grid,
+                               verbosity);
+
+        PressureArray[idx] = Pressures;
+        TemperatureArray[idx] = Temperatures;
+        VmrArray[idx] = Vmrs;
+        InterpWeightsArray[idx] = itw;
+        InterpWeightsZenithArray[idx] = itw_za;
+        GposArray[idx] = cloud_gp_p;
+        GposZenithArray[idx] = cloud_gp_za;
+        LstepArray[idx] = lstep;
+      }
+    } else if (za_grid[i_za] >= theta_lim) {
+      //
+      // downlooking angles
+      //
+      for (Index i_p = 0 + 1; i_p <= N_p - 1; i_p++) {
+        //        if (adaptive) {
+        //          ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
+        //          ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
+        //        }
+
+        const Index idx = subscript2index(i_za, i_p, N_za);
+
+        //combined pressure index
+        i_pcomb = i_p + p_index;
+
+        Vector Pressures;
+        Vector Temperatures;
+        Matrix Vmrs;
+        ArrayOfGridPos cloud_gp_p;
+        ArrayOfGridPos cloud_gp_za;
+        Vector lstep;
+        Matrix itw;
+        Matrix itw_za;
+        CloudPropagationPath1D(ws,
+                               Pressures,
+                               Temperatures,
+                               Vmrs,
+                               cloud_gp_p,
+                               cloud_gp_za,
+                               lstep,
+                               itw,
+                               itw_za,
+                               i_pcomb,
                                i_za,
                                za_grid,
                                cloudbox_limits,
@@ -3786,13 +3690,13 @@ void EstimatePPathElements1D(
       }  // Close loop over p_grid (inside cloudbox).
     }    // end if downlooking.
 
-      //
-      // Limb looking:
-      // We have to include a special case here, as we may miss the endpoints
-      // when the intersection point is at the same level as the aactual point.
-      // To be save we loop over the full cloudbox. Inside the function
-      // cloud_ppath_update1D it is checked whether the intersection point is
-      // inside the cloudbox or not.
+    //
+    // Limb looking:
+    // We have to include a special case here, as we may miss the endpoints
+    // when the intersection point is at the same level as the aactual point.
+    // To be save we loop over the full cloudbox. Inside the function
+    // cloud_ppath_update1D it is checked whether the intersection point is
+    // inside the cloudbox or not.
 
     else {
       for (Index i_p = 0; i_p <= N_p - 1; i_p++) {
@@ -3802,12 +3706,15 @@ void EstimatePPathElements1D(
         // gives an error for such cases.
 
         if (i_p != 0) {
-//          if (adaptive) {
-//            ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
-//            ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
-//          }
+          //          if (adaptive) {
+          //            ppath_lmax_temp = p_path_maxlength(i_p, 0, 0);
+          //            ppath_lraytrace_temp = p_path_maxlength(i_p, 0, 0);
+          //          }
 
           const Index idx = subscript2index(i_za, i_p, N_za);
+
+          //combined pressure index
+          i_pcomb = i_p + p_index;
 
           Vector Pressures;
           Vector Temperatures;
@@ -3826,7 +3733,7 @@ void EstimatePPathElements1D(
                                  lstep,
                                  itw,
                                  itw_za,
-                                 i_p,
+                                 i_pcomb,
                                  i_za,
                                  za_grid,
                                  cloudbox_limits,
@@ -3849,7 +3756,6 @@ void EstimatePPathElements1D(
           GposArray[idx] = cloud_gp_p;
           GposZenithArray[idx] = cloud_gp_za;
           LstepArray[idx] = lstep;
-
         }
       }
     }
@@ -3857,29 +3763,28 @@ void EstimatePPathElements1D(
 }
 
 void CloudPropagationPath1D(Workspace& ws,
-                          Vector& Pressures,
-                          Vector& Temperatures,
-                          Matrix& Vmrs,
-                          ArrayOfGridPos& cloud_gp_p,
-                          ArrayOfGridPos& cloud_gp_za,
-                          Vector& lstep,
-                          Matrix& itw,
-                          Matrix& itw_za,
-                          const Index& p_index,
-                          const Index& za_index,
-                          const ConstVectorView& za_grid,
-                          const ArrayOfIndex& cloudbox_limits,
-                          const Agenda& ppath_step_agenda,
-                          const Numeric& ppath_lmax,
-                          const Numeric& ppath_lraytrace,
-                          const ConstVectorView& p_grid,
-                          const ConstTensor3View& z_field,
-                          const ConstTensor3View& t_field,
-                          const ConstTensor4View& vmr_field,
-                          const ConstVectorView& refellipsoid,
-                          const ConstVectorView& f_grid,
-                          const Verbosity& verbosity) {
-
+                            Vector& Pressures,
+                            Vector& Temperatures,
+                            Matrix& Vmrs,
+                            ArrayOfGridPos& cloud_gp_p,
+                            ArrayOfGridPos& cloud_gp_za,
+                            Vector& lstep,
+                            Matrix& itw,
+                            Matrix& itw_za,
+                            const Index& p_index,
+                            const Index& za_index,
+                            const ConstVectorView& za_grid,
+                            const ArrayOfIndex& cloudbox_limits,
+                            const Agenda& ppath_step_agenda,
+                            const Numeric& ppath_lmax,
+                            const Numeric& ppath_lraytrace,
+                            const ConstVectorView& p_grid,
+                            const ConstTensor3View& z_field,
+                            const ConstTensor3View& t_field,
+                            const ConstTensor4View& vmr_field,
+                            const ConstVectorView& refellipsoid,
+                            const ConstVectorView& f_grid,
+                            const Verbosity& verbosity) {
   CREATE_OUT3;
 
   Ppath ppath_step;
@@ -3897,18 +3802,13 @@ void CloudPropagationPath1D(Workspace& ws,
   ppath_step.los(0, 0) = za_grid[za_index];
 
   // Define the grid positions:
-  ppath_step.gp_p[0].idx = p_index+cloudbox_limits[0];
+  ppath_step.gp_p[0].idx = p_index + cloudbox_limits[0];
   ppath_step.gp_p[0].fd[0] = 0;
   ppath_step.gp_p[0].fd[1] = 1;
 
   // Call ppath_step_agenda:
-  ppath_step_agendaExecute(ws,
-                           ppath_step,
-                           ppath_lmax,
-                           ppath_lraytrace,
-                           f_grid,
-                           ppath_step_agenda);
-
+  ppath_step_agendaExecute(
+      ws, ppath_step, ppath_lmax, ppath_lraytrace, f_grid, ppath_step_agenda);
 
   // Check whether the next point is inside or outside the
   // cloudbox. Only if the next point lies inside the
@@ -3919,7 +3819,6 @@ void CloudPropagationPath1D(Workspace& ws,
        cloudbox_limits[1] > ppath_step.gp_p[1].idx) ||
       (cloudbox_limits[1] == ppath_step.gp_p[1].idx &&
        abs(ppath_step.gp_p[1].fd[0]) < 1e-6)) {
-
     // Ppath_step normally has 2 points, the starting
     // point and the intersection point.
     // But there can be points in between, when a maximum
@@ -3947,7 +3846,6 @@ void CloudPropagationPath1D(Workspace& ws,
     itw_za.resize(cloud_gp_p.nelem(), 4);
     interpweights(itw_za, cloud_gp_p, cloud_gp_za);
 
-
     // interpolate pressure, temperature and vmr
     itw.resize(cloud_gp_p.nelem(), 2);
     interpweights(itw, cloud_gp_p);
@@ -3960,15 +3858,12 @@ void CloudPropagationPath1D(Workspace& ws,
     //temperature interpolation
     out3 << "Interpolate temperature for ppath\n";
     Temperatures.resize(ppath_step.np);
-    interp(Temperatures,itw, t_field(joker,0,0), cloud_gp_p);
+    interp(Temperatures, itw, t_field(joker, 0, 0), cloud_gp_p);
 
-    Vmrs.resize(vmr_field.nbooks(),ppath_step.np);
-    for (Index i_v = 0; i_v < vmr_field.nbooks(); i_v++){
-      interp(Vmrs(i_v,joker),itw, vmr_field(i_v,joker,0,0), cloud_gp_p);
+    Vmrs.resize(vmr_field.nbooks(), ppath_step.np);
+    for (Index i_v = 0; i_v < vmr_field.nbooks(); i_v++) {
+      interp(Vmrs(i_v, joker), itw, vmr_field(i_v, joker, 0, 0), cloud_gp_p);
     }
-
-
-
 
   }  //end if inside cloudbox
 }
@@ -3978,11 +3873,9 @@ void CloudPropagationPath1D(Workspace& ws,
 //
 //------------------------------------------------------------------------------
 
-
 void FlattenMeshGrid(Matrix& flattened_meshgrid,
                      const Vector& grid1,
                      const Vector& grid2) {
-
   const Index N_grid1 = grid1.nelem();
   const Index N_grid2 = grid2.nelem();
 
@@ -4003,15 +3896,14 @@ void FlattenMeshGrid(Matrix& flattened_meshgrid,
 
 void FlattenMeshGridIndex(ArrayOfIndex& index_grid1,
                           ArrayOfIndex& index_grid2,
-                     const Vector& grid1,
-                     const Vector& grid2) {
-
+                          const Vector& grid1,
+                          const Vector& grid2) {
   const Index N_grid1 = grid1.nelem();
   const Index N_grid2 = grid2.nelem();
 
   // preparing output
-  index_grid1.resize(N_grid1*N_grid2);
-  index_grid2.resize(N_grid1*N_grid2);
+  index_grid1.resize(N_grid1 * N_grid2);
+  index_grid2.resize(N_grid1 * N_grid2);
 
   //Flatten grids
   Index Idir_idx = 0;
@@ -4024,7 +3916,6 @@ void FlattenMeshGridIndex(ArrayOfIndex& index_grid1,
     }
   }
 }
-
 
 // Subscript to index functions-------------------------------------------------
 
@@ -4044,17 +3935,16 @@ Index subscript2index(
 
 //5d array
 Index subscript2index(Index i,
-                     Index j,
-                     Index k,
-                     Index l,
-                     Index m,
-                     Index Ni,
-                     Index Nj,
-                     Index Nk,
-                     Index Nl) {
+                      Index j,
+                      Index k,
+                      Index l,
+                      Index m,
+                      Index Ni,
+                      Index Nj,
+                      Index Nk,
+                      Index Nl) {
   return m * Nl * Nk * Nj * Ni + subscript2index(i, j, k, l, Ni, Nj, Nk);
 }
-
 
 // Index to subscript functions-------------------------------------------------
 //2d array
