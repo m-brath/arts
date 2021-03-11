@@ -659,7 +659,7 @@ void LimitInputGridsAndFieldsToCloudbox(
  * @param[in] surface_rtprop_agenda Agenda to calculate radiative properties of
  *              the surface.
  * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
- * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1 or 3).
  * @param[in] stokes_dim The dimensionality of the Stokes vector (1-4).
  * @param[in] pnd_field Particle number density field.
  * @param[in] t_field Temperature field.
@@ -982,7 +982,8 @@ void CalcPropagationPathMaxLength(
     const Numeric& ppath_lraytrace,
     const Numeric& tau_max);
 
-/**
+/**Checks where refinement is needed.
+ *
  * @param[out] refine Flag which indicate which grid CELL needs refinement.
  * @param[out] DlogK Difference in log10 of the mean extinction in 1 to 3 directions.
  * @param[out] tau_p mean optical thickness in in 1 to 3 directions.
@@ -991,16 +992,17 @@ void CalcPropagationPathMaxLength(
  * @param[in] gas_extinct Field with the gas extinction, this is not used
  *              for the actual RT calculation. It is just used for the adaptive
  *              ppath length.
- * @param[in] p_grid
- * @param[in] lat_grid
- * @param[in] lon_grid
- * @param[in] scat_za_grid
- * @param[in] scat_aa_grid
- * @param[in] z_field
- * @param[in] refellipsoid
- * @param[in] atmosphere_dim
- * @param[in] refine_crit
- * @param[in] tau_crit
+ * @param[in] p_grid Pressure grid.
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
+ * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
+ * @param[in] z_field Field of geometrical altitudes.
+ * @param[in] refellipsoid Reference ellipsoid.
+ * @param[in] atmosphere_dim The atmospheric dimensionality (1 or 3).
+ * @param[in] refine_crit Refinement criterium in terms of Log10 of ratio of two adjacent
+ *            points of the total extinction.
+ * @param[in] tau_crit Minimum optical thickness for refinement. Cells with smaller optical
+ *            thickness will not be refined.
  */
 void CheckForRefinement(
     ArrayOfIndex& refine,
@@ -1017,6 +1019,76 @@ void CheckForRefinement(
     const Index& atmosphere_dim,
     const Numeric& refine_crit,
     const Numeric& tau_crit);
+
+/**Does the refinement and prepares the subdomains.
+ *
+ * @param[out] Subdomains Array of sub radiative transfer domain
+ * @param[out] SubdomainsScatteringProperties Array of subdomain scattering properties
+ * @param[in] MainDomain Radiative transfer domain
+ * @param[in] MainDomainScatteringProperties Main domain scattering properties.
+ * @param[in] t_field Temperature field.
+ * @param[in] z_field Altitude field.
+ * @param[in] vmr_field Field of volume mixing ratios.
+ * @param[in] pnd_field Particle number density field.
+ * @param[in] scat_data Array of single scattering data.
+ * @param[in] t_interp_order Temperature interpolation order.
+ * @param[in] ForwardCorrectionFlag Index wether to use the forward scattering
+ *              corretion (1) or not (0).
+ * @param[in] refine Flag which indicate which grid CELL will be refinement.
+ * @param[in] DlogK Difference in log10 of the mean extinction in 1 to 3 directions.
+ * @param[in] N_decade Number of points per decade of change of extinction to be inserted.
+ */
+void PrepareSubdomains(
+    ArrayOfRTDomain& Subdomains,
+    ArrayOfRTDomainScatteringProperties& SubdomainsScatteringProperties,
+    const RTDomain MainDomain,
+    const RTDomainScatteringProperties MainDomainScatteringProperties,
+    const Tensor3& t_field,
+    const Tensor3& z_field,
+    const Tensor4& vmr_field,
+    const Tensor4& pnd_field,
+    const ArrayOfArrayOfSingleScatteringData& scat_data,
+    const Index& t_interp_order,
+    const Index& ForwardCorrectionFlag,
+    const ArrayOfIndex& refine,
+    const Tensor4& DlogK,
+    const Index& N_decade,
+    const Verbosity& verbosity);
+
+/**Does the refinement and prepares the subdomains for 1D atmospheres.
+ *
+ * @param[out] Subdomains Array of sub radiative transfer domain
+ * @param[out] SubdomainsScatteringProperties Array of subdomain scattering properties
+ * @param[in] MainDomain Radiative transfer domain
+ * @param[in] MainDomainScatteringProperties Main domain scattering properties.
+ * @param[in] t_field Temperature field.
+ * @param[in] z_field Altitude field.
+ * @param[in] vmr_field Field of volume mixing ratios.
+ * @param[in] pnd_field Particle number density field.
+ * @param[in] scat_data Array of single scattering data.
+ * @param[in] t_interp_order Temperature interpolation order.
+ * @param[in] ForwardCorrectionFlag Index wether to use the forward scattering
+ *              corretion (1) or not (0).
+ * @param[in] refine Flag which indicate which grid CELL will be refinement.
+ * @param[in] DlogK Difference in log10 of the mean extinction in 1 to 3 directions.
+ * @param[in] N_decade Number of points per decade of change of extinction to be inserted.
+ */
+void PrepareSubdomains1D(
+    ArrayOfRTDomain& Subdomains,
+    ArrayOfRTDomainScatteringProperties& SubdomainsScatteringProperties,
+    const RTDomain MainDomain,
+    const RTDomainScatteringProperties MainDomainScatteringProperties,
+    const Tensor3& t_field,
+    const Tensor3& z_field,
+    const Tensor4& vmr_field,
+    const Tensor4& pnd_field,
+    const ArrayOfArrayOfSingleScatteringData& scat_data,
+    const Index& t_interp_order,
+    const Index& ForwardCorrectionFlag,
+    const ArrayOfIndex& refine,
+    const Tensor4& DlogK,
+    const Index& N_decade,
+    const Verbosity& verbosity);
 
 /** The actual DOIT scattering solver
  *
@@ -1481,7 +1553,7 @@ void EstimatePPathElements1D(
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
-    const Tensor3& p_path_maxlength,
+//    const Tensor3& p_path_maxlength,
     const Vector& p_grid,
     const Tensor3& z_field,
     const ConstTensor3View& t_field,
