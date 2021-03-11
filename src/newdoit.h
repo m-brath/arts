@@ -683,7 +683,7 @@ void LimitInputGridsAndFieldsToCloudbox(
  * @param[in] epsilon Limits for convergence. A vector with length matching
  *              stokes_dim with unit of iy_unit.
  * @param[in] max_num_iterations Maximum number of iterations.
- * @param[in] tau_max Maximum optical thickness per propagation step.
+ * @param[in] tau_min Maximum optical thickness per propagation step.
  * @param[in] accelerated Index wether to accelerate only the intensity (1) or
  *              the whole Stokes Vector(>1).
  * @param[in] ForwardCorrectionFlag Index wether to use the forward scattering
@@ -729,7 +729,9 @@ void NewDoitMonoCalc(Workspace& ws,
                      const Vector& refellipsoid,
                      const Vector& epsilon,
                      const Index& max_num_iterations,
-                     const Numeric& tau_max,
+                     const Numeric& refinement_criterion,
+                     const Numeric& tau_min,
+                     const Index& N_decade,
                      const Index& accelerated,
                      const Index& ForwardCorrectionFlag,
                      const Numeric& ppath_lmax,
@@ -1560,6 +1562,7 @@ void CheckConvergence(  //WS Input and Output:
  * @param[out] MaxLimbIndex Index with index of the highest limb angle (-1 if no
  *              limb angle)
  * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] p_index Index of pressure gridpoint
  * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
  *              cloudbox.
  * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
@@ -1589,6 +1592,7 @@ void EstimatePPathElements1D(
     ArrayOfVector& LstepArray,
     Index& MaxLimbIndex,
     const ArrayOfIndex& cloudbox_limits,
+    const Index p_index,
     const Vector& za_grid,
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
