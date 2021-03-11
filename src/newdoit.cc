@@ -957,8 +957,17 @@ void NewDoitMonoCalc(Workspace& ws,
                         aa_grid,
                         atmosphere_dim);
 
-  //Set cloudbox_field of MainRTDomain
+  //Set cloudbox field of MainRTDomain
   MainRTDomain.set_CloudboxField(cloudbox_field_mono);
+
+  //Resize cloudbox scattering field of MainRTDomain
+  MainRTDomain.get_CloudboxScatteringField().resize(
+      MainRTDomain.get_CloudboxField().nvitrines(),
+      MainRTDomain.get_CloudboxField().nshelves(),
+      MainRTDomain.get_CloudboxField().nbooks(),
+      MainRTDomain.get_CloudboxField().npages(),
+      MainRTDomain.get_CloudboxField().nrows(),
+      MainRTDomain.get_CloudboxField().ncols());
 
   RTDomainScatteringProperties MainDomainScatteringProperties;
 
@@ -2178,15 +2187,6 @@ void RunNewDoit(  //Input and Output:
   CREATE_OUT2;
 
   Tensor6 cloudbox_field_mono_old;
-
-  //TODO: move this into NewDoitMonoCalc
-  MainDomain.get_CloudboxScatteringField().resize(
-      MainDomain.get_CloudboxField().nvitrines(),
-      MainDomain.get_CloudboxField().nshelves(),
-      MainDomain.get_CloudboxField().nbooks(),
-      MainDomain.get_CloudboxField().npages(),
-      MainDomain.get_CloudboxField().nrows(),
-      MainDomain.get_CloudboxField().ncols());
 
   convergence_flag = 0;
   iteration_counter = 0;
