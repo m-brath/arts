@@ -1680,6 +1680,8 @@ void ForwardScatteringCorrection(  //Output
           // The four extinction matrix elements based on energy conservation
           // The other elements are not changed.
 
+          // TODO: Check forward scattering correction, there seem to be issues with the off diagonal
+          // elements. When the off-diagonal elements are too big then nan encounter in the RT calc!?!
           for (Index i_sti = 0; i_sti < Nst; i_sti++) {
             Ki1 = AngIntegrate_trapezoid(
                       scattering_matrix(i_p, 0, 0, i_pz, joker, i_sti, 0),
