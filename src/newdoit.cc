@@ -1032,17 +1032,18 @@ void NewDoitMonoCalc(Workspace& ws,
                             MainRTDomain.get_GposZenithArray(),
                             MainRTDomain.get_LStepArray(),
                             MainRTDomain.get_MaxLimbIndex(),
-                            cloudbox_limits,
-                            0,
                             za_grid,
                             ppath_step_agenda,
                             ppath_lmax,
                             ppath_lraytrace,
                             //                              p_path_maxlength,
                             p_grid,
+                            lat_grid,
+                            lon_grid,
                             z_field,
                             t_field,
                             vmr_field,
+                            z_surface,
                             refellipsoid,
                             Vector(1, f_mono),
                             verbosity);
@@ -1137,6 +1138,7 @@ void NewDoitMonoCalc(Workspace& ws,
                       ppath_step_agenda,
                       ppath_lmax,
                       ppath_lraytrace,
+                      z_surface,
                       refellipsoid,
                       Vector(1, f_mono),
                       verbosity);
@@ -1971,6 +1973,7 @@ void PrepareSubdomains(
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
+    const Matrix& z_surface,
     const Vector& refellipsoid,
     const Vector& f_grid,
     const Verbosity& verbosity) {
@@ -1995,6 +1998,7 @@ void PrepareSubdomains(
                         ppath_step_agenda,
                         ppath_lmax,
                         ppath_lraytrace,
+                        z_surface,
                         refellipsoid,
                         f_grid,
                         verbosity);
@@ -2024,6 +2028,7 @@ void PrepareSubdomains1D(
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
+    const Matrix& z_surface,
     const Vector& refellipsoid,
     const Vector& f_grid,
     const Verbosity& verbosity) {
@@ -2045,6 +2050,7 @@ void PrepareSubdomains1D(
   Matrix itw;
   ArrayOfGridPos gridpositions_z;
   ArrayOfMatrix VmrArray_sub;
+  ArrayOfIndex cloudbox_limits_sub(2);
 
   Subdomains.resize(refine.nelem());
   SubdomainsScatteringProperties.resize(refine.nelem());
@@ -2104,6 +2110,11 @@ void PrepareSubdomains1D(
       Subdomains[il].get_CloudboxScatteringField().resize(
           Nz, 1, 1, N_za, 1, N_st);
 
+
+      //cloudbox limits of subfield
+      cloudbox_limits_sub[0]=0;
+      cloudbox_limits_sub[1]=p_grid_sub.nelem()-1;
+
       //interpolate temperature field
       interp(
           t_field_sub(joker, 0, 0), itw, t_field(joker, 0, 0), gridpositions_z);
@@ -2156,16 +2167,17 @@ void PrepareSubdomains1D(
                               Subdomains[il].get_GposZenithArray(),
                               Subdomains[il].get_LStepArray(),
                               Subdomains[il].get_MaxLimbIndex(),
-                              cloudbox_limits,
-                              il,
                               MainDomain.get_za_grid(),
                               ppath_step_agenda,
                               ppath_lmax,
                               ppath_lraytrace,
-                              p_grid_sub,
+                              Subdomains[il].get_p_grid(),
+                              Subdomains[il].get_lat_grid(),
+                              Subdomains[il].get_lon_grid(),
                               z_field_sub,
                               t_field_sub,
                               vmr_field_sub,
+                              z_surface,
                               refellipsoid,
                               f_grid,
                               verbosity);
@@ -3518,17 +3530,18 @@ void EstimatePPathElements1D(Workspace& ws,
                              ArrayOfArrayOfGridPos& GposZenithArray,
                              ArrayOfVector& LstepArray,
                              Index& MaxLimbIndex,
-                             const ArrayOfIndex& cloudbox_limits,
-                             const Index p_index,
                              const Vector& za_grid,
                              const Agenda& ppath_step_agenda,
                              const Numeric& ppath_lmax,
                              const Numeric& ppath_lraytrace,
                              //    const Tensor3& p_path_maxlength,
                              const Vector& p_grid,
+                             const Vector& lat_grid,
+                             const Vector& lon_grid,
                              const Tensor3& z_field,
                              const ConstTensor3View& t_field,
                              const ConstTensor4View& vmr_field,
+                             const ConstMatrixView& z_surface,
                              const Vector& refellipsoid,
                              const Vector& f_grid,
                              const Verbosity& verbosity) {
@@ -3541,7 +3554,7 @@ void EstimatePPathElements1D(Workspace& ws,
   // Number of zenith angles.
   const Index N_za = za_grid.nelem();
   const Index N_p = p_grid.nelem();
-  Index i_pcomb;
+
 
   // If theta is between 90° and the limiting value, the intersection point
   // is exactly at the same level as the starting point (cp. AUG)
@@ -3589,9 +3602,6 @@ void EstimatePPathElements1D(Workspace& ws,
 
         const Index idx = subscript2index(i_za, i_p, N_za);
 
-        //combined pressure index
-        i_pcomb = i_p + p_index;
-
         Vector Pressures;
         Vector Temperatures;
         Matrix Vmrs;
@@ -3609,17 +3619,19 @@ void EstimatePPathElements1D(Workspace& ws,
                                lstep,
                                itw,
                                itw_za,
-                               i_pcomb,
+                               i_p,
                                i_za,
                                za_grid,
-                               cloudbox_limits,
                                ppath_step_agenda,
                                ppath_lmax_temp,
                                ppath_lraytrace_temp,
                                p_grid,
+                               lon_grid,
+                               lat_grid,
                                z_field,
                                t_field,
                                vmr_field,
+                               z_surface,
                                refellipsoid,
                                f_grid,
                                verbosity);
@@ -3645,9 +3657,6 @@ void EstimatePPathElements1D(Workspace& ws,
 
         const Index idx = subscript2index(i_za, i_p, N_za);
 
-        //combined pressure index
-        i_pcomb = i_p + p_index;
-
         Vector Pressures;
         Vector Temperatures;
         Matrix Vmrs;
@@ -3665,17 +3674,19 @@ void EstimatePPathElements1D(Workspace& ws,
                                lstep,
                                itw,
                                itw_za,
-                               i_pcomb,
+                               i_p,
                                i_za,
                                za_grid,
-                               cloudbox_limits,
                                ppath_step_agenda,
                                ppath_lmax_temp,
                                ppath_lraytrace_temp,
                                p_grid,
+                               lon_grid,
+                               lat_grid,
                                z_field,
                                t_field,
                                vmr_field,
+                               z_surface,
                                refellipsoid,
                                f_grid,
                                verbosity);
@@ -3715,9 +3726,6 @@ void EstimatePPathElements1D(Workspace& ws,
 
           const Index idx = subscript2index(i_za, i_p, N_za);
 
-          //combined pressure index
-          i_pcomb = i_p + p_index;
-
           Vector Pressures;
           Vector Temperatures;
           Matrix Vmrs;
@@ -3735,17 +3743,19 @@ void EstimatePPathElements1D(Workspace& ws,
                                  lstep,
                                  itw,
                                  itw_za,
-                                 i_pcomb,
+                                 i_p,
                                  i_za,
                                  za_grid,
-                                 cloudbox_limits,
                                  ppath_step_agenda,
                                  ppath_lmax_temp,
                                  ppath_lraytrace_temp,
                                  p_grid,
+                                 lon_grid,
+                                 lat_grid,
                                  z_field,
                                  t_field,
                                  vmr_field,
+                                 z_surface,
                                  refellipsoid,
                                  f_grid,
                                  verbosity);
@@ -3776,20 +3786,26 @@ void CloudPropagationPath1D(Workspace& ws,
                             const Index& p_index,
                             const Index& za_index,
                             const ConstVectorView& za_grid,
-                            const ArrayOfIndex& cloudbox_limits,
                             const Agenda& ppath_step_agenda,
                             const Numeric& ppath_lmax,
                             const Numeric& ppath_lraytrace,
                             const ConstVectorView& p_grid,
+                            const ConstVectorView& lat_grid,
+                            const ConstVectorView& lon_grid,
                             const ConstTensor3View& z_field,
                             const ConstTensor3View& t_field,
                             const ConstTensor4View& vmr_field,
+                            const ConstMatrixView& z_surface,
                             const ConstVectorView& refellipsoid,
                             const ConstVectorView& f_grid,
                             const Verbosity& verbosity) {
   CREATE_OUT3;
 
   Ppath ppath_step;
+  ArrayOfIndex cloudbox_limits_local(2);
+
+  cloudbox_limits_local[0] = 0;
+  cloudbox_limits_local[1] = p_grid.nelem()-1;
 
   //Initialize ppath for 1D.
   ppath_init_structure(ppath_step, 1, 1);
@@ -3804,25 +3820,36 @@ void CloudPropagationPath1D(Workspace& ws,
   ppath_step.los(0, 0) = za_grid[za_index];
 
   // Define the grid positions:
-  ppath_step.gp_p[0].idx = p_index + cloudbox_limits[0];
+  ppath_step.gp_p[0].idx = p_index;// + cloudbox_limits[0];
   ppath_step.gp_p[0].fd[0] = 0;
   ppath_step.gp_p[0].fd[1] = 1;
 
   // Call ppath_step_agenda:
-  ppath_step_agendaExecute(
-      ws, ppath_step, ppath_lmax, ppath_lraytrace, f_grid, ppath_step_agenda);
+  //TODO: Update agenda mechanism and replace hardwired ppath_step calculation.
+//  ppath_step_agendaExecute(
+//      ws, ppath_step, ppath_lmax, ppath_lraytrace, f_grid, ppath_step_agenda);
+  ppath_stepGeometric(ppath_step,
+                      1,
+                      lat_grid,
+                      lon_grid,
+                      z_field,
+                      refellipsoid,
+                      z_surface,
+                      ppath_lmax,
+                      verbosity);
 
   // Check whether the next point is inside or outside the
   // cloudbox. Only if the next point lies inside the
   // cloudbox a radiative transfer step caclulation has to
   // be performed.
 
-  if ((cloudbox_limits[0] <= ppath_step.gp_p[1].idx &&
-       cloudbox_limits[1] > ppath_step.gp_p[1].idx) ||
-      (cloudbox_limits[1] == ppath_step.gp_p[1].idx &&
+  if ((cloudbox_limits_local[0] <= ppath_step.gp_p[1].idx &&
+       cloudbox_limits_local[1] > ppath_step.gp_p[1].idx) ||
+      (cloudbox_limits_local[1] == ppath_step.gp_p[1].idx &&
        abs(ppath_step.gp_p[1].fd[0]) < 1e-6)) {
     // Ppath_step normally has 2 points, the starting
     // point and the intersection point.
+
     // But there can be points in between, when a maximum
     // lstep is given. We have to interpolate on all the
     // points in the ppath_step.
@@ -3830,10 +3857,10 @@ void CloudPropagationPath1D(Workspace& ws,
 
     //get the right indices for the cloudbox
     for (Index i = 0; i < ppath_step.np; i++)
-      cloud_gp_p[i].idx -= cloudbox_limits[0];
+      cloud_gp_p[i].idx -= cloudbox_limits_local[0];
 
     // Grid index for points at upper limit of cloudbox must be shifted
-    const Index n1 = cloudbox_limits[1] - cloudbox_limits[0];
+    const Index n1 = cloudbox_limits_local[1] - cloudbox_limits_local[0];
     gridpos_upperend_check(cloud_gp_p[0], n1);
     gridpos_upperend_check(cloud_gp_p[ppath_step.np - 1], n1);
 

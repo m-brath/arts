@@ -1048,6 +1048,7 @@ void CheckForRefinement(
  *              paths.
  * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
  *              determining propagation paths.
+ * @param[in] z_surface Surface altitude.
  * @param[in] refellipsoid Reference ellipsoid.
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
@@ -1073,6 +1074,7 @@ void PrepareSubdomains(
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
+    const Matrix& z_surface,
     const Vector& refellipsoid,
     const Vector& f_grid,
     const Verbosity& verbosity);
@@ -1103,6 +1105,7 @@ void PrepareSubdomains(
  *              paths.
  * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
  *              determining propagation paths.
+ * @param[in] z_surface Surface altitude.
  * @param[in] refellipsoid Reference ellipsoid.
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
@@ -1128,6 +1131,7 @@ void PrepareSubdomains1D(
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
     const Numeric& ppath_lraytrace,
+    const Matrix& z_surface,
     const Vector& refellipsoid,
     const Vector& f_grid,
     const Verbosity& verbosity);
@@ -1570,41 +1574,42 @@ void CheckConvergence(  //WS Input and Output:
  *              paths.
  * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
  *              determining propagation paths.
- * @param[in] p_path_maxlength maximum length of propagation path
  * @param[in] p_grid Pressure grid.
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
  * @param[in] z_field Field of geometrical altitudes.
  * @param[in] t_field Temperature field.
  * @param[in] vmr_field Field of volume mixing ratios.
+ * @param[in] z_surface Surface altitude.
  * @param[in] refellipsoid Reference ellipsoid.
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
  * @param[in] verbosity Verbosity setting.
  */
-void EstimatePPathElements1D(
-    Workspace& ws,
-    ArrayOfVector& PressureArray,
-    ArrayOfVector& TemperatureArray,
-    ArrayOfMatrix& VmrArray,
-    ArrayOfMatrix& InterpWeightsArray,
-    ArrayOfMatrix& InterpWeightsZenithArray,
-    ArrayOfArrayOfGridPos& GposArray,
-    ArrayOfArrayOfGridPos& GposZenithArray,
-    ArrayOfVector& LstepArray,
-    Index& MaxLimbIndex,
-    const ArrayOfIndex& cloudbox_limits,
-    const Index p_index,
-    const Vector& za_grid,
-    const Agenda& ppath_step_agenda,
-    const Numeric& ppath_lmax,
-    const Numeric& ppath_lraytrace,
-//    const Tensor3& p_path_maxlength,
-    const Vector& p_grid,
-    const Tensor3& z_field,
-    const ConstTensor3View& t_field,
-    const ConstTensor4View& vmr_field,
-    const Vector& refellipsoid,
-    const Vector& f_grid,
-    const Verbosity& verbosity);
+void EstimatePPathElements1D(Workspace& ws,
+                             ArrayOfVector& PressureArray,
+                             ArrayOfVector& TemperatureArray,
+                             ArrayOfMatrix& VmrArray,
+                             ArrayOfMatrix& InterpWeightsArray,
+                             ArrayOfMatrix& InterpWeightsZenithArray,
+                             ArrayOfArrayOfGridPos& GposArray,
+                             ArrayOfArrayOfGridPos& GposZenithArray,
+                             ArrayOfVector& LstepArray,
+                             Index& MaxLimbIndex,
+                             const Vector& za_grid,
+                             const Agenda& ppath_step_agenda,
+                             const Numeric& ppath_lmax,
+                             const Numeric& ppath_lraytrace,
+                             const Vector& p_grid,
+                             const Vector& lat_grid,
+                             const Vector& lon_grid,
+                             const Tensor3& z_field,
+                             const ConstTensor3View& t_field,
+                             const ConstTensor4View& vmr_field,
+                             const ConstMatrixView& z_surface,
+                             const Vector& refellipsoid,
+                             const Vector& f_grid,
+                             const Verbosity& verbosity);
 
 /** Calculates a propagation path for 1D
  *
@@ -1622,16 +1627,18 @@ void EstimatePPathElements1D(
  * @param[in] za_index index of zenith angle gridpoint
  * @param[in] za_grid Zenith angle grid of Spectral radiance field inside the
  *              cloudbox.
- * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
  * @param[in] ppath_lmax Maximum length between points describing propagation
  *              paths.
  * @param[in]ppath_lraytrace Maximum length of ray tracing steps when
  *              determining propagation paths.
  * @param[in] p_grid Pressure grid.
+ * @param[in] lat_grid Latitude grid.
+ * @param[in] lon_grid Longitude grid.
  * @param[in] z_field Field of geometrical altitudes.
  * @param[in] t_field Temperature field.
  * @param[in] vmr_field Field of volume mixing ratios.
+ * @param[in] z_surface Surface altitude.
  * @param[in] refellipsoid Reference ellipsoid.
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
@@ -1649,14 +1656,16 @@ void CloudPropagationPath1D(Workspace& ws,
                             const Index& p_index,
                             const Index& za_index,
                             const ConstVectorView& za_grid,
-                            const ArrayOfIndex& cloudbox_limits,
                             const Agenda& ppath_step_agenda,
                             const Numeric& ppath_lmax,
                             const Numeric& ppath_lraytrace,
                             const ConstVectorView& p_grid,
+                            const ConstVectorView& lat_grid,
+                            const ConstVectorView& lon_grid,
                             const ConstTensor3View& z_field,
                             const ConstTensor3View& t_field,
                             const ConstTensor4View& vmr_field,
+                            const ConstMatrixView& z_surface,
                             const ConstVectorView& refellipsoid,
                             const ConstVectorView& f_grid,
                             const Verbosity& verbosity);
