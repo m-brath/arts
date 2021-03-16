@@ -704,7 +704,6 @@ void NewDoitMonoCalc(Workspace& ws,
                      Index& convergence_flag,
                      Index& iteration_counter,
                      //Input
-                     const ArrayOfIndex& cloudbox_limits,
                      const Agenda& propmat_clearsky_agenda,
                      const Agenda& surface_rtprop_agenda,
                      const Agenda& ppath_step_agenda,
@@ -1040,7 +1039,6 @@ void CheckForRefinement(
  * @param[in] refine Flag which indicate which grid CELL will be refinement.
  * @param[in] DlogK Difference in log10 of the mean extinction in 1 to 3 directions.
  * @param[in] N_decade Number of points per decade of change of extinction to be inserted.
- * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] propmat_clearsky_agenda Agenda to calculate the absorption
  *              coefficient matrix.
  * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
@@ -1069,7 +1067,6 @@ void PrepareSubdomains(
     const ArrayOfIndex& refine,
     const Tensor4& DlogK,
     const Index& N_decade,
-    const ArrayOfIndex& cloudbox_limits,
     const Agenda& propmat_clearsky_agenda,
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
@@ -1097,7 +1094,6 @@ void PrepareSubdomains(
  * @param[in] refine Flag which indicate which grid CELL will be refinement.
  * @param[in] DlogK Difference in log10 of the mean extinction in 1 to 3 directions.
  * @param[in] N_decade Number of points per decade of change of extinction to be inserted.
- * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] propmat_clearsky_agenda Agenda to calculate the absorption
  *              coefficient matrix.
  * @param[in] ppath_step_agenda Agenda to calculate a propagation path step.
@@ -1126,7 +1122,6 @@ void PrepareSubdomains1D(
     const ArrayOfIndex& refine,
     const Tensor4& DlogK,
     const Index& N_decade,
-    const ArrayOfIndex& cloudbox_limits,
     const Agenda& propmat_clearsky_agenda,
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
@@ -1150,7 +1145,6 @@ void PrepareSubdomains1D(
  * @param[in] surface_reflection_matrix The reflection coefficients for the directions
  *              given by surface_los to the direction of interest.
  * @param[in] surface_emission The emission from the surface.
- * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
  * @param[in] scat_za_grid Zenith angle grid for the scattering calculation.
  * @param[in] scat_aa_grid Azimuth angle grid for the scattering calculation.
@@ -1186,13 +1180,14 @@ void PrepareSubdomains1D(
  */
 void RunNewDoit(//Input and Output:
     RTDomain& MainDomain,
+    RTDomainScatteringProperties& MainDomainScatteringProperties,
+    ArrayOfRTDomain& Subdomains,
+    ArrayOfRTDomainScatteringProperties& SubdomainsScatteringProperties,
     Index& convergence_flag,
     Index& iteration_counter,
-    RTDomainScatteringProperties& MainDomainScatteringProperties,
     //Input
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
-    const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
     const Numeric& f_mono,
     const String& iy_unit,
@@ -1204,10 +1199,10 @@ void RunNewDoit(//Input and Output:
 /** RT calculation at iteration step
  *
  * @param[in,out] Domain Radiative transfer domain
+ * @param[in,out] Subdomains Radiative transfer  subdomain
  * @param[in] surface_reflection_matrix The reflection coefficients for the directions
  *              given by surface_los to the direction of interest.
  * @param[in] surface_emission The emission from the surface.
- * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] atmosphere_dim The atmospheric dimensionality (1-3).
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
@@ -1215,10 +1210,10 @@ void RunNewDoit(//Input and Output:
  */
 void UpdateSpectralRadianceField(//Input and Output:
     RTDomain& Domain,
+    ArrayOfRTDomain& Subdomains,
     //Input:
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
-    const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
     const Vector& f_grid,
     const Verbosity& verbosity);
@@ -1229,7 +1224,6 @@ void UpdateSpectralRadianceField(//Input and Output:
  * @param[in] surface_reflection_matrix The reflection coefficients for the directions
  *              given by surface_los to the direction of interest.
  * @param[in] surface_emission The emission from the surface.
- * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
  * @param[in] verbosity Verbosity setting.
@@ -1237,6 +1231,28 @@ void UpdateSpectralRadianceField(//Input and Output:
 void UpdateSpectralRadianceField1D(
     //Input and Output:
     RTDomain& Domain,
+    ArrayOfRTDomain& Subdomains,
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const Vector& f_grid,
+    const Verbosity& verbosity);
+
+/** RT calculation for 1D atmosphere at iteration step for one line of sight
+ *
+ * @param[in,out] Domain Radiative transfer domain.
+ * @param[in] i_za zenith angle index.
+ * @param[in] surface_reflection_matrix The reflection coefficients for the directions
+ *              given by surface_los to the direction of interest.
+ * @param[in] surface_emission The emission from the surface.
+ * @param[in] cloudbox_limits The limits of the cloud box.
+ * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
+ *              calculations.
+ * @param[in] verbosity Verbosity setting.
+ */
+void UpdateSpectralRadianceField1DLosOnly(
+    //Input and Output:
+    RTDomain& Domain,
+    const Index& i_za,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
     const ArrayOfIndex& cloudbox_limits,
@@ -1292,7 +1308,6 @@ void UpdateCloudPropagationPath1D(
     const ConstVectorView& f_grid,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
-    const ArrayOfIndex& cloudbox_limits,
     const Verbosity& verbosity);
 
 /** Interpolates fields on propagation path
@@ -1344,7 +1359,6 @@ void InterpolateOnPropagation1D(  //Output
  * @param[in] sca_vec_int Scattered field on propagation path
  * @param[in] cloudbox_field_mono_int Monochromatic radiation field on propagation
  *              path
- * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
  * @param[in] p_index Index of pressure gridpoint
@@ -1363,7 +1377,7 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
                                const ConstMatrixView& abs_vec_int,
                                const ConstMatrixView& sca_vec_int,
                                const ConstMatrixView& cloudbox_field_mono_int,
-                               const ArrayOfIndex& cloudbox_limits,
+                               const Index& atmosphere_dim,
                                const ConstVectorView& f_grid,
                                const Index& p_index,
                                const Index& lat_index,

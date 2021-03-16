@@ -906,7 +906,6 @@ void NewDoitMonoCalc(Workspace& ws,
                      Tensor7& scattering_matrix,
                      Index& convergence_flag,
                      Index& iteration_counter,
-                     const ArrayOfIndex& cloudbox_limits,
                      const Agenda& propmat_clearsky_agenda,
                      const Agenda& surface_rtprop_agenda,
                      const Agenda& ppath_step_agenda,
@@ -1133,7 +1132,6 @@ void NewDoitMonoCalc(Workspace& ws,
                       refine,
                       DlogK,
                       N_decade,
-                      cloudbox_limits,
                       propmat_clearsky_agenda,
                       ppath_step_agenda,
                       ppath_lmax,
@@ -1146,12 +1144,13 @@ void NewDoitMonoCalc(Workspace& ws,
 
   //run new doit
   RunNewDoit(MainRTDomain,
+             MainDomainScatteringProperties,
+             Subdomains,
+             SubdomainsScatteringProperties,
              convergence_flag,
              iteration_counter,
-             MainDomainScatteringProperties,
              surface_reflection_matrix,
              surface_emission,
-             cloudbox_limits,
              atmosphere_dim,
              f_mono,
              iy_unit,
@@ -1519,6 +1518,7 @@ void CalcScatteringProperties(  //Output
   out2 << os.str();
   os.clear();
 
+
   for (Index ilat = 0; ilat < Nlat; ilat++) {
     for (Index ilon = 0; ilon < Nlon; ilon++) {
       pha_mat_NScatElems(  //Output
@@ -1554,10 +1554,11 @@ void CalcScatteringProperties(  //Output
       //as for 1D atmosphere, there is no azimuth dependency of the incoming
       //radiation
       if (atmosphere_dim == 1) {
-        os << "As we have a 1D atmosphere, we can already integrate over \n"
+        ostringstream os1;
+        os1 << "As we have a 1D atmosphere, we can already integrate over \n"
            << "incoming azimuth. \n";
-        out2 << os.str();
-        os.clear();
+        out2 << os1.str();
+        os1.clear();
 
         Tensor5 scat_mat_bulk_ii_temp(
             1, Np, za_grid.nelem(), stokes_dim, stokes_dim);
@@ -1968,7 +1969,6 @@ void PrepareSubdomains(
     const ArrayOfIndex& refine,
     const Tensor4& DlogK,
     const Index& N_decade,
-    const ArrayOfIndex& cloudbox_limits,
     const Agenda& propmat_clearsky_agenda,
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
@@ -1993,7 +1993,6 @@ void PrepareSubdomains(
                         refine,
                         DlogK,
                         N_decade,
-                        cloudbox_limits,
                         propmat_clearsky_agenda,
                         ppath_step_agenda,
                         ppath_lmax,
@@ -2023,7 +2022,6 @@ void PrepareSubdomains1D(
     const ArrayOfIndex& refine,
     const Tensor4& DlogK,
     const Index& N_decade,
-    const ArrayOfIndex& cloudbox_limits,
     const Agenda& propmat_clearsky_agenda,
     const Agenda& ppath_step_agenda,
     const Numeric& ppath_lmax,
@@ -2154,9 +2152,6 @@ void PrepareSubdomains1D(
           verbosity);
 
       //Estimate ppath for the subdomain
-      //TODO: the subdomain has a different pressuregrid that the main domain
-      //This results so far in problems with the ppath calculation, as the ppath
-      //relates everting to the main domain p_grid :(
       EstimatePPathElements1D(ws,
                               Subdomains[il].get_PressureArray(),
                               Subdomains[il].get_TemperatureArray(),
@@ -2208,13 +2203,14 @@ void PrepareSubdomains1D(
 
 void RunNewDoit(  //Input and Output:
     RTDomain& MainDomain,
+    RTDomainScatteringProperties& MainDomainScatteringProperties,
+    ArrayOfRTDomain& Subdomains,
+    ArrayOfRTDomainScatteringProperties& SubdomainsScatteringProperties,
     Index& convergence_flag,
     Index& iteration_counter,
-    RTDomainScatteringProperties& MainDomainScatteringProperties,
     //Input
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
-    const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
     const Numeric& f_mono,
     const String& iy_unit,
@@ -2238,7 +2234,7 @@ void RunNewDoit(  //Input and Output:
     // store cloudbox field, because we need it for the convergence check
     cloudbox_field_mono_old = MainDomain.get_CloudboxField();
 
-    // Calculate the scattered field.
+    // Calculate the scattered field of the main domain.
     out2 << "  Calculate scattering field. \n";
     MainDomainScatteringProperties.CalcScatteredField(
         MainDomain.get_CloudboxScatteringField(),
@@ -2246,13 +2242,23 @@ void RunNewDoit(  //Input and Output:
         atmosphere_dim,
         verbosity);
 
+    // Calculate the scattered field of the sub domains.
+    for (Index i_sub = 0; i_sub < Subdomains.nelem(); i_sub++ ){
+      SubdomainsScatteringProperties[i_sub].CalcScatteredField(
+          Subdomains[i_sub].get_CloudboxScatteringField(),
+          Subdomains[i_sub].get_CloudboxField(),
+          atmosphere_dim,
+          verbosity);
+    }
+
+
     // Update cloudbox_field.
     out2 << "  Execute doit_rte_agenda. \n";
     Vector f_grid(1, f_mono);
     UpdateSpectralRadianceField(MainDomain,
+                                Subdomains,
                                 surface_reflection_matrix,
                                 surface_emission,
-                                cloudbox_limits,
                                 atmosphere_dim,
                                 f_grid,
                                 verbosity);
@@ -2286,18 +2292,18 @@ void RunNewDoit(  //Input and Output:
 
 void UpdateSpectralRadianceField(  //Input and Output:
     RTDomain& Domain,
+    ArrayOfRTDomain& Subdomains,
     //Input:
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
-    const ArrayOfIndex& cloudbox_limits,
     const Index& atmosphere_dim,
     const Vector& f_grid,
     const Verbosity& verbosity) {
   if (atmosphere_dim == 1) {
     UpdateSpectralRadianceField1D(Domain,
+                                  Subdomains,
                                   surface_reflection_matrix,
                                   surface_emission,
-                                  cloudbox_limits,
                                   f_grid,
                                   verbosity);
   } else if (atmosphere_dim == 3) {
@@ -2326,9 +2332,9 @@ void UpdateSpectralRadianceField(  //Input and Output:
 void UpdateSpectralRadianceField1D(
     //Input and Output:
     RTDomain& Domain,
+    ArrayOfRTDomain& Subdomains,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
-    const ArrayOfIndex& cloudbox_limits,
     const Vector& f_grid,
     const Verbosity& verbosity) {
   CREATE_OUT2;
@@ -2370,6 +2376,9 @@ void UpdateSpectralRadianceField1D(
       for (Index i_p = N_p - 2; i_p >= 0; i_p--) {
         const Index idx = subscript2index(i_za, i_p, N_za);
 
+
+
+
         UpdateCloudPropagationPath1D(Domain,
                                      i_p,
                                      i_za,
@@ -2377,7 +2386,6 @@ void UpdateSpectralRadianceField1D(
                                      f_grid,
                                      surface_reflection_matrix,
                                      surface_emission,
-                                     cloudbox_limits,
                                      verbosity);
       }
     } else if (i_za > Domain.get_MaxLimbIndex()) {
@@ -2394,7 +2402,6 @@ void UpdateSpectralRadianceField1D(
                                      f_grid,
                                      surface_reflection_matrix,
                                      surface_emission,
-                                     cloudbox_limits,
                                      verbosity);
       }  // Close loop over p_grid (inside cloudbox).
     }    // end if downlooking.
@@ -2430,7 +2437,6 @@ void UpdateSpectralRadianceField1D(
                                          f_grid,
                                          surface_reflection_matrix,
                                          surface_emission,
-                                         cloudbox_limits,
                                          verbosity);
           }
         }
@@ -2462,6 +2468,141 @@ void UpdateSpectralRadianceField1D(
     }
   }  // Closes loop over za_grid.
 }
+
+void UpdateSpectralRadianceField1DLosOnly(
+    //Input and Output:
+    RTDomain& Domain,
+    const Index& i_za,
+    const ConstTensor6View& surface_reflection_matrix,
+    const ConstTensor5View& surface_emission,
+    const ArrayOfIndex& cloudbox_limits,
+    const Vector& f_grid,
+    const Verbosity& verbosity) {
+  CREATE_OUT2;
+  CREATE_OUT3;
+
+  out2
+      << "  UpdateSpectralRadianceField1D: Radiative transfer calculation in cloudbox\n";
+  out2 << "  ------------------------------------------------------------- \n";
+
+  // Number of zenith angles.
+  const Index N_za = Domain.get_CloudboxField().npages();
+  const Index N_p = Domain.get_CloudboxField().nvitrines();
+  const Index stokes_dim = Domain.get_CloudboxField().ncols();
+
+  // Epsilon for additional limb iterations
+  Vector epsilon(4);
+  epsilon[0] = 0.1;
+  epsilon[1] = 0.01;
+  epsilon[2] = 0.01;
+  epsilon[3] = 0.01;
+
+  Matrix cloudbox_field_limb;
+
+  Index MaxUpwardAngleIndex = int(Numeric(N_za) / 2. - 0.5);
+
+
+
+  // Sequential update (sweep) for up looking angles
+  if (i_za <= MaxUpwardAngleIndex) {
+    // Loop over all positions inside the cloud box defined by the
+    // cloudbox_limits excluding the upper boundary. For uplooking
+    // directions, we start from cloudbox_limits[1]-1 and go down
+    // to cloudbox_limits[0] to do a sequential update of the
+    // radiation field
+    for (Index i_p = N_p - 2; i_p >= 0; i_p--) {
+      const Index idx = subscript2index(i_za, i_p, N_za);
+
+      UpdateCloudPropagationPath1D(Domain,
+                                   i_p,
+                                   i_za,
+                                   idx,
+                                   f_grid,
+                                   surface_reflection_matrix,
+                                   surface_emission,
+                                   verbosity);
+    }
+  } else if (i_za > Domain.get_MaxLimbIndex()) {
+    //
+    // Sequential update (sweep) for down looking angles
+    //
+    for (Index i_p = 0 + 1; i_p <= N_p - 1; i_p++) {
+      const Index idx = subscript2index(i_za, i_p, N_za);
+
+      UpdateCloudPropagationPath1D(Domain,
+                                   i_p,
+                                   i_za,
+                                   idx,
+                                   f_grid,
+                                   surface_reflection_matrix,
+                                   surface_emission,
+                                   verbosity);
+    }
+  }
+
+  //
+  // Limb looking:
+  // We have to include a special case here, as we may miss the endpoints
+  // when the intersection point is at the same level as the aactual point.
+  // To be save we loop over the full cloudbox. Inside the function
+  // cloud_ppath_update1D it is checked whether the intersection point is
+  // inside the cloudbox or not.
+
+  else {
+    bool conv_flag = false;
+    Index limb_it = 0;
+    while (!conv_flag && limb_it < 10) {
+      limb_it++;
+      cloudbox_field_limb =
+          Domain.get_CloudboxField()(joker, 0, 0, i_za, 0, joker);
+      for (Index i_p = 0; i_p <= N_p - 1; i_p++) {
+        // For this case the cloudbox goes down to the surface and we
+        // look downwards. These cases are outside the cloudbox and
+        // not needed. Switch is included here, as ppath_step_agenda
+        // gives an error for such cases.
+
+        if (i_p != 0) {
+          const Index idx = subscript2index(i_za, i_p, N_za);
+
+          UpdateCloudPropagationPath1D(Domain,
+                                       i_p,
+                                       i_za,
+                                       idx,
+                                       f_grid,
+                                       surface_reflection_matrix,
+                                       surface_emission,
+                                       verbosity);
+        }
+      }
+
+      conv_flag = true;
+      for (Index i_p = 0;
+           conv_flag && i_p < Domain.get_CloudboxField().nvitrines();
+           i_p++) {
+        for (Index stokes_index = 0; conv_flag && stokes_index < stokes_dim;
+             stokes_index++) {
+          Numeric diff =
+              Domain.get_CloudboxField()(i_p, 0, 0, i_za, 0, stokes_index) -
+              cloudbox_field_limb(i_p, stokes_index);
+
+          // If the absolute difference of the components
+          // is larger than the pre-defined values, continue with
+          // another iteration
+          Numeric diff_bt = invrayjean(diff, f_grid[0]);
+          if (abs(diff_bt) > epsilon[stokes_index]) {
+            out2 << "Limb BT difference: " << diff_bt << " in stokes dim "
+                 << stokes_index << "\n";
+
+            conv_flag = false;
+          }
+        }
+      }
+    }
+    out2 << "Limb iterations: " << limb_it << "\n";
+  }
+}
+
+
 
 void UpdateSpectralRadianceField3D(Workspace& ws,
                                    // WS Input and Output:
@@ -2495,7 +2636,6 @@ void UpdateCloudPropagationPath1D(
     const ConstVectorView& f_grid,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
-    const ArrayOfIndex& cloudbox_limits,
     const Verbosity& verbosity) {
   Index Npath = Domain.get_PressureArray()[idx].nelem();
   Index Ncloud = Domain.get_CloudboxScatteringField().nvitrines();
@@ -2551,7 +2691,7 @@ void UpdateCloudPropagationPath1D(
                               abs_vec_int,
                               sca_vec_int,
                               cloudbox_field_mono_int,
-                              cloudbox_limits,
+                              1,
                               f_grid,
                               p_index,
                               0,
@@ -2643,7 +2783,7 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
                                const ConstMatrixView& abs_vec_int,
                                const ConstMatrixView& sca_vec_int,
                                const ConstMatrixView& cloudbox_field_mono_int,
-                               const ArrayOfIndex& cloudbox_limits,
+                               const Index& atmosphere_dim,
                                const ConstVectorView& f_grid,
                                const Index& p_index,
                                const Index& lat_index,
@@ -2654,7 +2794,6 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
   CREATE_OUT3;
 
   const Index stokes_dim = cloudbox_field_mono.ncols();
-  const Index atmosphere_dim = cloudbox_limits.nelem() / 2;
   const Index Nppath = pressure_ppath.nelem();
 
   Vector sca_vec_av(stokes_dim, 0);
@@ -2755,8 +2894,8 @@ void RTStepInCloudNoBackground(Tensor6View cloudbox_field_mono,
     cloudbox_field_mono(p_index, 0, 0, za_index, 0, joker) = stokes_vec;
   else if (atmosphere_dim == 3)
     cloudbox_field_mono(p_index,
-                        lat_index - cloudbox_limits[2],
-                        lon_index - cloudbox_limits[4],
+                        lat_index,
+                        lon_index,
                         za_index,
                         aa_index,
                         joker) = stokes_vec;
