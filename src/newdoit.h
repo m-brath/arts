@@ -1244,7 +1244,6 @@ void UpdateSpectralRadianceField1D(
  * @param[in] surface_reflection_matrix The reflection coefficients for the directions
  *              given by surface_los to the direction of interest.
  * @param[in] surface_emission The emission from the surface.
- * @param[in] cloudbox_limits The limits of the cloud box.
  * @param[in] f_grid f_grid The frequency grid for monochromatic pencil beam
  *              calculations.
  * @param[in] verbosity Verbosity setting.
@@ -1255,7 +1254,6 @@ void UpdateSpectralRadianceField1DLosOnly(
     const Index& i_za,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
-    const ArrayOfIndex& cloudbox_limits,
     const Vector& f_grid,
     const Verbosity& verbosity);
 

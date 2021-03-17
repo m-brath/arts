@@ -2103,15 +2103,26 @@ void PrepareSubdomains1D(
                                 MainDomain.get_aa_grid(),
                                 MainDomain.get_AtmosphereDim());
 
-      //allocate
-      Subdomains[il].get_CloudboxField().resize(Nz, 1, 1, N_za, 1, N_st);
-      Subdomains[il].get_CloudboxScatteringField().resize(
-          Nz, 1, 1, N_za, 1, N_st);
-
-
       //cloudbox limits of subfield
       cloudbox_limits_sub[0]=0;
       cloudbox_limits_sub[1]=p_grid_sub.nelem()-1;
+
+      //allocate
+      Subdomains[il].get_CloudboxField().resize(Nz + 1, 1, 1, N_za, 1, N_st);
+      Subdomains[il].get_CloudboxScatteringField().resize(
+          Nz + 1 , 1, 1, N_za, 1, N_st);
+
+      // Interpolate cloudbox_field
+      for ( Index i_za = 0; i_za < N_za; i_za++){
+        for (Index i_sti = 0; i_sti < MainDomain.get_CloudboxField().ncols(); i_sti++){
+
+          interp(Subdomains[il].get_CloudboxField()(joker,0,0,i_za,0,i_sti),
+                 itw,
+                 MainDomain.get_CloudboxField()(joker,0,0,i_za,0,i_sti),
+                 gridpositions_z);
+        }
+      }
+
 
       //interpolate temperature field
       interp(
@@ -2244,11 +2255,13 @@ void RunNewDoit(  //Input and Output:
 
     // Calculate the scattered field of the sub domains.
     for (Index i_sub = 0; i_sub < Subdomains.nelem(); i_sub++ ){
-      SubdomainsScatteringProperties[i_sub].CalcScatteredField(
-          Subdomains[i_sub].get_CloudboxScatteringField(),
-          Subdomains[i_sub].get_CloudboxField(),
-          atmosphere_dim,
-          verbosity);
+      if (Subdomains[i_sub].get_p_grid().nelem()>0){
+        SubdomainsScatteringProperties[i_sub].CalcScatteredField(
+            Subdomains[i_sub].get_CloudboxScatteringField(),
+            Subdomains[i_sub].get_CloudboxField(),
+            atmosphere_dim,
+            verbosity);
+      }
     }
 
 
@@ -2360,6 +2373,9 @@ void UpdateSpectralRadianceField1D(
 
   Index MaxUpwardAngleIndex = int(Numeric(N_za) / 2. - 0.5);
 
+  bool subdomain_flag = Subdomains.nelem();
+  bool subtransport_flag;
+
   //Loop over all directions, defined by za_grid
   for (Index i_za = 0; i_za < N_za; i_za++) {
     //======================================================================
@@ -2376,17 +2392,34 @@ void UpdateSpectralRadianceField1D(
       for (Index i_p = N_p - 2; i_p >= 0; i_p--) {
         const Index idx = subscript2index(i_za, i_p, N_za);
 
+        subtransport_flag = false;
 
+        // check for sub transport
+        if (subdomain_flag) {
+          subtransport_flag = Subdomains[i_p].get_p_grid().nelem() > 0;
+        }
 
+        if (subdomain_flag && subtransport_flag) {
+          UpdateSpectralRadianceField1DLosOnly(Subdomains[i_p],
+                                               i_za,
+                                               surface_reflection_matrix,
+                                               surface_emission,
+                                               f_grid,
+                                               verbosity);
 
-        UpdateCloudPropagationPath1D(Domain,
-                                     i_p,
-                                     i_za,
-                                     idx,
-                                     f_grid,
-                                     surface_reflection_matrix,
-                                     surface_emission,
-                                     verbosity);
+          Domain.get_CloudboxField()(i_p, 0, 0, i_za, 0, joker) =
+              Subdomains[i_p].get_CloudboxField()(0, 0, 0, i_za, 0, joker);
+
+        } else {
+          UpdateCloudPropagationPath1D(Domain,
+                                       i_p,
+                                       i_za,
+                                       idx,
+                                       f_grid,
+                                       surface_reflection_matrix,
+                                       surface_emission,
+                                       verbosity);
+        }
       }
     } else if (i_za > Domain.get_MaxLimbIndex()) {
       //
@@ -2395,14 +2428,40 @@ void UpdateSpectralRadianceField1D(
       for (Index i_p = 0 + 1; i_p <= N_p - 1; i_p++) {
         const Index idx = subscript2index(i_za, i_p, N_za);
 
-        UpdateCloudPropagationPath1D(Domain,
-                                     i_p,
-                                     i_za,
-                                     idx,
-                                     f_grid,
-                                     surface_reflection_matrix,
-                                     surface_emission,
-                                     verbosity);
+        subtransport_flag = false;
+
+        // check for sub transport
+        if (subdomain_flag) {
+          subtransport_flag = Subdomains[i_p - 1].get_p_grid().nelem() > 0;
+        }
+
+        if (subdomain_flag && subtransport_flag) {
+          UpdateSpectralRadianceField1DLosOnly(Subdomains[i_p - 1],
+                                               i_za,
+                                               surface_reflection_matrix,
+                                               surface_emission,
+                                               f_grid,
+                                               verbosity);
+
+          Domain.get_CloudboxField()(i_p, 0, 0, i_za, 0, joker) =
+              Subdomains[i_p-1].get_CloudboxField()(
+                  Subdomains[i_p-1].get_p_grid().nelem() - 1,
+                  0,
+                  0,
+                  i_za,
+                  0,
+                  joker);
+
+        } else {
+          UpdateCloudPropagationPath1D(Domain,
+                                       i_p,
+                                       i_za,
+                                       idx,
+                                       f_grid,
+                                       surface_reflection_matrix,
+                                       surface_emission,
+                                       verbosity);
+        }
       }  // Close loop over p_grid (inside cloudbox).
     }    // end if downlooking.
 
@@ -2430,14 +2489,40 @@ void UpdateSpectralRadianceField1D(
           if (i_p != 0) {
             const Index idx = subscript2index(i_za, i_p, N_za);
 
-            UpdateCloudPropagationPath1D(Domain,
-                                         i_p,
-                                         i_za,
-                                         idx,
-                                         f_grid,
-                                         surface_reflection_matrix,
-                                         surface_emission,
-                                         verbosity);
+            subtransport_flag = false;
+
+            // check for sub transport
+            if (subdomain_flag) {
+              subtransport_flag = Subdomains[i_p - 1].get_p_grid().nelem() > 0;
+            }
+
+            if (subdomain_flag && subtransport_flag) {
+              UpdateSpectralRadianceField1DLosOnly(Subdomains[i_p - 1],
+                                                   i_za,
+                                                   surface_reflection_matrix,
+                                                   surface_emission,
+                                                   f_grid,
+                                                   verbosity);
+
+              Domain.get_CloudboxField()(i_p, 0, 0, i_za, 0, joker) =
+                  Subdomains[i_p-1].get_CloudboxField()(
+                      Subdomains[i_p-1].get_p_grid().nelem() - 1,
+                      0,
+                      0,
+                      i_za,
+                      0,
+                      joker);
+
+            } else {
+              UpdateCloudPropagationPath1D(Domain,
+                                           i_p,
+                                           i_za,
+                                           idx,
+                                           f_grid,
+                                           surface_reflection_matrix,
+                                           surface_emission,
+                                           verbosity);
+            }
           }
         }
 
@@ -2475,15 +2560,14 @@ void UpdateSpectralRadianceField1DLosOnly(
     const Index& i_za,
     const ConstTensor6View& surface_reflection_matrix,
     const ConstTensor5View& surface_emission,
-    const ArrayOfIndex& cloudbox_limits,
     const Vector& f_grid,
     const Verbosity& verbosity) {
   CREATE_OUT2;
   CREATE_OUT3;
 
-  out2
+  out3
       << "  UpdateSpectralRadianceField1D: Radiative transfer calculation in cloudbox\n";
-  out2 << "  ------------------------------------------------------------- \n";
+  out3 << "  ------------------------------------------------------------- \n";
 
   // Number of zenith angles.
   const Index N_za = Domain.get_CloudboxField().npages();
@@ -2590,7 +2674,7 @@ void UpdateSpectralRadianceField1DLosOnly(
           // another iteration
           Numeric diff_bt = invrayjean(diff, f_grid[0]);
           if (abs(diff_bt) > epsilon[stokes_index]) {
-            out2 << "Limb BT difference: " << diff_bt << " in stokes dim "
+            out3 << "Limb BT difference: " << diff_bt << " in stokes dim "
                  << stokes_index << "\n";
 
             conv_flag = false;
@@ -2598,7 +2682,7 @@ void UpdateSpectralRadianceField1DLosOnly(
         }
       }
     }
-    out2 << "Limb iterations: " << limb_it << "\n";
+    out3 << "Limb iterations: " << limb_it << "\n";
   }
 }
 
