@@ -2067,8 +2067,13 @@ void PrepareSubdomains1D(
   //3D it would be N_za*N_aa
   Index N_idir = MainDomainScatteringProperties.get_ScatteringMatrix().npages();
 
+  Index counter=0;
+
   for (Index il = 0; il < Nlayers; il++) {
     if (refine[il]) {
+
+      counter++;
+
       // Get the number of sublayers, we want to have for the subdomain
       Nz = Index(ceil(DlogK(il, 0, 0, 0) * Numeric(N_decade)) + 1);
 
@@ -2207,7 +2212,7 @@ void PrepareSubdomains1D(
     }
   }
 
-  os << "subdomain prepared \n";
+  os << counter << " subdomains prepared \n";
   out0 << os.str();
   os.clear();
 }
@@ -2378,12 +2383,13 @@ void UpdateSpectralRadianceField1D(
 
   //Loop over all directions, defined by za_grid
   for (Index i_za = 0; i_za < N_za; i_za++) {
-    //======================================================================
-    // Radiative transfer inside the cloudbox
-    //=====================================================================
 
-    // Sequential update for uplooking angles
+
+
     if (i_za <= MaxUpwardAngleIndex) {
+      // Sequential update for uplooking angles
+      // sweep the transport through the domain in downward direction
+
       // Loop over all positions inside the cloud box defined by the
       // cloudbox_limits excluding the upper boundary. For uplooking
       // directions, we start from cloudbox_limits[1]-1 and go down
@@ -2400,6 +2406,11 @@ void UpdateSpectralRadianceField1D(
         }
 
         if (subdomain_flag && subtransport_flag) {
+
+          Subdomains[i_p].get_CloudboxField()(
+              Subdomains[i_p].get_p_grid().nelem() - 1, 0, 0, i_za, 0, joker) =
+              Domain.get_CloudboxField()(i_p + 1, 0, 0, i_za, 0, joker);
+
           UpdateSpectralRadianceField1DLosOnly(Subdomains[i_p],
                                                i_za,
                                                surface_reflection_matrix,
@@ -2422,10 +2433,10 @@ void UpdateSpectralRadianceField1D(
         }
       }
     } else if (i_za > Domain.get_MaxLimbIndex()) {
-      //
       // Sequential updating for downlooking angles
+      // sweep the transport through the domain in upward direction
       //
-      for (Index i_p = 0 + 1; i_p <= N_p - 1; i_p++) {
+      for (Index i_p = 1; i_p <= N_p - 1; i_p++) {
         const Index idx = subscript2index(i_za, i_p, N_za);
 
         subtransport_flag = false;
@@ -2436,6 +2447,11 @@ void UpdateSpectralRadianceField1D(
         }
 
         if (subdomain_flag && subtransport_flag) {
+
+          Subdomains[i_p-1].get_CloudboxField()(
+              0, 0, 0, i_za, 0, joker) =
+              Domain.get_CloudboxField()(i_p - 1, 0, 0, i_za, 0, joker);
+
           UpdateSpectralRadianceField1DLosOnly(Subdomains[i_p - 1],
                                                i_za,
                                                surface_reflection_matrix,
@@ -2462,18 +2478,16 @@ void UpdateSpectralRadianceField1D(
                                        surface_emission,
                                        verbosity);
         }
-      }  // Close loop over p_grid (inside cloudbox).
-    }    // end if downlooking.
-
-    //
-    // Limb looking:
-    // We have to include a special case here, as we may miss the endpoints
-    // when the intersection point is at the same level as the aactual point.
-    // To be save we loop over the full cloudbox. Inside the function
-    // cloud_ppath_update1D it is checked whether the intersection point is
-    // inside the cloudbox or not.
+      }
+    }
 
     else {
+      // Limb looking:
+      // We have to include a special case here, as we may miss the endpoints
+      // when the intersection point is at the same level as the aactual point.
+      // To be save we loop over the full cloudbox. Inside the function
+      // cloud_ppath_update1D it is checked whether the intersection point is
+      // inside the cloudbox or not.
       bool conv_flag = false;
       Index limb_it = 0;
       while (!conv_flag && limb_it < 10) {
@@ -2497,6 +2511,11 @@ void UpdateSpectralRadianceField1D(
             }
 
             if (subdomain_flag && subtransport_flag) {
+
+              Subdomains[i_p-1].get_CloudboxField()(
+                  0, 0, 0, i_za, 0, joker) =
+                  Domain.get_CloudboxField()(i_p - 1, 0, 0, i_za, 0, joker);
+
               UpdateSpectralRadianceField1DLosOnly(Subdomains[i_p - 1],
                                                    i_za,
                                                    surface_reflection_matrix,
