@@ -1258,7 +1258,7 @@ class StokesVector final : public PropagationMatrix {
 
   /** Construct a new Stokes Vector object
    *
-   * @param x Single Stokes vector
+   * @param x Spectrum of Stokes vector
    */
     explicit StokesVector(ConstMatrixView x) {
       mfreqs = x.nrows();

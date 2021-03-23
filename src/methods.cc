@@ -6657,6 +6657,23 @@ void define_md_data_raw() {
       GIN_DESC("Constant Xsec value")));
 
   md_data_raw.push_back(create_mdrecord(
+      NAME("gas_scatteringMatrixIsotropic"),
+      DESCRIPTION(
+          "Calculates the spectrum of normalized scattering matrices.\n"),
+      AUTHORS("Manfred Brath"),
+      OUT("sca_mat"),
+      GOUT(),
+      GOUT_TYPE(),
+      GOUT_DESC(),
+      IN("sca_mat",
+         "f_grid",
+         "stokes_dim"),
+      GIN(),
+      GIN_TYPE(),
+      GIN_DEFAULT(),
+      GIN_DESC()));
+
+  md_data_raw.push_back(create_mdrecord(
       NAME("g0Earth"),
       DESCRIPTION(
           "Gravity at zero altitude on Earth.\n"
