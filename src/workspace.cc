@@ -3895,7 +3895,7 @@ void Workspace::define_wsv_data() {
           "Units: [ 1 ]\n"
           "\n"
           "Size:  [fgrid, stokes_dim, stokes_dim]\n"),
-      GROUP("PropagationMatrix")));
+      GROUP("TransmissionMatrix")));
 
   wsv_data.push_back(WsvRecord(
       NAME("scat_data"),
