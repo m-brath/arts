@@ -4733,6 +4733,17 @@ void Workspace::define_wsv_data() {
       GROUP("Index")));
 
   wsv_data.push_back(WsvRecord(
+      NAME("stars"),
+      DESCRIPTION("Array of Star.\n"
+                  "\n"
+                  "This variable describes a list of stars.\n"
+                  "Each star is described by a struct with its spectrum, radius,\n"
+                  "distance from center of planet to center of star,\n"
+                  "temperature (if possible), latitude in the sky of the planet,\n"
+                  "longitude in the sky of the planet and the type\n"),
+      GROUP("ArrayOfStar")));
+
+  wsv_data.push_back(WsvRecord(
       NAME("star_pos"),
       DESCRIPTION(
           "Geographical positions of the star(s)\n"

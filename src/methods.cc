@@ -18142,8 +18142,8 @@ void define_md_data_raw() {
                "Default value is set to 1 a.u.\n",
                "The effective temperature of the stars photosphere in Kelvin.\n"
                "Default is the temperature of our sun - 5772 Kelvin\n",
-               "The latitude or the azimuthal position of the star in the sky.\n",
-               "The longitude or zenith position of the star in the sky.\n")));
+               "The latitude or the zenith position of the star in the sky.\n",
+               "The longitude or azimuthal position of the star in the sky.\n")));
 
   md_data_raw.push_back(create_mdrecord(
       NAME("starOff"),
