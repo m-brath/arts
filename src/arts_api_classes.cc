@@ -615,6 +615,24 @@ void printArrayOfPpath(void *) {std::cout << std::endl;}
 BasicInputOutputCAPI(ArrayOfPpath)
 
 
+// Star
+// BasicInterfaceCAPI(Star)
+void * createStar() {return new Star;}
+void deleteStar(void * data) {delete static_cast<Star *>(data);}
+void printStar(void * data) {std::cout << *static_cast<Star *>(data) << std::endl;}
+BasicInputOutputCAPI(Star)
+VoidStructGetterCAPI(Star, description)
+VoidStructGetterCAPI(Star, spectrum)
+VoidStructGetterCAPI(Star, radius)
+VoidStructGetterCAPI(Star, distance)
+VoidStructGetterCAPI(Star, latitude)
+VoidStructGetterCAPI(Star, longitude)
+VoidArrayCAPI(ArrayOfStar)
+void * createArrayOfStar() {return new ArrayOfStar;}
+void deleteArrayOfStar(void * data) {delete static_cast<ArrayOfStar *>(data);}
+void printArrayOfStar(void * data) {std::cout << *static_cast<ArrayOfStar *>(data) << std::endl;}
+BasicInputOutputCAPI(ArrayOfStar)
+
 // TransmissionMatrix
 BasicInterfaceCAPI(TransmissionMatrix)
 BasicInputOutputCAPI(TransmissionMatrix)

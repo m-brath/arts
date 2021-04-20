@@ -456,6 +456,19 @@ extern "C" {
     BasicInterfaceCAPI(ArrayOfPpath)
     BasicInputOutputCAPI(ArrayOfPpath)
     
+    // Star
+    BasicInterfaceCAPI(Star)
+    BasicInputOutputCAPI(Star)
+    VoidStructGetterCAPI(Star, description)
+    VoidStructGetterCAPI(Star, spectrum)
+    VoidStructGetterCAPI(Star, radius)
+    VoidStructGetterCAPI(Star, distance)
+    VoidStructGetterCAPI(Star, latitude)
+    VoidStructGetterCAPI(Star, longitude)
+    VoidArrayCAPI(ArrayOfStar)
+    BasicInterfaceCAPI(ArrayOfStar)
+    BasicInputOutputCAPI(ArrayOfStar)
+
     // TransmissionMatrix
     BasicInterfaceCAPI(TransmissionMatrix)
     BasicInputOutputCAPI(TransmissionMatrix)
