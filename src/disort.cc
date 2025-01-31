@@ -62,11 +62,17 @@ void add_normed_phase_functions(Tensor3View pfct1,
 
   for (Index i = 0; i < np1; i++) {        // frequncy loop
     for (Index j = 0; j < nr1 ; j++) {  // layer loop
-      for (Index k = 0; k < nc1; k++)      // polynomial loop
 
-        pfct1(i, j, k) =
-            (sca1(i, j) * pfct1(i, j, k) + sca2(i, j) * pfct2(j, k)) /
-            (sca1(i, j) + sca2(i, j));
+      // add only if at least one scattering coefficient is > 0
+      if (sca1(i, j) + sca2(i, j)>0) {
+        for (Index k = 0; k < nc1; k++)      // polynomial loop
+
+          pfct1(i, j, k) =
+              (sca1(i, j) * pfct1(i, j, k) + sca2(i, j) * pfct2(j, k)) /
+              (sca1(i, j) + sca2(i, j));
+      } else {
+        pfct1(i, j, joker) = 0;
+      }
     }
   }
 }
