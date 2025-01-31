@@ -7337,6 +7337,26 @@ R"(
       GIN_DESC("Constant Xsec value")));
 
   md_data_raw.push_back(create_mdrecord(
+      NAME("gas_scattering_coefConst"),
+      DESCRIPTION(
+          "Calculates the spectrum of scattering coefficient matrices.\n"
+          "\n"
+          "It calculates the spectrum of scattering coefficient matrices from \n"
+          "constant scattering coeffcicient between the lower and upper pressure limit.\n"),
+      AUTHORS("Manfred Brath"),
+      OUT("gas_scattering_coef"),
+      GOUT(),
+      GOUT_TYPE(),
+      GOUT_DESC(),
+      IN("f_grid", "stokes_dim", "rtp_pressure"),
+      GIN("ConstCoeff", "lower_limit", "upper_limit"),
+      GIN_TYPE("Numeric", "Numeric", "Numeric"),
+      GIN_DEFAULT(NODEF, "0.", "Inf"),
+      GIN_DESC("Constant Xsec value",
+               "Lower pressure limit",
+               "Upper pressure limit")));
+
+  md_data_raw.push_back(create_mdrecord(
       NAME("gas_scattering_matIsotropic"),
       DESCRIPTION(
           "Calculates the spectrum of normalized scattering matrices.\n"
