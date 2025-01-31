@@ -45,13 +45,41 @@ void gas_scatteringOff(Workspace& ws,
 
 /* Workspace method: Doxygen documentation will be auto-generated */
 void gas_scattering_coefXsecConst(PropagationMatrix& gas_scattering_coef,
-                                 const Vector& f_grid,
-                                 const Numeric& rtp_pressure,
-                                 const Numeric& rtp_temperature,
-                                 const Index& stokes_dim,
-                                 const Numeric& ConstXsec,
-                                 const Verbosity&) {
-  gas_scattering_coef = PropagationMatrix(f_grid.nelem(), stokes_dim, 1, 1, ConstXsec * number_density(rtp_pressure, rtp_temperature));
+                                  const Vector& f_grid,
+                                  const Numeric& rtp_pressure,
+                                  const Numeric& rtp_temperature,
+                                  const Index& stokes_dim,
+                                  const Numeric& ConstXsec,
+                                  const Verbosity&) {
+  gas_scattering_coef = PropagationMatrix(
+      f_grid.nelem(),
+      stokes_dim,
+      1,
+      1,
+      ConstXsec * number_density(rtp_pressure, rtp_temperature));
+}
+
+/* Workspace method: Doxygen documentation will be auto-generated */
+void gas_scattering_coefConst(PropagationMatrix& gas_scattering_coef,
+                              const Vector& f_grid,
+                              const Index& stokes_dim,
+                              const Numeric& rtp_pressure,
+                              const Numeric& ConstCoeff,
+                              const Numeric& lower_limit,
+                              const Numeric& upper_limit,
+                              const Verbosity&) {
+
+
+
+  if (lower_limit <= rtp_pressure && rtp_pressure <= upper_limit) {
+    gas_scattering_coef =
+      PropagationMatrix(f_grid.nelem(), stokes_dim, 1, 1, ConstCoeff);
+  }
+  else {
+    gas_scattering_coef =
+      PropagationMatrix(f_grid.nelem(), stokes_dim, 1, 1, 0);
+  }
+
 }
 
 /* Workspace method: Doxygen documentation will be auto-generated */
