@@ -34,6 +34,7 @@ if (NOT ENABLE_ARTS_LGPL)
 endif()
 
 arts_test_run_pyfile(fast artscomponents/refractiveindex/Test_refr_index_waterVisibleNIR.py)
+arts_test_run_pyfile(fast artscomponents/psd/Test_psdCOSMOIce.py)
 arts_test_run_pyfile(fast artscomponents/surface/Test_iySurfaceFlatReflectivity.py)
 arts_test_run_pyfile(fast artscomponents/surface/Test_iySurfaceFlatRefractiveIndex.py)
 if (NOT ENABLE_ARTS_LGPL)
