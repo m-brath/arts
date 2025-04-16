@@ -1235,6 +1235,8 @@ void psd_quasi_monodisperse(Vector& psd,
                             const Numeric& T0) {
   const Index nsi = psd.nelem();
 
+  const Numeric N_tot = N0 * std::exp(b * (-T + T0));
+
   for (Index i = 0; i < nsi; i++) {
     psd[i] =
         (1.0 / 2.0) * std::numbers::sqrt2 *
@@ -1244,7 +1246,8 @@ void psd_quasi_monodisperse(Vector& psd,
                                        std::exp(-1.0 / 3.0 * b * (-T + T0))),
                           2) /
                  std::pow(sigma, 2)) /
-        (std::sqrt(PI) * d_m[i] * sigma);
+        (std::sqrt(PI) * d_m[i] * sigma) *
+          N_tot ;
 
     // Calculate derivative with respect to q if requested
     if (dpsd_dx.nelem()) {
