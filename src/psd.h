@@ -305,6 +305,7 @@ void psd_MY05(Vector& psd,
  *                            to atmospheric ice water content.
  * @param[in]  d_m            size of the scattering elements (supposed to be maximum
  *                            diameter of the ice particles).
+ * @param d_mean              mean diameter
  * @param[in]  sigma          Standard deviation of the log-normal distribution.
  * @param[in]  q              Atmospheric ice water content [kg/m^3].
  * @param[in]  N0             Intercept parameter.
@@ -316,6 +317,7 @@ void psd_MY05(Vector& psd,
 void psd_quasi_monodisperse(Vector& psd,
                             Vector& dpsd_dx,
                             const Vector& d_m,
+                            const Numeric& d_mean,
                             const Numeric& sigma,
                             const Numeric& q,
                             const Numeric& N0,

@@ -1226,6 +1226,7 @@ void psd_MY05(Vector& psd,
 void psd_quasi_monodisperse(Vector& psd,
                             Vector& dpsd_dx,
                             const Vector& d_m,
+                            const Numeric& d_mean,
                             const Numeric& sigma,
                             const Numeric& q,
                             const Numeric& N0,
@@ -1235,7 +1236,17 @@ void psd_quasi_monodisperse(Vector& psd,
                             const Numeric& T0) {
   const Index nsi = psd.nelem();
 
-  const Numeric N_tot = N0 * std::exp(b * (-T + T0));
+  // We normalize the psd, so that the mass-density is conserved compared to original
+  // COSMO scheme but not the number density
+
+  // Mean of log normal
+  const Numeric mu = std::log(d_mean) - 0.5 * std::pow(sigma, 2);
+
+  // Calculate the mean mass of the distribution using the third moment of the log-normal
+  const Numeric m_mean = std::exp(3*mu + (9*std::pow(sigma,2)/2)) * a;
+
+  // Calculate normalization constant for the psd equivalent to total number density
+  const Numeric  N_tot = q/m_mean;
 
   for (Index i = 0; i < nsi; i++) {
     psd[i] =
@@ -1250,12 +1261,30 @@ void psd_quasi_monodisperse(Vector& psd,
           N_tot ;
 
     // Calculate derivative with respect to q if requested
+    // Derivative was calculated and converted to C++ using sympy
     if (dpsd_dx.nelem()) {
-      dpsd_dx[i] = (1.0 / 3.0) *
-                        ((1.0 / 2.0) * std::pow(sigma, 2) + std::log(d_m[i]) -
-                         std::log(std::cbrt(q / (N0 * a)) *
-                                  std::exp(-1.0 / 3.0 * b * (-T + T0)))) /
-                        (q * std::pow(sigma, 2)) * psd[i];
+      dpsd_dx[i] =
+          (1.0 / 2.0) * M_SQRT2 *
+              std::exp(
+                  -1.0 / 2.0 *
+                  std::pow((1.0 / 2.0) * std::pow(sigma, 2) + std::log(d_m[i]) -
+                               std::log(std::cbrt(q / (N0 * a)) *
+                                        std::exp(-1.0 / 3.0 * b * (-T + T0))),
+                           2) /
+                  std::pow(sigma, 2)) /
+              (std::sqrt(M_PI) * d_m[i] * m_mean * sigma) +
+          (1.0 / 6.0) * M_SQRT2 *
+              ((1.0 / 2.0) * std::pow(sigma, 2) + std::log(d_m[i]) -
+               std::log(std::cbrt(q / (N0 * a)) *
+                        std::exp(-1.0 / 3.0 * b * (-T + T0)))) *
+              std::exp(
+                  -1.0 / 2.0 *
+                  std::pow((1.0 / 2.0) * std::pow(sigma, 2) + std::log(d_m[i]) -
+                               std::log(std::cbrt(q / (N0 * a)) *
+                                        std::exp(-1.0 / 3.0 * b * (-T + T0))),
+                           2) /
+                  std::pow(sigma, 2)) /
+              (std::sqrt(M_PI) * d_m[i] * m_mean * std::pow(sigma, 3));
     }
   }
 }

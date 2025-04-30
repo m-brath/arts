@@ -714,7 +714,7 @@ void psdCOSMOIce(Matrix& psd_data,
     }
 
     psd_quasi_monodisperse(
-        psd, dpsd_dIWC, psd_size_grid, std_log, IWC, N_0, a, b, t, t0);
+        psd, dpsd_dIWC, psd_size_grid, d_mean, std_log, IWC, N_0, a, b, t, t0);
 
     psd_data(ip, joker) = psd;
 
