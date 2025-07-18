@@ -307,7 +307,6 @@ void disort_settingsNoLegendre(DisortSettings& disort_settings) {
       "Must have at least one Legendre mode to use the Legendre coefficients.")
 
   disort_settings.legendre_coefficients                  = 0.0;
-  disort_settings.legendre_coefficients[joker, joker, 0] = 1.0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

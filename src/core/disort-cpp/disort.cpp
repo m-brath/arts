@@ -580,11 +580,11 @@ void main_data::check_input_value() const {
   ARTS_USER_ERROR_IF(
       stdr::any_of(Leg_coeffs_all,
                    [](auto&& x) {
-                     return x[0] != 1 or stdr::any_of(x, [](auto&& u) {
+                     return stdr::any_of(x, [](auto&& u) {
                               return std::abs<Numeric>(u) > 1;
                             });
                    }),
-      "Leg_coeffs_all must have 1 in the first column and be [-1, 1] elsewhere, got {:B,}",
+      "Leg_coeffs_all must be [-1, 1], got {:B,}",
       Leg_coeffs_all);
 
   ARTS_USER_ERROR_IF(I0 < 0, "I0 must be non-negative, got {}", I0);
