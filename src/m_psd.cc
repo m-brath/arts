@@ -629,6 +629,100 @@ void psdModifiedGammaMassSingleMoment(
   ===========================================================================*/
 
 /* Workspace method: Doxygen documentation will be auto-generated */
+void psdCOSMOIce(Matrix& psd_data,
+                 Tensor3& dpsd_data_dx,
+                 const Vector& psd_size_grid,
+                 const Vector& pnd_agenda_input_t,
+                 const Matrix& pnd_agenda_input,
+                 const ArrayOfString& pnd_agenda_input_names,
+                 const ArrayOfString& dpnd_data_dx_names,
+                 const Numeric& t_min,
+                 const Numeric& t_max,
+                 const Numeric& sigma,
+                 const Index& picky,
+                 const Verbosity&) {
+  // Standard checks
+  START_OF_PSD_METHODS();
+
+  // Additional (basic) checks
+  ARTS_USER_ERROR_IF(nin != 1,
+                     "The number of columns in *pnd_agenda_input* must "
+                     "be 1 ");
+
+  if (psd_size_grid[0] < std::numeric_limits<Numeric>::epsilon()) {
+    ARTS_USER_ERROR_IF(
+        psd_size_grid.nelem() < 3,
+        "psd_size_grid has only one element which is 0. This is not allowed.");
+  }
+
+  const Numeric a = 130;      // kg/m^3 density times (pi/6)
+  const Numeric t0 = 273.25;  // K
+  const Numeric b = 0.2;      // 1/K
+  const Numeric N_0 = 1e2;    // #/m^3
+
+  Numeric std_log = sigma;
+  Vector psd(nsi);
+  Vector dpsd_dIWC;
+  if (ndx) {
+    dpsd_dIWC.resize(nsi);
+  }
+
+  for (Index ip = 0; ip < np; ip++) {
+    const Numeric t = pnd_agenda_input_t[ip];
+
+    if ((t < t_min) || (t > t_max)) {
+      ARTS_USER_ERROR_IF(
+          picky,
+          "Method called with a temperature of ",
+          t,
+          " K.\n"
+          "This is outside the specified allowed range: [ max(0.,",
+          t_min,
+          "), ",
+          t_max,
+          " ]")
+      continue;
+    }
+
+    // Extract the input variables
+    const Numeric IWC = pnd_agenda_input(ip, 0);
+    const Numeric d_mean =
+        std::pow(IWC / (N_0 * a), 1.0 / 3.0) * std::exp(-b * (-t + t0) / 3.0);
+
+    if (sigma <= 0) {
+      // get the closest size to d_mean
+      std::vector<Numeric> ratio(psd_size_grid.size());  // ratio of d to d_mean
+      for (Index i = 0; i < psd_size_grid.size(); i++) {
+        ratio[i] = std::abs(std::log10(psd_size_grid[i] / d_mean));
+      }
+      auto min_iter = std::ranges::min_element(ratio);
+      const size_t idx = std::distance(ratio.begin(), min_iter);
+
+      if (idx == 0) {
+        std_log = std::log(psd_size_grid[1] / psd_size_grid[0]);
+      } else if (idx == static_cast<size_t>(psd_size_grid.size() - 1)) {
+        std_log = std::log(psd_size_grid[psd_size_grid.size() - 1] /
+                           psd_size_grid[psd_size_grid.size() - 2]);
+      } else {
+        std_log =
+            std::max(std::log(psd_size_grid[idx] / psd_size_grid[idx - 1]),
+                     std::log(psd_size_grid[idx + 1] / psd_size_grid[idx]));
+      }
+    }
+
+    psd_quasi_monodisperse(
+        psd, dpsd_dIWC, psd_size_grid, std_log, IWC, N_0, a, b, t, t0);
+
+    psd_data(ip, joker) = psd;
+
+    if (ndx) {
+      dpsd_data_dx(0, ip, joker) = dpsd_dIWC;
+    }
+  }
+}
+
+
+/* Workspace method: Doxygen documentation will be auto-generated */
 void psdDelanoeEtAl14(Matrix& psd_data,
                          Tensor3& dpsd_data_dx,
                          const Vector& psd_size_grid,

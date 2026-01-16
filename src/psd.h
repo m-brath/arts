@@ -294,6 +294,35 @@ void psd_MY05(Vector& psd,
               const Numeric WC,
               const String psd_type);
 
+/**
+ * Calculates the particle size distribution for a quasi-monodisperse distribution.
+ * It is used for the calculation of the particle size distribution for the COSMO
+ * cloud ice scheme
+ *
+ * @param[out] psd            Particle size distribution data.
+ * @param[out] dpsd_dx        Derivative of the particle size distribution with respect
+ *                            to atmospheric ice water content.
+ * @param[in]  d_m            size of the scattering elements (supposed to be maximum
+ *                            diameter of the ice particles).
+ * @param[in]  sigma          Standard deviation of the log-normal distribution.
+ * @param[in]  q              Atmospheric ice water content [kg/m^3].
+ * @param[in]  N0             Intercept parameter.
+ * @param[in]  a              Coefficient for the mass-dimension relationship.
+ * @param[in]  b              Slope for temperature dependency.
+ * @param[in]  T              Temperature.
+ * @param[in]  T0             Reference temperature.
+ */
+void psd_quasi_monodisperse(Vector& psd,
+                            Vector& dpsd_dx,
+                            const Vector& d_m,
+                            const Numeric& sigma,
+                            const Numeric& q,
+                            const Numeric& N0,
+                            const Numeric& a,
+                            const Numeric& b,
+                            const Numeric& T,
+                            const Numeric& T0);
+
 /** Derives Dm from IWC and N0star
  *
  * For definition of Dm and N0star follows the DARDAR PSD.

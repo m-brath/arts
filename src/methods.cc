@@ -14673,6 +14673,64 @@ approximations.   Change the value of no_negatives to 0 to allow these negative 
           "Flag whether to be strict with parametrization value checks.")));
 
   md_data_raw.push_back(create_mdrecord(
+      NAME("psdCOSMOIce"),
+      DESCRIPTION(
+       "COSMO particle size distribution for cloud ice. \n"
+       "\n"
+       "This psd mimics the COSMO ice scheme. The actual COSMO scheme is a\n"
+       "temperature depending monodispersesive PSD. Here we mimic the by a\n"
+       "log-normal distribution around the actual particulate size.\n"
+       "The width of the distribution is given by the parameter sigma.\n"
+       "By default, the sigma is set automatically so that three "
+       "*psd_size_grid* points are within one sigma around the particulate size\n"
+       "of the actual COSMO ice scheme!\n"
+       "This is a 1-parameter PSD, i.e. *pnd_agenda_input* shall have one\n"
+       "column and *pnd_agenda_input_names* shall contain a single string.\n"
+       "The input data in *pnd_agenda_input* shall be ice hydrometeor mass\n"
+       "content in unit of [kg/m3]. The naming used is *pnd_agenda_input_names*\n"
+       "is free but the same name must be used in *particle_bulkprop_names* and\n"
+       "*dpnd_data_dx_names*.\n"
+       "\n"
+       "*psd_size_grid* shall contain size in terms of maximum diameter.\n"
+       "\n"
+      "Derivatives are obtained by analytically.\n"
+      "\n"
+      "The validity range of mass content is not limited. Negative mass\n"
+      "contents will produce negative psd values following a distribution\n"
+      "given by abs(IWC), ie. abs(psd)=f(abs(IWC)).\n"
+      "\n"
+      "If temperature is outside [``t_min``,``t_max``] psd=0 and dpsd=0 if\n"
+      "picky=0, or an error is thrown if picky=1.\n"
+      "\n"
+      "Important, due to the finite sampling of the psd, the resulting expectation\n"
+      "value of the diameter can deviate from the actual COSMO ice scheme. The finer \n"
+      " the *psd_size_grid* the better the approximation.\n"),
+      AUTHORS("Manfred Brath"),
+      OUT("psd_data", "dpsd_data_dx"),
+      GOUT(),
+      GOUT_TYPE(),
+      GOUT_DESC(),
+      IN("psd_size_grid",
+         "pnd_agenda_input_t",
+         "pnd_agenda_input",
+         "pnd_agenda_input_names",
+         "dpnd_data_dx_names"),
+      GIN("t_min",
+          "t_max",
+          "sigma",
+          "picky"),
+      GIN_TYPE("Numeric",
+               "Numeric",
+               "Numeric",
+               "Index"),
+      GIN_DEFAULT( "0", "290.", "-1", "0"),
+      GIN_DESC(
+          "Low temperature limit to calculate a psd.",
+          "High temperature limit to calculate a psd.",
+          "Standard deviation of log Gaussian distribution.",
+          "Flag whether to be strict with parametrization value checks.")));
+
+  md_data_raw.push_back(create_mdrecord(
       NAME("psdDelanoeEtAl14"),
       DESCRIPTION(
           "Normalized PSD as proposed in Delanoë et al. ((2014)),\n"

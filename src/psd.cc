@@ -1223,6 +1223,44 @@ void psd_MY05(Vector& psd,
   }
 }
 
+void psd_quasi_monodisperse(Vector& psd,
+                            Vector& dpsd_dx,
+                            const Vector& d_m,
+                            const Numeric& sigma,
+                            const Numeric& q,
+                            const Numeric& N0,
+                            const Numeric& a,
+                            const Numeric& b,
+                            const Numeric& T,
+                            const Numeric& T0) {
+  const Index nsi = psd.nelem();
+
+  const Numeric N_tot = N0 * std::exp(b * (-T + T0));
+
+  for (Index i = 0; i < nsi; i++) {
+    psd[i] =
+        (1.0 / 2.0) * std::numbers::sqrt2 *
+        std::exp(-1.0 / 2.0 *
+                 std::pow((1.0 / 2.0) * std::pow(sigma, 2) + std::log(d_m[i]) -
+                              std::log(std::cbrt(q / (N0 * a)) *
+                                       std::exp(-1.0 / 3.0 * b * (-T + T0))),
+                          2) /
+                 std::pow(sigma, 2)) /
+        (std::sqrt(PI) * d_m[i] * sigma) *
+          N_tot ;
+
+    // Calculate derivative with respect to q if requested
+    if (dpsd_dx.nelem()) {
+      dpsd_dx[i] = (1.0 / 3.0) *
+                        ((1.0 / 2.0) * std::pow(sigma, 2) + std::log(d_m[i]) -
+                         std::log(std::cbrt(q / (N0 * a)) *
+                                  std::exp(-1.0 / 3.0 * b * (-T + T0)))) /
+                        (q * std::pow(sigma, 2)) * psd[i];
+    }
+  }
+}
+
+
 Numeric dm_from_iwc_n0(Numeric iwc, Numeric n0, Numeric rho) {
   if (iwc == 0.0) {
     return 1e-9;
