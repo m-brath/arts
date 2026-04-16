@@ -4,8 +4,24 @@
 """
 
 import os
-from importlib_metadata import files
 import pyarts3 as pyarts
+
+
+def get_arts_data_path():
+    path = None
+    test = False
+    for p in pyarts.arts.globals.parameters.datapath:
+        if "arts-cat-data" in p:
+            path = p
+            test = True
+            break
+
+    if not test:
+        raise RuntimeError(
+            "Data path does not include arts-cat-data. Please update your data path to include arts-cat-data."
+        )
+
+    return path
 
 
 def test_iso(fn: str):
@@ -119,15 +135,7 @@ def test_partfun(fn: str):
 
 
 def all_isotopologues():
-    test = False
-    for path in pyarts.arts.globals.parameters.datapath:
-        if path.endswith("arts-cat-data"):
-            test = True
-            break
-
-    if not test:
-        raise RuntimeError(
-            "Data path does not include arts-cat-data. Please update your data path to include arts-cat-data.")
+    path = get_arts_data_path()
 
     out = {}
     isot_path = os.path.join(path, "isotopologues")
@@ -142,15 +150,7 @@ def all_isotopologues():
 
 
 def all_hitran():
-    test = False
-    for path in pyarts.arts.globals.parameters.datapath:
-        if path.endswith("arts-cat-data"):
-            test = True
-            break
-
-    if not test:
-        raise RuntimeError(
-            "Data path does not include arts-cat-data. Please update your data path to include arts-cat-data.")
+    path = get_arts_data_path()
 
     out = {}
     hitran_path = os.path.join(path, "hitran")
@@ -205,15 +205,7 @@ def all_hitran():
 
 
 def all_jpl():
-    test = False
-    for path in pyarts.arts.globals.parameters.datapath:
-        if path.endswith("arts-cat-data"):
-            test = True
-            break
-
-    if not test:
-        raise RuntimeError(
-            "Data path does not include arts-cat-data. Please update your data path to include arts-cat-data.")
+    path = get_arts_data_path()
 
     out = {}
     jpl_path = os.path.join(path, "jpl")
@@ -232,15 +224,7 @@ def all_jpl():
 
 
 def all_species():
-    test = False
-    for path in pyarts.arts.globals.parameters.datapath:
-        if path.endswith("arts-cat-data"):
-            test = True
-            break
-
-    if not test:
-        raise RuntimeError(
-            "Data path does not include arts-cat-data. Please update your data path to include arts-cat-data.")
+    path = get_arts_data_path()
 
     out = {}
     species_path = os.path.join(path, "species")
@@ -258,15 +242,7 @@ def all_species():
 
 
 def all_partfun():
-    test = False
-    for path in pyarts.arts.globals.parameters.datapath:
-        if path.endswith("arts-cat-data"):
-            test = True
-            break
-
-    if not test:
-        raise RuntimeError(
-            "Data path does not include arts-cat-data. Please update your data path to include arts-cat-data.")
+    path = get_arts_data_path()
 
     out = {}
     partfun_path = os.path.join(path, "partition-functions")
