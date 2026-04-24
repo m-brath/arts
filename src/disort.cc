@@ -1382,7 +1382,7 @@ void run_cdisort(Workspace& ws,
          it != fail_msg.end();
          it++)
       os << *it << '\n';
-      throw runtime_error(os.str());
+    throw runtime_error(os.str());
   }
 
   // Allocate aux data
@@ -1818,7 +1818,7 @@ void run_cdisort_flux(Workspace& ws,
 
           ostringstream os;
           os << "failure at f_index " << f_index << ":\n" << e.what();
-#pragma omp critical(ybatchCalc_push_fail_msg)
+#pragma omp critical(run_cdisort_flux_push_fail_msg)
           fail_msg.push_back(os.str());
         }
       }
@@ -1891,7 +1891,7 @@ void run_cdisort_flux(Workspace& ws,
          it != fail_msg.end();
          it++)
       os << *it << '\n';
-      throw runtime_error(os.str());
+    throw runtime_error(os.str());
   }
 
   // Allocate aux data
