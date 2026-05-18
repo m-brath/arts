@@ -44,6 +44,7 @@ add_subdirectory(spec)
 add_subdirectory(strings)
 add_subdirectory(sun)
 add_subdirectory(surface)
+add_subdirectory(surface_scattering)
 add_subdirectory(subsurface)
 
 add_subdirectory(util)
@@ -83,6 +84,7 @@ target_link_libraries(artscore INTERFACE
   subsurface
   sun
   surface
+  surface_scattering
   util
   xml_io
 )
