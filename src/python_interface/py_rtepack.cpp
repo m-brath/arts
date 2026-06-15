@@ -316,6 +316,10 @@ void py_rtepack(py::module_ &m) try {
   rtepack_array<Muelmat, 3, 4, 4>(mt3);
   generic_interface(mt3);
 
+  py::class_<MuelmatTensor5> mt5(m, "MuelmatTensor5");
+  rtepack_array<Muelmat, 5, 4, 4>(mt5);
+  generic_interface(mt5);
+
   py::class_<Specmat> cmm(m, "Specmat");
   cmm.def(py::init_implicit<Complex>())
       .def(py::init_implicit<std::array<Complex, 16>>())
