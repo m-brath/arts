@@ -307,7 +307,7 @@ void spectral_radSurfaceScatteringFlatDiffuse(
 
       // calculate scattered upward radiation
       for (Size i_f = 0; i_f < freq_grid.size(); i_f++) {
-        const Muelmat R  = surface_props.brdf_matrix[i_f, i_za, i_aa, 0, 0];
+        const Muelmat R  = surface_props.brdf_matrix_diffuse[i_f, i_za, i_aa, 0, 0];
         spectral_rad_scattered[i_f] += R * spectral_rad_incoming[i_za, i_aa, i_f] *
                            zen_grid_weights[i_za] * az_grid_weights[i_aa];
 
@@ -317,7 +317,7 @@ void spectral_radSurfaceScatteringFlatDiffuse(
       //For now, there is no jacobian for the surface scattering model!!!
       for (Size i_jac = 0; i_jac < jac_targets.x_size(); i_jac++) {
         for (Size i_f = 0; i_f < freq_grid.size(); i_f++) {
-          const Muelmat R  = surface_props.brdf_matrix[i_f, i_za, i_aa, 0, 0];
+          const Muelmat R  = surface_props.brdf_matrix_diffuse[i_f, i_za, i_aa, 0, 0];
           spectral_rad_scattered_jac[i_jac, i_f] += R * spectral_rad_incoming_jac[i_za, i_aa, i_jac, i_f] *
                            zen_grid_weights[i_za] * az_grid_weights[i_aa];
         }
@@ -327,7 +327,7 @@ void spectral_radSurfaceScatteringFlatDiffuse(
 
   // Calculate upward emission
   for (Size i_f = 0; i_f < freq_grid.size(); i_f++) {
-    spectral_rad_surface[i_f] = surface_props.emissivity_vector[i_f, 0, 0] * spectral_rad_surface[i_f];
+    spectral_rad_surface[i_f] = surface_props.emissivity_vector_diffuse[i_f, 0, 0] * spectral_rad_surface[i_f];
   }
 
   //Calculate jacobian for subsurface emission
@@ -335,7 +335,7 @@ void spectral_radSurfaceScatteringFlatDiffuse(
   StokvecMatrix spectral_rad_jac_subsurface(jac_targets.x_size(), freq_grid.size());
   for (Size i_jac = 0; i_jac < jac_targets.x_size(); i_jac++) {
     for (Size i_f = 0; i_f < freq_grid.size(); i_f++) {
-      spectral_rad_jac_subsurface[i_jac, i_f] = surface_props.emissivity_vector[i_f, 0, 0] * spectral_rad_jac_surface[i_jac, i_f];
+      spectral_rad_jac_subsurface[i_jac, i_f] = surface_props.emissivity_vector_diffuse[i_f, 0, 0] * spectral_rad_jac_surface[i_jac, i_f];
     }
   }
 
@@ -348,3 +348,4 @@ void spectral_radSurfaceScatteringFlatDiffuse(
 
 }
 ARTS_METHOD_ERROR_CATCH
+
